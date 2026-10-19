@@ -131,8 +131,9 @@ the URL in it too).
 
 ## What you'll see
 
-Pick **Classic Office** or **Dev Shop** on the clock-in screen. In the Dev Shop, workers go to
-the station for the kind of work (Azure DevOps, GitHub, SQL Server, Python…); see README.
+Pick a theme on the clock-in screen: **Classic Office**, **Dev Shop**, **Sci-Fi Station** or
+**Haunted House**. In all but Classic, workers go to the station for the kind of work (Azure
+DevOps, GitHub, SQL Server, Python…); see README.
 
 
 | Claude is…                                 | The worker…                                     |

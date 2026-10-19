@@ -65,7 +65,7 @@
   #overlay h3 { margin:0 0 8px; font-size:22px; }
   #overlay p { color:var(--dim); margin:0 0 16px; }
   #overlay .card { max-width:560px; }
-  .themes { display:flex; gap:10px; margin:0 0 12px; }
+  .themes { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 12px; }
   .theme { flex:1; text-align:left; padding:12px 14px; display:flex; flex-direction:column; gap:5px; border-radius:10px; }
   .theme b { font-size:15px; } .theme span { font-size:12px; color:var(--dim); line-height:1.35; }
   .theme.sel { border-color:var(--accent); box-shadow:0 0 0 2px rgba(217,119,87,.45); }
@@ -102,7 +102,8 @@
     <h2>Settings</h2>
     <div class="controls">
       <label>Theme <select id="optTheme" name="office-theme" autocomplete="off">
-        <option value="classic">Classic Office</option><option value="dev">Dev Shop</option></select></label>
+        <option value="classic">Classic Office</option><option value="dev">Dev Shop</option>
+        <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
@@ -138,6 +139,8 @@ py office.py demo</pre>
   <div class="themes">
     <button class="theme" data-theme="classic"><b>🏭 Classic Office</b><span>Carpentry, blacksmith, dairy barn, valet, pizzeria… Workers pick a station at random.</span></button>
     <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python… Workers go to the station that matches what Claude is doing.</span></button>
+    <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad… (also follows the work)</span></button>
+    <button class="theme" data-theme="horror"><b>🎃 Haunted House</b><span>Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and ghosts. The Crypt, the Cauldron, the Dungeon… (also follows the work)</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
 </div></div>
@@ -901,15 +904,533 @@ const DEV = {
     },
     tick() {} },
 };
-STATION_ORDER.forEach(id => {
-  const c = STA[id], d = DEV[id];
+// Sci-Fi Station theme: the same 12 slots, re-skinned as parts of a space station.
+const SCIFI = {
+  workbench: { label: 'MISSION CONTROL', name: 'Mission Control', tint: '#cfd8ee', anim: 'type', sit: true, dx: 80,
+    lines: ['Mission ticket accepted.', 'Houston, we have a story.', 'Updating the flight plan.'],
+    draw(x, y, t, on) {
+      RR(x + 146, y + 28, 86, 82, 3, '#0b1026', '#4b5a8a', 1.5);
+      TXT('MISSION BOARD', x + 189, y + 34, 'bold 6px system-ui', '#7dd3fc');
+      const ox = x + 168, oy = y + 56, a = on ? t * 1.2 : 0.8;
+      g.beginPath(); g.ellipse(ox, oy, 20, 9, -0.3, 0, TAU); g.strokeStyle = '#38bdf8'; g.lineWidth = 1; g.stroke();
+      C(ox, oy, 5, '#3b82f6'); C(ox - 1.5, oy - 1.5, 2, '#86efac');
+      C(ox + Math.cos(a) * 20 * 0.955 + Math.sin(a) * 9 * 0.296, oy - Math.cos(a) * 20 * 0.296 + Math.sin(a) * 9 * 0.955, 2.2, '#fde047');
+      ['TODO', 'FLY', 'DONE'].forEach((c, i) => { TXT(c, x + 160 + i * 28, y + 82, 'bold 5px system-ui', '#94a3b8'); if (i) L(x + 146 + i * 28.6, y + 78, x + 146 + i * 28.6, y + 108, '#334155', 1); });
+      const card = (cx, cy, col) => RR(cx - 9, cy, 18, 8, 1.5, col);
+      card(x + 160, y + 88, '#fca5a5'); card(x + 160, y + 98, '#fca5a5'); card(x + 216, y + 88, '#86efac');
+      card(x + 160 + (on ? ((t * 0.15) % 1) * 28 : 28), y + 93, '#fde047');
+      RR(x + 196, y + 40, 30, 28, 2, '#111a3a', '#334155', 1);
+      for (let i = 0; i < 4; i++) { const v = on ? 4 + hh(Math.floor(t * 3) + i * 5) % 18 : 6 + i * 4; R(x + 200 + i * 6, y + 66 - v, 4, v, '#22d3ee'); }
+      deskSit(x, y); monitor(x, y, '#06101f');
+      TXT('T+00:42', x + 121, y + 90, 'bold 5px monospace', '#4ade80');
+      for (let i = 0; i < 3; i++) R(x + 106, y + 95 + i * 3, 10 + (i * 9 + (on ? Math.floor(t * 2) * 5 : 0)) % 20, 1.3, '#38bdf8');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['Go for launch', 'Ticket linked', 'Orbit stable', 'Roger that'], '#1d4ed8'); } },
+  forge: { label: 'ORBITAL CLOUD', name: 'the Orbital Cloud', tint: '#d4e0f6', anim: 'point',
+    lines: ['Beaming up the database...', 'Uplink at 99%.', "Don't drop the payload."],
+    draw(x, y, t, on) {
+      for (const [cx, cy, r] of [[150, 142, 14], [172, 135, 17], [196, 143, 14], [172, 148, 14]]) C(x + cx, y + cy, r, '#f1f6ff');
+      R(x + 164, y + 150, 16, 22, '#64748b');
+      g.save(); g.translate(x + 172, y + 128); g.rotate(on ? Math.sin(t * 0.8) * 0.25 - 0.5 : -0.5);
+      poly([-14, 0, 14, 0, 0, -16], '#cbd5e1'); E(0, -2, 15, 4, '#94a3b8'); L(0, -2, 0, -18, '#475569', 1.5); C(0, -19, 2, on && Math.floor(t * 4) % 2 ? '#f87171' : '#7f1d1d'); g.restore();
+      [[172, 52], [204, 76], [152, 76]].forEach(([cx, cy], i) => {
+        const by = Math.sin(t * 1.5 + i * 2) * 2;
+        cyl(x + cx - 9, y + cy + by, 18, 18, ['#2563eb', '#7c3aed', '#0891b2'][i]);
+        if (on) C(x + cx, y + cy + 11 + by, 1.6, Math.floor(t * 4 + i) % 3 ? '#a3e635' : '#fff');
+        const k = on ? (t * 0.7 + i * 0.3) % 1 : 0.5;
+        C(x + 172 + (cx - 172) * k, y + 112 + (cy + 14 - 112) * k, 1.8, '#fde047');
+        g.setLineDash([2, 3]); L(x + 172, y + 112, x + cx, y + cy + 18 + by, 'rgba(56,189,248,.6)', 0.8); g.setLineDash([]);
+      });
+      TXT('UPLINK', x + 216, y + 112, 'bold 5.5px system-ui', '#1e3a8a');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.25) popText(x + 172, y + 44, ['Uploading...', '200 OK', 'Deployed to orbit', 'Scaling up'], '#0a5eb8'); } },
+  dairy: { label: 'WORMHOLE', name: 'the Wormhole', tint: '#d9d2ee', anim: 'point',
+    lines: ['Branching off to Andromeda.', 'Merging back through the portal.', 'Conflict in sector 7!', 'LGTM! Engage.'],
+    draw(x, y, t, on) {
+      RR(x + 98, y + 28, 134, 124, 6, '#120d2a');
+      const cx = x + 192, cy = y + 90, sp = on ? t * 2.2 : 0.4;
+      for (let r = 34; r >= 6; r -= 7) C(cx, cy, r, ['#2e1065', '#4c1d95', '#6d28d9', '#7c3aed', '#a78bfa'][Math.floor((34 - r) / 7) % 5]);
+      for (let k = 0; k < 3; k++) {
+        g.beginPath();
+        for (let i = 0; i <= 14; i++) { const a = sp + k * 2.1 + i * 0.3, r = 3 + i * 2.1; i ? g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r) : g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+        g.strokeStyle = 'rgba(224,231,255,.8)'; g.lineWidth = 1.6; g.stroke();
+      }
+      C(cx, cy, 4, '#fff');
+      const my = y + 90;
+      L(x + 104, my, x + 124, my, '#e2e8f0', 2); L(x + 150, my, x + 160, my, '#e2e8f0', 2);
+      g.beginPath(); g.moveTo(x + 124, my); g.bezierCurveTo(x + 130, my - 28, x + 146, my - 28, x + 150, my); g.strokeStyle = '#4ade80'; g.lineWidth = 2; g.stroke();
+      g.beginPath(); g.moveTo(x + 124, my); g.bezierCurveTo(x + 130, my + 28, x + 146, my + 28, x + 150, my); g.strokeStyle = '#f472b6'; g.lineWidth = 2; g.stroke();
+      [104, 124, 150, 160].forEach((px, i) => C(x + px, my, 2.6, i < (on ? Math.floor(t * 0.8) % 5 : 4) ? '#4ade80' : '#475569'));
+      TXT('main', x + 112, my - 8, '6px monospace', '#c4b5fd'); TXT('feature', x + 137, y + 62, '5.5px monospace', '#4ade80');
+      const k = on ? (t * 0.3) % 1 : 0.2; C(x + 104 + k * 56, my, 2, '#fde047');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 150, y + 56, ['Merged ✓', 'PR #' + (100 + Math.floor(Math.random() * 900)), 'git push', 'Rebased!'], '#7c3aed'); } },
+  valet: { label: 'HULL BREACH', name: 'the Hull Breach', tint: '#f1d3d3', anim: 'fix',
+    lines: ['Is that a hole?!', 'Did you try turning the ship off?', 'Patching with duct tape.', 'It worked before launch!'],
+    draw(x, y, t, on) {
+      RR(x + 100, y + 36, 130, 116, 4, '#5b6472', '#2f3640', 2);
+      for (let i = 0; i < 4; i++) { L(x + 100, y + 66 + i * 28, x + 230, y + 66 + i * 28, '#3f4753', 1); }
+      for (const [rx, ry] of [[106, 42], [224, 42], [106, 146], [224, 146]]) C(x + rx, y + ry, 2, '#9aa3b2');
+      poly([x + 150, y + 74, x + 172, y + 66, x + 190, y + 80, x + 196, y + 100, x + 184, y + 120, x + 162, y + 124, x + 148, y + 108, x + 156, y + 92], '#0b0f24');
+      for (let i = 0; i < 6; i++) C(x + 156 + hh(i * 3) % 34, y + 76 + hh(i * 7 + 1) % 42, 0.9, '#fff');
+      C(x + 178, y + 98, 6, '#6b5b4b'); C(x + 176, y + 96, 2, '#4b3f33');
+      poly([x + 148, y + 74, x + 140, y + 66, x + 144, y + 84], '#8b95a5'); poly([x + 196, y + 100, x + 208, y + 96, x + 198, y + 110], '#8b95a5');
+      const blink = on ? Math.floor(t * 3) % 2 : 0;
+      C(x + 214, y + 50, 6, blink ? '#ff3b3b' : '#6b1d1d');
+      if (blink) { g.globalAlpha = 0.25; C(x + 214, y + 50, 14, '#ff3b3b'); g.globalAlpha = 1; }
+      TXT('WARNING', x + 130, y + 52, 'bold 6px system-ui', '#fde047');
+      for (let i = 0; i < 3; i++) { const dx = Math.sin(t * 0.9 + i * 2) * 6, dy = Math.cos(t * 0.7 + i) * 4; R(x + 200 + i * 8 + dx, y + 120 + dy - i * 10, 5, 3, '#9aa3b2'); }
+      RR(x + 106, y + 128, 30, 14, 2, '#d1d5db', '#9ca3af', 1); TXT('PATCH', x + 121, y + 135, 'bold 5.5px system-ui', '#dc2626');
+    },
+    tick(x, y, w, dt, t) {
+      if (Math.random() < dt * 4) puff(x + 172, y + 90, { kind: 'spark', vx: rand(-40, 40), vy: rand(-60, 0), ay: 200, life: 0.5, color: pick(['#ffd23f', '#7cc7ff', '#fff']) });
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 112, y + 120, { kind: 'spark', vx: rand(-80, 80), vy: rand(-120, -20), ay: 300, life: 0.4, color: pick(['#ffd23f', '#7cc7ff']) });
+      if (Math.random() < dt * 0.25) popText(x + 190, y + 40, ['PSSSSHH!', 'ALERT!', 'Decompressing'], '#dc2626');
+    } },
+  bakery: { label: 'DATA CORE', name: 'the Data Core', tint: '#d3e6ee', anim: 'type', sit: true, dx: 80,
+    lines: ['SELECT * FROM stars;', 'The core needs an index.', 'Querying the galaxy...'],
+    draw(x, y, t, on) {
+      const p = on ? 0.5 + Math.sin(t * 3) * 0.5 : 0.4;
+      g.globalAlpha = 0.18 + p * 0.22; C(x + 200, y + 92, 30, '#22d3ee'); g.globalAlpha = 1;
+      RR(x + 182, y + 126, 36, 12, 3, '#334155'); R(x + 190, y + 138, 20, 14, '#475569');
+      poly([x + 200, y + 56, x + 214, y + 92, x + 200, y + 124, x + 186, y + 92], '#22d3ee');
+      poly([x + 200, y + 56, x + 214, y + 92, x + 200, y + 92], '#67e8f9'); poly([x + 200, y + 92, x + 186, y + 92, x + 200, y + 124], '#0891b2');
+      L(x + 200, y + 56, x + 200, y + 124, 'rgba(255,255,255,.5)', 1);
+      for (let i = 0; i < 5; i++) {
+        const a = (on ? t * 1.5 : 0.5) + i * TAU / 5;
+        C(x + 200 + Math.cos(a) * 26, y + 92 + Math.sin(a) * 10, 1.8, '#fde047');
+      }
+      RR(x + 150, y + 30, 80, 20, 2, '#0b1220', '#334155', 1);
+      const sc = on ? Math.floor(t * 4) : 0;
+      for (let i = 0; i < 3; i++) R(x + 154, y + 34 + i * 5, 10 + hh(sc + i * 4) % 56, 2, i % 2 ? '#38bdf8' : '#4ade80');
+      deskSit(x, y); monitor(x, y, '#04121a');
+      const rows = ['SELECT *', 'FROM stars', 'WHERE hot', 'ORDER BY ly'];
+      rows.forEach((s, i) => TXT(s, x + 106, y + 90 + i * 5, '4.5px monospace', i % 2 ? '#7dd3fc' : '#4ade80', 'left'));
+      if (on) R(x + 104, y + 87 + (Math.floor(t * 1.2) % 4) * 5, 34, 5, 'rgba(255,255,255,.12)');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 130, y + 78, ['(9,999 stars)', 'Query OK', 'Core hot!', '01101001'], '#0e7490'); } },
+  garden: { label: 'LAUNCH PAD', name: 'the Launch Pad', tint: '#d6e8e0', anim: 'pack',
+    lines: ['T-minus... something.', 'Deploying to orbit!', 'Countdown looks clean.'],
+    draw(x, y, t, on) {
+      const cyc = on ? (t * 0.22) % 1 : 0, launch = cyc > 0.6 ? (cyc - 0.6) / 0.4 : 0, lift = launch * launch * 80;
+      const n = cyc < 0.6 ? 3 - Math.floor(cyc / 0.2) : 0;
+      RR(x + 100, y + 30, 50, 22, 3, '#0f172a'); TXT(on ? (n > 0 ? 'T-' + n : 'GO!') : 'T-3', x + 125, y + 41, 'bold 11px monospace', n > 0 || !on ? '#f87171' : '#4ade80');
+      R(x + 196, y + 60, 8, 96, '#64748b'); for (let i = 0; i < 5; i++) L(x + 196, y + 64 + i * 18, x + 204, y + 82 + i * 18, '#475569', 1);
+      L(x + 196, y + 76, x + 178, y + 76, '#94a3b8', 2);
+      RR(x + 110, y + 154, 86, 8, 2, '#475569'); R(x + 120, y + 148, 66, 6, '#64748b');
+      g.save(); g.translate(x + 153, y + 148 - lift);
+      poly([-9, -10, -17, 2, -9, 0], '#ef4444'); poly([9, -10, 17, 2, 9, 0], '#ef4444');
+      RR(-9, -50, 18, 50, 7, '#f1f5f9', '#94a3b8', 1); poly([-9, -42, 0, -62, 9, -42], '#ef4444');
+      C(0, -30, 4, '#38bdf8'); R(-9, -16, 18, 3, '#ef4444');
+      if (launch > 0) { poly([-6, 0, 6, 0, 0, 14 + Math.sin(t * 40) * 3], '#fb923c'); poly([-3, 0, 3, 0, 0, 8], '#fde047'); }
+      g.restore();
+      if (launch > 0) for (let i = 0; i < 4; i++) { g.globalAlpha = 0.5; C(x + 140 + i * 10, y + 150, 6 + i * 2, '#e5e7eb'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 2) puff(x + 153 + rand(-8, 8), y + 150, { vy: -14, vx: rand(-14, 14), grow: 4, life: 1.2, size: 3, color: 'rgba(220,220,225,.6)' });
+      if (Math.random() < dt * 0.25) popText(x + 170, y + 40, ['Liftoff!', 'Deployed ✓', 'Nominal'], '#0f766e');
+    } },
+  pizza: { label: 'ENGINE ROOM', name: 'the Engine Room', tint: '#e6dcc4', anim: 'dial',
+    lines: ['Dilithium levels nominal.', 'I canna change the config!', 'Tuning the warp flag.'],
+    draw(x, y, t, on) {
+      const p = on ? 0.5 + Math.sin(t * 4) * 0.5 : 0.5;
+      RR(x + 160, y + 30, 40, 84, 8, '#1e293b', '#475569', 2); R(x + 168, y + 36, 24, 72, '#0b1a33');
+      g.globalAlpha = 0.25 + p * 0.3; R(x + 170, y + 38, 20, 68, '#38bdf8'); g.globalAlpha = 1;
+      for (let i = 0; i < 5; i++) { const k = on ? (t * 0.8 + i * 0.2) % 1 : i * 0.2; const ry = y + 104 - k * 64; E(x + 180, ry, 14, 3, 'rgba(165,243,252,' + (0.9 - k * 0.6) + ')'); }
+      C(x + 180, y + 70, 5 + p * 3, '#e0f2fe');
+      gear(x + 120, y + 52, 12, 10, on ? t * 1.2 : 0.2, '#94a3b8'); gear(x + 140, y + 40, 7, 8, on ? -t * 1.9 : 0, '#64748b');
+      RR(x + 98, y + 80, 56, 40, 4, '#2f3542');
+      for (let i = 0; i < 3; i++) {
+        const cx = x + 112 + i * 18, a = on ? t * (1 + i * 0.5) : i;
+        C(cx, y + 94, 8, '#1f2430'); C(cx, y + 94, 6, '#64748b'); L(cx, y + 94, cx + Math.cos(a) * 5, y + 94 + Math.sin(a) * 5, '#fde68a', 1.8);
+        R(cx - 5, y + 106, 10, 8, '#0f172a'); R(cx - 4, y + 112 - (on ? 2 + hh(Math.floor(t * 3) + i) % 6 : 4), 8, on ? 2 + hh(Math.floor(t * 3) + i) % 6 : 4, ['#22c55e', '#facc15', '#ef4444'][i]);
+      }
+      RR(x + 98, y + 128, 134, 24, 4, '#2f3542');
+      for (let i = 0; i < 8; i++) C(x + 110 + i * 15, y + 140, 3.2, on && (Math.floor(t * 5) + i) % 4 ? ['#22c55e', '#facc15', '#38bdf8'][i % 3] : '#475569');
+      TXT('WARP', x + 216, y + 50, 'bold 7px system-ui', '#92400e'); TXT('CORE', x + 216, y + 60, 'bold 7px system-ui', '#92400e');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 180, y + 28, ['⚙ saved', 'Warp 9 set', 'config pushed', 'flag: ON'], '#a16207'); } },
+  easel: { label: 'XENO LAB', name: 'the Xeno Lab', tint: '#d9ecd8', anim: 'review',
+    lines: ['It moved. Again.', 'Hmm, a bare tentacle...', 'Needs a test. And a net.'],
+    draw(x, y, t, on) {
+      RR(x + 98, y + 34, 66, 64, 2, '#0b1220', '#334155', 1.5);
+      const code = [['def', ' feed(xeno):'], ['  try', ':'], ['    xeno.poke()'], ['  except', ':'], ['    run()']];
+      const hl = on ? Math.floor(t * 0.7) % code.length : -1;
+      code.forEach(([a, b], i) => {
+        if (i === hl) R(x + 100, y + 39 + i * 11, 62, 9, 'rgba(250,204,21,.3)');
+        g.font = '6px monospace'; TXT(a, x + 102, y + 44 + i * 11, g.font, '#4ade80', 'left');
+        TXT(b, x + 102 + g.measureText(a).width, y + 44 + i * 11, g.font, '#cbd5e1', 'left');
+      });
+      RR(x + 170, y + 34, 56, 116, 8, 'rgba(120,255,200,.22)', '#8fb8bd', 2); R(x + 166, y + 146, 64, 8, '#475569'); R(x + 166, y + 30, 64, 6, '#475569');
+      const ph = on ? t * 3 : 0, sy = i => y + 108 + Math.sin(i * 0.5 + ph) * 6 - i * 1.8;
+      g.beginPath(); for (let i = 0; i <= 16; i++) { const sx = x + 198 + Math.sin(i * 0.6 + ph) * 8; i ? g.lineTo(sx, y + 142 - i * 4.5) : g.moveTo(sx, y + 142); }
+      g.strokeStyle = '#a3e635'; g.lineWidth = 6; g.lineCap = 'round'; g.stroke();
+      const hx = x + 198 + Math.sin(16 * 0.6 + ph) * 8, hy = y + 142 - 16 * 4.5;
+      C(hx, hy, 8, '#a3e635'); C(hx - 3, hy - 1, 2.2, '#fff'); C(hx + 3, hy - 1, 2.2, '#fff'); C(hx - 3, hy - 1, 1, '#111'); C(hx + 3, hy - 1, 1, '#111');
+      for (let i = 0; i < 5; i++) C(x + 192 + (i % 2) * 12, y + 130 - i * 14, 1.5, '#fef08a');
+      for (let i = 0; i < 4; i++) C(x + 180 + hh(i) % 36, y + 140 - ((t * 10 + i * 30) % 100), 1.2, 'rgba(255,255,255,.6)');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 130, y + 30, ['LGTM ✓', '# nit: tentacle', 'It bit me', 'Needs a test'], '#15803d'); } },
+  lumber: { label: 'ALIEN NEST', name: 'the Alien Nest', tint: '#1f2a24', anim: 'scared',
+    lines: ['Did that egg just blink?', "Don't wake it up...", 'Nobody touch the legacy!', 'It is breathing.'],
+    draw(x, y, t, on) {
+      RR(x + 96, y + 26, 138, 158, 8, '#0d1511');
+      for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(x + 100 + i * 24, y + 26); g.bezierCurveTo(x + 110 + i * 24, y + 60, x + 90 + i * 24, y + 80, x + 106 + i * 24, y + 120); g.strokeStyle = '#1c2a22'; g.lineWidth = 5; g.stroke(); }
+      const e1 = (cx, cy, s, ph) => { const k = 1 + Math.sin(t * (on ? 3 : 1.5) + ph) * 0.05; E(cx, cy, 11 * s * k, 16 * s * k, '#3b5a3b'); E(cx - 3 * s, cy - 5 * s, 3 * s, 6 * s, 'rgba(180,255,150,.35)');
+        E(cx, cy, 11 * s * k, 16 * s * k * 0.15 + 1, 'rgba(0,0,0,.0)'); };
+      E(x + 165, y + 170, 70, 10, '#16301f');
+      e1(x + 130, y + 156, 0.9, 0); e1(x + 202, y + 158, 1, 1.5); e1(x + 220, y + 168, 0.7, 3);
+      const cx = x + 168, cy = y + 150, cr = on ? 0.5 + Math.sin(t * 5) * 0.2 : 0.2;
+      E(cx, cy, 13, 18, '#4a6e3a'); poly([cx - 12, cy - 6, cx - 5, cy - 14, cx, cy - 4, cx + 5, cy - 15, cx + 12, cy - 6, cx + 6, cy - 22, cx - 6, cy - 22], '#0d1511');
+      E(cx, cy - 4, 8 * (1 + cr), 7 * (1 + cr), '#9be37a'); C(cx - 2, cy - 4, 2, '#1c3a18');
+      L(cx - 6, cy - 14, cx + 4, cy - 8, '#d9f99d', 0.9);
+      if ((t % 5) > 0.15) { const ey = y + 74 + Math.sin(t * 0.6) * 2; g.globalAlpha = 0.3; C(x + 196, ey, 11, '#ff2a2a'); g.globalAlpha = 1; E(x + 196, ey, 7, on ? 3.2 : 2.2, '#ff2a2a'); E(x + 196, ey, 1.4, 3, '#000'); }
+      for (let i = 0; i < 3; i++) { const dy = ((t * 30 + i * 37) % 90); const dx = x + 120 + i * 40; L(dx, y + 28, dx, y + 28 + Math.min(dy, 24), '#6fbf5a', 1.6); if (dy > 24) C(dx, y + 28 + dy, 1.8, '#8be35a'); }
+      const fl = on ? (Math.sin(t * 23) > -0.6 ? 1 : 0.15) : 0.5;
+      L(x + 116, y + 26, x + 116, y + 66, '#555', 1); C(x + 116, y + 69, 4, 'rgba(255,236,150,' + fl + ')');
+      if (on) { g.globalAlpha = 0.14; poly([x + 92, y + 112, x + 160, y + 92, x + 160, y + 134], '#fff3b0'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.25) puff(x + 168, y + 134, { kind: 'text', text: '🥚', vx: rand(-20, 20), vy: rand(-40, -15), life: 1.4, color: '#000', font: '10px system-ui' });
+      if (Math.random() < dt * 0.4) puff(x + 168 + rand(-6, 6), y + 140, { vy: -16, grow: 2, life: 1, size: 2, color: 'rgba(150,230,110,.5)' });
+      if (Math.random() < dt * 0.12) popText(w.x + 8, w.y - 66, ['eek!', '😱', 'gulp'], '#fff');
+    } },
+  lab: { label: 'SIMULATION DECK', name: 'the Simulation Deck', tint: '#cfe3ea', anim: 'point',
+    lines: ['Running the simulation...', 'Flaky hologram again.', 'All green. Suspicious.', 'Reality check: FAIL.'],
+    draw(x, y, t, on) {
+      RR(x + 98, y + 30, 134, 122, 5, '#06141c', '#22d3ee', 1.5);
+      const hy = y + 108, sh = on ? (t * 6) % 10 : 0;
+      for (let i = 0; i <= 7; i++) L(x + 165, hy - 6, x + 106 + i * 16.5, y + 150, 'rgba(34,211,238,.55)', 0.8);
+      for (let i = 0; i < 5; i++) { const gy = hy + (i * 9 + sh * 0.9) % 42; L(x + 100 + (gy - hy) * -0.3, gy, x + 230 + (gy - hy) * 0.3, gy, 'rgba(34,211,238,.5)', 0.8); }
+      const res = [['login', 1], ['warp()', 1], ['airlock', 0], ['oxygen', 1]];
+      const hot = on ? Math.floor(t * 0.5) % 4 : -1;
+      res.forEach(([n, ok], i) => {
+        const ry = y + 38 + i * 11;
+        if (i === hot) R(x + 102, ry - 4, 126, 9, 'rgba(250,204,21,.25)');
+        TXT(n, x + 106, ry, '6px monospace', '#cbd5e1', 'left');
+        TXT(ok ? 'PASS' : 'FAIL', x + 224, ry, 'bold 6px monospace', ok ? '#4ade80' : '#f87171', 'right');
+      });
+      const bob = Math.sin(t * 2) * 2;
+      E(x + 165, y + 132, 10, 3, 'rgba(34,211,238,.3)');
+      C(x + 165, y + 112 + bob, 6, 'rgba(125,211,252,.55)'); R(x + 161, y + 118 + bob, 8, 10, 'rgba(125,211,252,.45)');
+      L(x + 156, y + 120 + bob, x + 162, y + 119 + bob, 'rgba(125,211,252,.55)', 2); L(x + 174, y + 120 + bob, x + 168, y + 119 + bob, 'rgba(125,211,252,.55)', 2);
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 165, y + 94, ['✓ PASS', '✓ PASS', '✗ FAIL', 'Sim 98%'], '#0e7490'); } },
+  servers: { label: 'ROBOT BAY', name: 'the Robot Bay', tint: '#c6cfdc', anim: 'fix',
+    lines: ['Have you tried a new battery?', 'Turning the robot off and on.', "It's always the servo.", 'Tightening bolts.'],
+    draw(x, y, t, on) {
+      RR(x + 100, y + 120, 130, 10, 2, '#64748b'); R(x + 106, y + 130, 6, 28, '#475569'); R(x + 218, y + 130, 6, 28, '#475569');
+      RR(x + 120, y + 92, 64, 28, 6, '#cbd5e1', '#64748b', 1.5); R(x + 126, y + 98, 22, 12, '#0f172a');
+      TXT(on && Math.floor(t * 2) % 2 ? '01' : '10', x + 137, y + 104, 'bold 6px monospace', '#4ade80');
+      for (let i = 0; i < 3; i++) C(x + 156 + i * 8, y + 104, 2, ['#ef4444', '#facc15', '#22c55e'][i]);
+      RR(x + 186, y + 90, 26, 26, 6, '#e2e8f0', '#64748b', 1.5); C(x + 194, y + 101, 3.4, on ? '#38bdf8' : '#1e3a5f'); C(x + 205, y + 101, 3.4, on ? '#38bdf8' : '#1e3a5f');
+      L(x + 199, y + 90, x + 199, y + 80, '#64748b', 1.5); C(x + 199, y + 78, 2.4, on && Math.floor(t * 3) % 2 ? '#f87171' : '#7f1d1d');
+      L(x + 124, y + 120, x + 116, y + 138, '#94a3b8', 4); L(x + 178, y + 120, x + 186, y + 138, '#94a3b8', 4);
+      L(x + 150, y + 96, x + 156, y + 76, '#94a3b8', 4); RR(x + 150, y + 70, 12, 8, 2, '#f59e0b');
+      L(x + 156, y + 76, x + 156, y + 70, '#475569', 2);
+      RR(x + 206, y + 134, 22, 12, 2, '#dc2626'); R(x + 213, y + 131, 8, 3, '#7f1d1d');
+      for (let i = 0; i < 3; i++) C(x + 130 + i * 38, y + 38 + (i % 2) * 8, 2, on && Math.floor(t * 3 + i) % 2 ? '#fde047' : '#475569');
+      L(x + 110, y + 34, x + 230, y + 34, '#334155', 2);
+    },
+    tick(x, y, w, dt, t) {
+      if (Math.random() < dt * 2.5) puff(x + 156, y + 76, { kind: 'spark', vx: rand(-50, 50), vy: rand(-70, -10), ay: 220, life: 0.4, color: pick(['#ffd23f', '#7cc7ff', '#fff']) });
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 5; i++) puff(x + 140, y + 100, { kind: 'spark', vx: rand(-80, 80), vy: rand(-110, -20), ay: 300, life: 0.4, color: pick(['#ffd23f', '#7cc7ff']) });
+      if (Math.random() < dt * 0.2) popText(x + 172, y + 60, ['🔧', 'bzzzt', 'reboot…', 'servo ✓'], '#1e293b');
+    } },
+  packing: { label: 'CARGO BAY', name: 'the Cargo Bay', tint: '#d3cdb8', anim: 'pack',
+    lines: ['Tracking the freighter.', 'Beam it up, carefully.', 'Cargo status: floating.'],
+    draw(x, y, t, on) {
+      RR(x + 100, y + 30, 70, 52, 3, '#0b1026', '#4b5a8a', 1.5);
+      for (let i = 0; i < 8; i++) C(x + 106 + hh(i * 5) % 58, y + 36 + hh(i * 11 + 2) % 40, 0.8, '#fff');
+      g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x + 108, y + 72); g.bezierCurveTo(x + 124, y + 38, x + 144, y + 76, x + 162, y + 42); g.strokeStyle = '#64748b'; g.lineWidth = 1.2; g.stroke(); g.setLineDash([]);
+      C(x + 108, y + 72, 2.2, '#22c55e'); C(x + 162, y + 42, 2.2, '#ef4444');
+      const k = on ? (t * 0.1) % 1 : 0.6, q = 1 - k;
+      const px = q * q * q * 108 + 3 * q * q * k * 124 + 3 * q * k * k * 144 + k * k * k * 162, py = q * q * q * 72 + 3 * q * q * k * 38 + 3 * q * k * k * 76 + k * k * k * 42;
+      poly([x + px - 3, y + py + 2, x + px + 4, y + py, x + px - 3, y + py - 2], '#facc15');
+      TXT('STAR CHART', x + 135, y + 35, 'bold 5px system-ui', '#94a3b8');
+      poly([x + 170, y + 34, x + 204, y + 34, x + 196, y + 38, x + 178, y + 38], '#94a3b8'); RR(x + 176, y + 28, 22, 8, 3, '#e2e8f0');
+      const lift = on ? Math.abs(Math.sin(t * 0.8)) : 0.5, cy2 = y + 138 - lift * 58;
+      g.globalAlpha = 0.25; poly([x + 180, y + 38, x + 196, y + 38, x + 218, y + 150, x + 158, y + 150], '#67e8f9'); g.globalAlpha = 1;
+      RR(x + 177, cy2, 22, 16, 1, '#c8a06a', 'rgba(0,0,0,.25)', 1); L(x + 188, cy2, x + 188, cy2 + 16, '#a07c4a', 1.2);
+      R(x + 100, y + 150, 134, 6, '#4b5563'); for (let i = 0; i < 7; i++) C(x + 108 + i * 18, y + 156, 2.4, '#9ca3af');
+      for (const [bx, by, bw, bh] of [[208, 134, 22, 16], [212, 118, 18, 16], [104, 136, 18, 14]]) { RR(x + bx, y + by, bw, bh, 1, '#c8a06a', 'rgba(0,0,0,.25)', 1); L(x + bx + bw / 2, y + by, x + bx + bw / 2, y + by + bh, '#a07c4a', 1.2); }
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 2) puff(x + 188 + rand(-14, 14), y + 120 + rand(-20, 20), { vy: -20, life: 0.8, size: 1.4, color: '#a5f3fc' });
+      if (Math.random() < dt * 0.25) popText(x + 188, y + 84, ['Cargo ✓', 'In transit', 'Tractor on', 'Logged'], '#0e7490');
+    } },
+};
+// Haunted House theme: the same 12 slots, re-skinned as spooky places where dev work happens.
+const HORROR = {
+  workbench: { label: 'TICKET CRYPT', name: 'the Ticket Crypt', tint: '#d6cfe0', anim: 'point',
+    lines: ['Another one bites the dust.', 'Resurrecting AB#1234...', 'Who buried this bug?', 'Closed. Six feet under.'],
+    draw(x, y, t, on) {
+      R(x + 96, y + 150, 138, 30, '#3f5035'); R(x + 96, y + 150, 138, 3, '#566b46');
+      const stone = (sx, sy, w, h, a, b) => {
+        RR(x + sx, y + sy, w, h, [w / 2, w / 2, 0, 0], '#9a97a6', '#6e6a7c', 1.2);
+        TXT('RIP', x + sx + w / 2, y + sy + 11, 'bold 7px system-ui', '#4a4658'); TXT(a, x + sx + w / 2, y + sy + 21, 'bold 5px system-ui', '#4a4658');
+        if (b) TXT(b, x + sx + w / 2, y + sy + 29, 'bold 5px system-ui', '#4a4658');
+        L(x + sx + 4, y + sy + h - 2, x + sx + w - 4, y + sy + h - 2, '#6e6a7c', 1);
+      };
+      stone(100, 92, 36, 60, 'AB#1234'); stone(142, 74, 38, 78, 'BUG', '(old)');
+      E(x + 206, y + 152, 20, 9, '#5a4128'); E(x + 206, y + 148, 15, 6, '#6e5034');
+      L(x + 206, y + 118, x + 206, y + 148, '#7a5a34', 2.5); L(x + 198, y + 127, x + 214, y + 127, '#7a5a34', 2.5);
+      TXT('NEW', x + 206, y + 140, 'bold 5px system-ui', '#f5e9c8');
+      const fl = 0.7 + Math.sin(t * 17) * 0.15 + Math.sin(t * 7.3) * 0.1;
+      L(x + 228, y + 70, x + 228, y + 152, '#3a2f26', 2.5); L(x + 228, y + 70, x + 218, y + 70, '#3a2f26', 2);
+      RR(x + 214, y + 72, 9, 12, 2, '#2b2b33'); R(x + 216, y + 75, 5, 7, 'rgba(255,200,90,' + fl + ')');
+      g.globalAlpha = 0.18 * fl; C(x + 218.5, y + 79, 18, '#ffcf6a'); g.globalAlpha = 1;
+      if (on) { const bx = x + 150 + Math.sin(t * 1.3) * 40, by = y + 44 + Math.sin(t * 2.6) * 6;
+        poly([bx - 8, by, bx - 2, by - 3, bx, by + 1, bx + 2, by - 3, bx + 8, by, bx + 3, by + 3, bx, by + 5, bx - 3, by + 3], '#1c1424'); }
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 160, y + 62, ['RIP AB#' + (1000 + Math.floor(Math.random() * 9000)), 'ticket risen!', 'RIP BUG', '👻 boo'], '#5b21b6'); } },
+  forge: { label: 'STORM TOWER', name: 'the Storm Tower', tint: '#aeb8d4', anim: 'dial',
+    lines: ['Scaling up! MUAHAHA!', 'It\'s ALIVE... and billing!', 'Who has Owner on this?!', 'Don\'t touch prod.'],
+    draw(x, y, t, on) {
+      const f = on ? (t * 1.3) % 1 : 2, strike = f < 0.16 && Math.floor(f * 40) % 2 === 0;
+      for (const [cx, cy, r] of [[148, 38, 14], [168, 32, 17], [192, 34, 16], [214, 38, 14], [180, 42, 16]]) E(x + cx, y + cy, r + 4, r * 0.6, strike ? '#6b6f89' : '#4a4d63');
+      poly([x + 150, y + 176, x + 158, y + 80, x + 202, y + 80, x + 210, y + 176], '#6d6a7a');
+      for (let i = 0; i < 6; i++) L(x + 154 + i * 0.4, y + 92 + i * 14, x + 206 - i * 0.4, y + 92 + i * 14, '#524f60', 1);
+      poly([x + 154, y + 80, x + 180, y + 56, x + 206, y + 80], '#3b3748'); R(x + 176, y + 66, 8, 12, on ? '#ffe27a' : '#a8914a');
+      RR(x + 168, y + 120, 24, 30, [12, 12, 0, 0], '#1d1a26');
+      L(x + 180, y + 56, x + 180, y + 30, '#bfc3d6', 2); C(x + 180, y + 29, strike ? 5 : 2.5, strike ? '#fff' : '#9fb3ff');
+      if (strike) {
+        g.beginPath(); g.moveTo(x + 160, y + 40); g.lineTo(x + 172, y + 36); g.lineTo(x + 166, y + 32); g.lineTo(x + 180, y + 29);
+        g.strokeStyle = '#fff6a8'; g.lineWidth = 2.5; g.lineCap = 'round'; g.stroke();
+        g.globalAlpha = 0.18; R(x + 96, y + 26, 138, 158, '#fff8c0'); g.globalAlpha = 1; }
+      RR(x + 98, y + 126, 40, 32, 3, '#2f3542'); R(x + 100, y + 128, 36, 4, '#4a5568');
+      [112, 126].forEach((cx, i) => { C(x + cx, y + 144, 7, '#1f2430'); C(x + cx, y + 144, 5.5, '#cbd5e1');
+        const a = on ? t * (2 + i) : i; L(x + cx, y + 144, x + cx + Math.cos(a) * 5, y + 144 + Math.sin(a) * 5, '#dc2626', 1.5); });
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 150, y + 60, ['⚡ ZAP', 'scaling up!', '200 OK ⚡', 'IT LIVES'], '#fde047');
+      if (Math.random() < dt * 1.2) puff(x + 180, y + 30, { kind: 'spark', vx: rand(-60, 60), vy: rand(-50, 10), ay: 200, life: 0.3, color: '#fff6a8' }); } },
+  dairy: { label: 'BRANCHING WOODS', name: 'the Branching Woods', tint: '#c9cdb4', anim: 'point',
+    lines: ['Hoo merged this?', 'Rebasing in the dark...', 'Merge conflict. Whoooo.', 'LGTM! Hoot!'],
+    draw(x, y, t, on) {
+      C(x + 214, y + 46, 13, '#f1ecc8'); C(x + 209, y + 43, 13, '#c9cdb4');
+      R(x + 96, y + 168, 138, 16, '#4a5a3c');
+      const wood = '#2b2230', br = (pts, w) => { g.beginPath(); g.moveTo(pts[0], pts[1]); g.bezierCurveTo(pts[2], pts[3], pts[4], pts[5], pts[6], pts[7]); g.strokeStyle = wood; g.lineWidth = w; g.lineCap = 'round'; g.stroke(); };
+      const o = [x, y];
+      br([o[0] + 168, o[1] + 172, o[0] + 168, o[1] + 150, o[0] + 164, o[1] + 134, o[0] + 166, o[1] + 118], 9);
+      br([o[0] + 166, o[1] + 118, o[0] + 140, o[1] + 106, o[0] + 128, o[1] + 94, o[0] + 114, o[1] + 78], 5);
+      br([o[0] + 166, o[1] + 118, o[0] + 148, o[1] + 98, o[0] + 148, o[1] + 82, o[0] + 168, o[1] + 66], 4);
+      br([o[0] + 166, o[1] + 118, o[0] + 190, o[1] + 98, o[0] + 190, o[1] + 82, o[0] + 168, o[1] + 66], 4);
+      br([o[0] + 168, o[1] + 66, o[0] + 172, o[1] + 56, o[0] + 168, o[1] + 46, o[0] + 170, o[1] + 38], 4);
+      br([o[0] + 166, o[1] + 118, o[0] + 196, o[1] + 114, o[0] + 212, o[1] + 104, o[0] + 222, o[1] + 88], 5);
+      L(x + 114, y + 78, x + 106, y + 70, wood, 2); L(x + 222, y + 88, x + 228, y + 80, wood, 2);
+      const tips = [[114, 78], [170, 38], [222, 88], [106, 70], [228, 80]], n = on ? 1 + Math.floor(t * 0.8) % 5 : 5;
+      tips.forEach(([tx, ty], i) => { if (i < n) { g.globalAlpha = 0.25; C(x + tx, y + ty, 7, '#7dffa8'); g.globalAlpha = 1; C(x + tx, y + ty, 3, '#7dffa8'); } });
+      const ox = x + 207, oy = y + 100 - 6;
+      E(ox, oy + 6, 6, 8, '#6b4f36'); E(ox, oy + 8, 3.5, 5, '#9a7a56');
+      poly([ox - 5, oy - 2, ox - 6, oy - 8, ox - 2, oy - 4], '#6b4f36'); poly([ox + 5, oy - 2, ox + 6, oy - 8, ox + 2, oy - 4], '#6b4f36');
+      const bl = (t % 3.4) < 0.14 ? 0.3 : 2.4;
+      E(ox - 2.6, oy, 2.6, bl, '#facc15'); E(ox + 2.6, oy, 2.6, bl, '#facc15'); if (bl > 1) { C(ox - 2.6, oy, 0.9, '#111'); C(ox + 2.6, oy, 0.9, '#111'); }
+      TXT('main', x + 168, y + 164, 'bold 5.5px system-ui', '#d9e6c8'); TXT('feat/boo', x + 120, y + 66, '5.5px monospace', '#2b2230');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 168, y + 34, ['merged 🍃', 'PR #' + (100 + Math.floor(Math.random() * 900)), 'git push', 'hoo-ray'], '#166534');
+      if (Math.random() < dt * 0.4) puff(x + rand(110, 225), y + 70, { kind: 'text', text: '🍂', vx: rand(-6, 6), vy: 18, life: 2.2, color: '#000', font: '8px system-ui' }); } },
+  valet: { label: 'CURSED JUNK', name: 'the Cursed Junk', tint: '#d3c1d1', anim: 'fix',
+    lines: ['It was fine until it wasn\'t.', 'The doll moved again.', 'Ticket #666... again.', 'Did you try an exorcism?'],
+    draw(x, y, t, on) {
+      E(x + 114, y + 98, 17, 34, '#6b4f36'); E(x + 114, y + 98, 13, 30, '#bcd0d8');
+      L(x + 108, y + 72, x + 116, y + 94, '#fff', 1); L(x + 116, y + 94, x + 110, y + 110, '#fff', 1); L(x + 116, y + 94, x + 124, y + 100, '#fff', 1);
+      poly([x + 122, y + 72, x + 128, y + 80, x + 120, y + 86], '#e8f1f4'); poly([x + 104, y + 118, x + 108, y + 126, x + 112, y + 118], '#9fb6c0');
+      poly([x + 104, y + 144, x + 112, y + 134, x + 124, y + 134, x + 118, y + 144], '#bcd0d8');
+      const sh = on ? Math.sin(t * 40) * 1.2 : 0;
+      RR(x + 142 + sh, y + 130, 48, 26, 3, '#5a3a22'); R(x + 142 + sh, y + 138, 48, 3, '#d4a548'); R(x + 164 + sh, y + 136, 4, 7, '#d4a548');
+      RR(x + 142 + sh, y + 124, 48, 8, [4, 4, 0, 0], '#6b4528');
+      if (on) { R(x + 143 + sh, y + 131, 46, 1.5, '#7cff6b'); }
+      const hx = Math.sin(t * (on ? 2.2 : 0.6)) * 3.5;
+      R(x + 158, y + 108, 14, 16, '#c4565e'); RR(x + 155, y + 122, 20, 3, 1, '#f0e0d0'); E(x + 165 + hx, y + 98, 9, 9, '#f2e2d2');
+      C(x + 161.5 + hx * 1.3, y + 97, 2, '#111'); C(x + 168.5 + hx * 1.3, y + 97, 2, '#111'); L(x + 162 + hx, y + 104, x + 169 + hx, y + 104, '#a02030', 1.2);
+      L(x + 156, y + 91, x + 160, y + 88, '#222', 3); L(x + 174, y + 91, x + 170, y + 88, '#222', 3);
+      const rg = on ? Math.sin(t * 35) * 1.4 : 0;
+      RR(x + 198 + rg, y + 130, 30, 24, 4, '#1c1c22'); C(x + 213 + rg, y + 143, 7, '#3a3a44'); C(x + 213 + rg, y + 143, 3, '#9ca3af');
+      RR(x + 198 + rg, y + 122 - Math.abs(rg), 30, 6, 3, '#111'); R(x + 198 + rg, y + 128, 4, 3, '#111'); R(x + 224 + rg, y + 128, 4, 3, '#111');
+    },
+    tick(x, y, w, dt, t) {
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 5; i++) puff(x + 166, y + 132, { kind: 'spark', vx: rand(-60, 60), vy: rand(-100, -20), ay: 300, life: 0.4, color: pick(['#7cff6b', '#c4b5fd']) });
+      if (Math.random() < dt * 0.3) popText(x + 213, y + 112, ['RING!', 'RING RING!', 'it\'s for you...'], '#7c3aed');
+      if (Math.random() < dt * 0.15) popText(x + 165, y + 84, ['creeeak', 'it blinked', '👁'], '#6b21a8');
+    } },
+  bakery: { label: "WITCH'S CAULDRON", name: "the Witch's Cauldron", tint: '#c4d6bb', anim: 'stir',
+    lines: ['SELECT eye_of_newt...', 'Double, double, no trouble.', 'Missing index of bat wing.', 'Ready for you to taste.'],
+    draw(x, y, t, on) {
+      const cx = x + 184, fl = i => (on ? 6 + Math.sin(t * 13 + i * 2) * 3 : 4);
+      R(x + 150, y + 160, 68, 6, '#3f2f22'); R(x + 156, y + 166, 56, 5, '#52402c');
+      for (let i = 0; i < 4; i++) poly([x + 158 + i * 16, y + 160, x + 166 + i * 16, y + 160 - 16 - fl(i), x + 174 + i * 16, y + 160], i % 2 ? '#fb923c' : '#fbbf24');
+      L(x + 160, y + 140, x + 154, y + 160, '#2a2a30', 3); L(x + 208, y + 140, x + 214, y + 160, '#2a2a30', 3);
+      E(cx, y + 128, 34, 26, '#1f1f26'); E(cx - 8, y + 122, 14, 14, '#2c2c36');
+      E(cx, y + 108, 36, 8, '#2a2a33'); E(cx, y + 108, 31, 6, '#4fbf37'); E(cx - 6, y + 107, 14, 3, '#7ee05a');
+      for (let i = 0; i < 5; i++) { const k = on ? ((t * 0.6 + i * 0.2) % 1) : 0.4 + i * 0.07, bx = cx - 20 + i * 10 + Math.sin(t + i) * 2;
+        g.globalAlpha = on ? 1 - k : 0.7; C(bx, y + 106 - k * 18, 1.5 + (i % 3), '#9cff7a'); g.globalAlpha = 1; }
+      RR(x + 98, y + 62, 52, 40, 2, '#f1e6c8', '#8a6a3a', 1.5); L(x + 124, y + 62, x + 124, y + 102, '#8a6a3a', 1);
+      TXT('SELECT', x + 111, y + 72, 'bold 5.5px monospace', '#7f1d1d'); TXT('eye_of_newt', x + 111, y + 80, '4.6px monospace', '#3b2a1a');
+      TXT('FROM', x + 137, y + 72, 'bold 5.5px monospace', '#7f1d1d'); TXT('pantry;', x + 137, y + 80, '5px monospace', '#3b2a1a');
+      R(x + 102, y + 88, 44, 1.5, 'rgba(60,40,20,.5)'); R(x + 102, y + 93, 30, 1.5, 'rgba(60,40,20,.5)');
+      L(x + 124, y + 102, x + 124, y + 150, '#5a3a22', 3); R(x + 114, y + 150, 20, 4, '#5a3a22');
+      if (on) { const c = Math.floor(t * 2) % 2; E(x + 111, y + 64.5, 2, 2, c ? '#fde047' : '#c4b5fd'); }
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 1.5) puff(x + rand(165, 205), y + 100, { vy: -20, vx: rand(-5, 5), grow: 3, life: 1.6, size: 3, color: 'rgba(130,230,100,.45)' });
+      if (Math.random() < dt * 0.3) popText(x + 184, y + 84, ['(3 newts affected)', 'bubble bubble', 'Query brewed ✓', 'Msg 208: no toads?!'], '#15803d'); } },
+  garden: { label: 'GRAVEDIGGING', name: 'the Graveyard Shift', tint: '#c7cfb2', anim: 'chop',
+    lines: ['Burying the dacpac...', 'Dig. Deploy. Repeat.', 'Rollback script? What rollback...', 'Schema compare looks dead.'],
+    draw(x, y, t, on) {
+      R(x + 96, y + 150, 138, 34, '#5a4632'); R(x + 96, y + 150, 138, 3, '#6d5740');
+      RR(x + 98, y + 106, 32, 46, [16, 16, 0, 0], '#9a97a6', '#6e6a7c', 1.2);
+      TXT('RIP', x + 114, y + 117, 'bold 6px system-ui', '#4a4658'); TXT('DEPLOYED', x + 114, y + 129, 'bold 4.8px system-ui', '#4a4658');
+      E(x + 170, y + 152, 32, 9, '#1a1410'); R(x + 138, y + 152, 64, 20, '#1a1410');
+      L(x + 140, y + 90, x + 140, y + 152, '#5a3a22', 3.5); L(x + 200, y + 90, x + 200, y + 152, '#5a3a22', 3.5); R(x + 134, y + 86, 72, 5, '#5a3a22');
+      const k = on ? (t * 0.25) % 1 : 0.35, cy = y + 94 + k * 50;
+      L(x + 152, y + 91, x + 152, cy + 3, '#c9b48a', 1.2); L(x + 188, y + 91, x + 188, cy + 3, '#c9b48a', 1.2);
+      poly([x + 148, cy + 4, x + 156, cy, x + 184, cy, x + 192, cy + 4, x + 184, cy + 14, x + 156, cy + 14], '#6b3f24');
+      TXT('dacpac', x + 170, cy + 7.5, 'bold 5px system-ui', '#f5e9c8');
+      poly([x + 132, y + 152, x + 208, y + 152, x + 212, y + 156, x + 128, y + 156], '#6d5740'); R(x + 128, y + 156, 84, 28, '#5a4632');
+      E(x + 220, y + 168, 18, 15, '#6d5740'); E(x + 214, y + 170, 10, 8, '#7a634a');
+      L(x + 218, y + 122, x + 224, y + 160, '#7a5a34', 3); poly([x + 220, y + 158, x + 232, y + 154, x + 230, y + 166, x + 222, y + 168], '#9aa0a8');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 1.2) puff(x + 220, y + 150, { vx: rand(-30, 30), vy: rand(-70, -30), ay: 200, life: 0.6, size: 1.6, color: '#6d5740' });
+      if (Math.random() < dt * 0.3) popText(x + 170, y + 80, ['Deployed ✓', 'dacpac: 6ft under', 'Publish OK', '🪦 schema ✓'], '#365314'); } },
+  pizza: { label: 'MAD LAB', name: 'the Mad Lab', tint: '#c6d4cf', anim: 'dial',
+    lines: ['Flipping the big lever!', 'Which client is this for?!', 'Config updated! MUAHAHA!', 'More POWER!'],
+    draw(x, y, t, on) {
+      [[104, '#5ef08a'], [124, '#c084fc'], [144, '#fb923c']].forEach(([tx, c], i) => {
+        RR(x + tx, y + 34, 14, 42, 4, 'rgba(210,235,245,.55)', '#7a8a96', 1.2); RR(x + tx + 1.5, y + 50 - i * 3, 11, 24 + i * 3, 3, c);
+        for (let j = 0; j < 3; j++) { const k = on ? ((t * 0.5 + j * 0.33 + i * 0.2) % 1) : 0.5; C(x + tx + 4 + j * 3, y + 70 - k * 30, 1.2, 'rgba(255,255,255,.85)'); } });
+      RR(x + 98, y + 86, 78, 70, 4, '#3a3f4a', '#232730', 1.5); R(x + 102, y + 90, 70, 4, '#4b5567');
+      for (let i = 0; i < 3; i++) {
+        const bx = x + 116 + i * 22, a = on ? Math.sin(t * 1.4 + i * 2) * 0.7 : (i - 1) * 0.5;
+        RR(bx - 5, y + 128, 10, 14, 2, '#1f2430'); L(bx, y + 134, bx + Math.sin(a) * 18, y + 134 - Math.cos(a) * 18, '#cbd5e1', 3);
+        C(bx + Math.sin(a) * 18, y + 134 - Math.cos(a) * 18, 4, '#dc2626');
+      }
+      for (let i = 0; i < 6; i++) C(x + 108 + i * 12, y + 106, 2.5, on && (Math.floor(t * 4) + i) % 3 === 0 ? '#facc15' : '#5a5f6b');
+      R(x + 194, y + 150, 36, 6, '#3a3f4a');
+      L(x + 202, y + 150, x + 208, y + 64, '#b8bcc6', 2); L(x + 222, y + 150, x + 216, y + 64, '#b8bcc6', 2);
+      if (on) { const k = (t * 0.8) % 1, sy = y + 148 - k * 82, hw = 7 + (1 - k) * 12 - 1;
+        g.beginPath(); g.moveTo(x + 212 - hw, sy); for (let i = 1; i <= 5; i++) g.lineTo(x + 212 - hw + i * hw * 0.4, sy - 3 + (hh(i + Math.floor(t * 20)) % 6));
+        g.strokeStyle = '#a5f3fc'; g.lineWidth = 1.8; g.stroke(); g.globalAlpha = 0.25; C(x + 212, sy, 9, '#a5f3fc'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 1.5) puff(x + 212, y + rand(70, 140), { kind: 'spark', vx: rand(-40, 40), vy: rand(-40, 20), life: 0.25, color: '#a5f3fc' });
+      if (Math.random() < dt * 0.3) popText(x + 160, y + 30, ['BZZT!', 'config pushed ⚡', 'lever pulled', 'appsettings.EVIL'], '#7e22ce'); } },
+  easel: { label: 'SNAKE PIT', name: 'the Snake Pit', tint: '#cdd2a4', anim: 'review',
+    lines: ['Hiss... a bare except.', 'sss-yntax error.', 'Could be a list comprehension.', 'PEP 8 sssays hi.'],
+    draw(x, y, t, on) {
+      RR(x + 108, y + 28, 100, 44, 3, '#efe0b4', '#9a7a42', 1.5); R(x + 104, y + 26, 108, 4, '#6b4f36'); R(x + 104, y + 70, 108, 4, '#6b4f36');
+      const code = ['def bite(self):', '  try: venom()', '  except: pass', '  return "LGTM"'], hl = on ? Math.floor(t * 0.7) % 4 : -1;
+      code.forEach((s, i) => { if (i === hl) R(x + 111, y + 34 + i * 9, 94, 8, 'rgba(255,212,59,.55)'); TXT(s, x + 113, y + 38 + i * 9, '5.5px monospace', i === 2 ? '#991b1b' : '#3b2f1a', 'left'); });
+      E(x + 168, y + 154, 64, 22, '#6b6670'); E(x + 168, y + 150, 54, 17, '#16121a');
+      const snake = (cx, len, ph, c1, c2) => {
+        for (let i = len; i >= 0; i--) { const px = cx + Math.sin(i * 0.55 + ph) * 6, py = y + 148 - i * 3.2; C(px, py, 3.6 - i * 0.03, c2 && i % 3 === 0 ? c2 : c1); }
+        const hx = cx + Math.sin(len * 0.55 + ph) * 6, hy = y + 148 - len * 3.2; E(hx, hy - 2, 4.6, 3.6, c1); C(hx - 1.8, hy - 3, 1, '#fde047'); C(hx + 1.8, hy - 3, 1, '#fde047');
+        if (Math.sin(t * 5 + cx) > 0.2) L(hx, hy - 5, hx + Math.sin(t * 20) * 2, hy - 9, '#e11d48', 1);
+      };
+      const p = on ? t * 2.5 : 0.7;
+      snake(x + 140, 16, p, '#3f8f3a'); snake(x + 196, 14, p + 2, '#7c3aed', '#c4b5fd'); snake(x + 168, 20, p + 4, '#2563eb', '#facc15'); snake(x + 154, 9, p + 1, '#a16207'); snake(x + 184, 8, p + 3, '#3f8f3a');
+      g.beginPath(); g.ellipse(x + 168, y + 153, 56, 19, 0, 0.05, Math.PI - 0.05); g.strokeStyle = '#7d7885'; g.lineWidth = 8; g.lineCap = 'butt'; g.stroke();
+      for (let i = 0; i < 6; i++) { const a = 0.35 + i * 0.5; L(x + 168 + Math.cos(a) * 52, y + 153 + Math.sin(a) * 17, x + 168 + Math.cos(a) * 59, y + 153 + Math.sin(a) * 20, '#5a5560', 1); }
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 158, y + 24, ['LGTM ✓', '# nit: sssspacing', 'PEP 8!', 'needs a test'], '#166534');
+      if (Math.random() < dt * 0.25) popText(x + 168, y + 96, ['ssss', 'hisss'], '#3f6212'); } },
+  lumber: { label: 'THE DUNGEON', name: 'the Dungeon', tint: '#1d1926', anim: 'scared',
+    lines: ['Who wrote this?!', "Don't wake it up...", 'Why is this 4,000 lines?', 'Abandon all hope.'],
+    draw(x, y, t, on) {
+      RR(x + 96, y + 26, 138, 158, 8, '#14111b');
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) { const bx = x + 98 + c * 34 + (r % 2 ? 17 : 0); if (bx + 32 < x + 234 && bx > x + 96) RR(bx, y + 30 + r * 19, 32, 17, 2, null, '#26212f', 1); }
+      R(x + 96, y + 160, 138, 24, '#1e1a26');
+      const ey = y + 96 + Math.sin(t * 0.8) * 2, blink = (t % 4.5) > 0.14, er = on ? 2.6 : 1.8;
+      if (blink) { E(x + 150, ey, 3.4, er, '#ff2a2a'); E(x + 164, ey, 3.4, er, '#ff2a2a'); }
+      if (blink && (t % 7) < 3.5) { E(x + 196, ey + 22, 2.6, 2, '#fde047'); E(x + 206, ey + 22, 2.6, 2, '#fde047'); }
+      C(x + 212, y + 150, 7, '#e7e5e4'); R(x + 208, y + 154, 8, 4, '#e7e5e4'); C(x + 209.5, y + 149, 1.8, '#14111b'); C(x + 214.5, y + 149, 1.8, '#14111b');
+      L(x + 212, y + 158, x + 222, y + 172, '#d6d3d1', 2); L(x + 206, y + 162, x + 226, y + 163, '#d6d3d1', 1.6); L(x + 208, y + 166, x + 228, y + 167, '#d6d3d1', 1.6);
+      L(x + 222, y + 172, x + 232, y + 178, '#d6d3d1', 2); L(x + 214, y + 160, x + 200, y + 176, '#d6d3d1', 2);
+      for (let i = 0; i < 7; i++) R(x + 110 + i * 18, y + 26, 3, 134, '#6b6475');
+      R(x + 104, y + 62, 126, 3, '#58525f'); R(x + 104, y + 128, 126, 3, '#58525f');
+      for (const cx of [x + 108, x + 226]) { for (let i = 0; i < 6; i++) RR(cx - 2 + (i % 2) * 1.5, y + 28 + i * 7, 4, 6, 2, null, '#8d8798', 1.2);
+        const sw = Math.sin(t * 0.9 + cx) * 1.5; RR(cx - 4 + sw, y + 70, 8, 7, 2, '#58525f'); }
+      const dy = y + 32 + ((t * 38) % 126); E(x + 134, dy, 1.4, 2.4, '#7dd3fc');
+      E(x + 134, y + 170, 10, 2.5, '#2a3a48'); const rp = (t * 0.8) % 1; g.beginPath(); g.ellipse(x + 134, y + 170, 4 + rp * 9, 1 + rp * 2, 0, 0, TAU); g.strokeStyle = 'rgba(125,211,252,' + (0.5 - rp * 0.5) + ')'; g.lineWidth = 0.8; g.stroke();
+      const fl = on ? 0.8 + Math.sin(t * 23) * 0.2 : 0.65;
+      L(x + 226, y + 150, x + 226, y + 168, '#5b4222', 3); L(x + 226, y + 150, x + 226, y + 146, '#8a6a3a', 5);
+      poly([x + 222, y + 146, x + 226, y + 130 - fl * 6, x + 230, y + 146], '#fb923c'); poly([x + 224, y + 146, x + 226, y + 136 - fl * 4, x + 228, y + 146], '#fde047');
+      g.globalAlpha = 0.14 * fl; C(x + 226, y + 142, 26, '#ffb347'); g.globalAlpha = 1;
+      if (on && (t % 11) < 0.12) { g.globalAlpha = 0.3; R(x + 96, y + 26, 138, 158, '#e9e3ff'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.25) puff(x + 170, y + 90, { kind: 'text', text: '🦇', vx: rand(-40, 40), vy: rand(-40, -15), life: 1.6, color: '#000', font: '12px system-ui' });
+      if (Math.random() < dt * 0.12) popText(w.x + 8, w.y - 66, ['eek!', '😱', 'gulp', 'nope'], '#fff');
+    } },
+  lab: { label: 'POTION TESTING', name: 'Potion Testing', tint: '#d0c4e0', anim: 'stir',
+    lines: ['Drinking the test batch...', 'Flaky potion again.', 'All green! Probably.', 'This one just exploded.'],
+    draw(x, y, t, on) {
+      const fail = on && Math.floor(t * 0.5) % 4 === 3;
+      RR(x + 160, y + 28, 72, 24, 3, '#111'); TXT(fail ? '☠ FAILED' : '✓ PASSED', x + 196, y + 40, 'bold 8px monospace', fail ? '#ef4444' : '#22c55e');
+      const flask = (px, py, h, c, w) => { R(px - 2, py - h - 5, 4, 5, 'rgba(210,225,235,.8)'); R(px - 1.5, py - h - 8, 3, 3, '#8a6a3a'); E(px, py - h / 2 + 1, w, h / 2, 'rgba(210,225,235,.6)'); E(px, py - h / 3 + 1, w - 1.5, h / 3, c); };
+      R(x + 98, y + 86, 134, 4, '#6b4f36'); R(x + 98, y + 126, 134, 4, '#6b4f36');
+      ['#a855f7', '#22c55e', '#f97316', '#38bdf8', '#ef4444', '#facc15', '#22c55e'].forEach((c, i) => flask(x + 108 + i * 19, y + 86, 16, c, 6));
+      ['#38bdf8', '#a855f7', '#22c55e', '#f97316', '#ef4444'].forEach((c, i) => { if (i !== 2) flask(x + 112 + i * 26, y + 126, 15, c, 6); });
+      R(x + 98, y + 154, 134, 6, '#6b4f36'); R(x + 104, y + 160, 5, 22, '#52402c'); R(x + 221, y + 160, 5, 22, '#52402c');
+      flask(x + 164, y + 154, 24, '#4ade80', 11);
+      const k = on ? (Math.sin(t * 5) * 0.5 + 0.5) : 0.2;
+      E(x + 164, y + 124 - k * 3, 9 + k * 3, 4 + k * 2, '#bbf7d0'); C(x + 156, y + 124 - k * 4, 3, '#bbf7d0'); C(x + 172, y + 124 - k * 4, 3, '#bbf7d0');
+      if (on) for (let i = 0; i < 2; i++) { const d = (t * 0.7 + i * 0.5) % 1; L(x + 154 + i * 20, y + 126 + d * 24, x + 154 + i * 20, y + 129 + d * 24, '#4ade80', 2); }
+      TXT('💀', x + 208, y + 142, '12px system-ui', '#000');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 1.5) puff(x + rand(158, 170), y + 122, { vy: -25, vx: rand(-6, 6), life: 0.9, size: 2, color: 'rgba(120,230,150,.8)' });
+      if (Math.random() < dt * 0.3) popText(x + 140, y + 74, ['✓ PASS', '✓ PASS', '☠ FAIL', 'fizz!'], '#15803d'); } },
+  servers: { label: "IGOR'S WORKSHOP", name: "Igor's Workshop", tint: '#c1b8a2', anim: 'fix',
+    lines: ['Yes, Master. Fixing it, Master.', 'Have you tried a new cable?', 'It\'s always the dock...', 'Eye-gor to reboot it.'],
+    draw(x, y, t, on) {
+      L(x + 130, y + 26, x + 130, y + 110, '#3a2f26', 5); L(x + 214, y + 26, x + 214, y + 110, '#3a2f26', 5); R(x + 126, y + 30, 92, 6, '#3a2f26');
+      gear(x + 150, y + 62, 17, 10, on ? t * 1.2 : 0.3, '#b08d3a'); gear(x + 182, y + 48, 11, 8, on ? -t * 1.8 : 0.1, '#8a6f2c'); gear(x + 200, y + 80, 14, 9, on ? t * 1.4 : 0.6, '#c9a548');
+      RR(x + 98, y + 124, 6, 34, 2, '#3a2f26'); RR(x + 218, y + 124, 6, 34, 2, '#3a2f26');
+      poly([x + 100, y + 122, x + 226, y + 118, x + 226, y + 128, x + 100, y + 132], '#7b6a55'); L(x + 106, y + 130, x + 110, y + 156, '#3a2f26', 4); L(x + 216, y + 128, x + 214, y + 156, '#3a2f26', 4);
+      E(x + 156, y + 114, 30, 8, '#e5dfd0'); E(x + 140, y + 112, 12, 6, '#eee9dc'); E(x + 178, y + 117, 5, 3, '#c4a58a'); E(x + 186, y + 118, 5, 3, '#c4a58a');
+      L(x + 190, y + 70, x + 190, y + 100, '#555', 1.5); R(x + 186, y + 100, 8, 5, '#9ca3af');
+      g.beginPath(); g.moveTo(x + 214, y + 40); g.bezierCurveTo(x + 232, y + 70, x + 200, y + 90, x + 194, y + 102); g.strokeStyle = '#111'; g.lineWidth = 1.6; g.stroke();
+      if (on && Math.sin(t * 17) > 0.1) { L(x + 190, y + 105, x + 186 + (hh(Math.floor(t * 20)) % 10), y + 114, '#fff6a8', 2); C(x + 190, y + 105, 3, '#fff6a8'); }
+      L(x + 232, y + 86, x + 232, y + 110, '#555', 3); C(x + 232, y + 84, 4, '#dc2626');
+      RR(x + 100, y + 160, 28, 12, 2, '#dc2626'); R(x + 108, y + 157, 10, 3, '#7f1d1d'); L(x + 102, y + 166, x + 126, y + 166, '#7f1d1d', 1);
+    },
+    tick(x, y, w, dt, t) {
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 190, y + 106, { kind: 'spark', vx: rand(-80, 80), vy: rand(-110, -20), ay: 300, life: 0.4, color: pick(['#ffd23f', '#a5f3fc']) });
+      if (Math.random() < dt * 0.25) popText(x + 160, y + 22, ['creeeak', 'Yes, Master?', 'clank!', '🔧 driver ✓'], '#5b4222');
+    } },
+  packing: { label: 'COFFIN SHIPPING', name: 'Coffin Shipping', tint: '#d4c6b2', anim: 'pack',
+    lines: ['Next-night undead delivery.', 'Status: in transit.', 'Signature required: just a bat.', 'Tracking number: 666.'],
+    draw(x, y, t, on) {
+      const coffin = (cx, cy, c) => { poly([cx, cy + 5, cx + 8, cy, cx + 30, cy, cx + 38, cy + 5, cx + 30, cy + 15, cx + 8, cy + 15], c); L(cx + 16, cy + 3, cx + 16, cy + 12, shade(c, 0.16), 1.5); L(cx + 12, cy + 6, cx + 20, cy + 6, shade(c, 0.16), 1.5); };
+      RR(x + 98, y + 30, 66, 30, 2, '#f1e6c8', '#8a6a3a', 1.2); TXT('SHIP TO:', x + 131, y + 39, 'bold 6px system-ui', '#7f1d1d'); TXT('TRANSYLVANIA', x + 131, y + 50, 'bold 6.5px system-ui', '#1f1a14');
+      RR(x + 172, y + 30, 60, 52, 3, '#1b1823', '#58525f', 1.5); TXT('TRACKING', x + 202, y + 37, 'bold 5.5px system-ui', '#a8a2b8');
+      g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x + 180, y + 74); g.bezierCurveTo(x + 192, y + 44, x + 208, y + 74, x + 224, y + 48); g.strokeStyle = '#6b6475'; g.lineWidth = 1.4; g.stroke(); g.setLineDash([]);
+      C(x + 180, y + 74, 2.2, '#22c55e'); TXT('🏰', x + 224, y + 48, '8px system-ui', '#fff');
+      const kk = on ? (t * 0.1) % 1 : 0.5, q = 1 - kk;
+      TXT('🦇', x + q * q * q * 180 + 3 * q * q * kk * 192 + 3 * q * kk * kk * 208 + kk * kk * kk * 224, y + q * q * q * 74 + 3 * q * q * kk * 44 + 3 * q * kk * kk * 74 + kk * kk * kk * 48, '8px system-ui', '#fff');
+      R(x + 98, y + 142, 92, 8, '#2f2c36'); R(x + 98, y + 150, 92, 2, '#1a1820');
+      for (let i = 0; i < 8; i++) { const rx = x + 102 + ((i * 12 + (on ? t * 20 : 0)) % 88); L(rx, y + 143, rx, y + 149, '#4a4654', 1); }
+      for (const lx of [104, 182]) { L(x + lx, y + 152, x + lx, y + 170, '#3a3644', 3); C(x + lx, y + 146, 0, '#000'); }
+      coffin(x + 102 + (on ? (t * 14) % 52 : 30), y + 127, '#6b3f24');
+      coffin(x + 194, y + 168, '#5a3320'); coffin(x + 194, y + 152, '#7a4a2c'); coffin(x + 196, y + 136, '#6b3f24');
+      RR(x + 202, y + 154, 22, 9, 1, '#f1e6c8'); TXT('666', x + 213, y + 158.5, 'bold 5px system-ui', '#7f1d1d');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.4) puff(x + rand(110, 160), y + 140, { vx: rand(-8, 8), vy: -12, grow: 2, life: 1, size: 2, color: 'rgba(120,110,100,.4)' });
+      if (Math.random() < dt * 0.3) popText(x + 150, y + 112, ['📦 in transit', 'Tracking #666', 'Shipped ⚰', 'Delivered: dusk'], '#7c2d12'); } },
+};
+for (const set of [DEV, SCIFI, HORROR]) STATION_ORDER.forEach(id => {
+  const c = STA[id], d = set[id];
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
 });
 // Server work areas (see AREA_RULES in server.py) -> the slot a Dev Shop worker goes to.
 const AREA_SLOT = { ado: 'workbench', azure: 'forge', github: 'dairy', support: 'valet', sql: 'bakery', dbproj: 'garden',
   impl: 'pizza', python: 'easel', service: 'lumber', qa: 'lab', hardware: 'servers', tracking: 'packing' };
-const THEMES = { classic: { name: 'Classic Office', stations: STA }, dev: { name: 'Dev Shop', stations: DEV } };
+// A theme: its 12 stations, whether workers follow the work area (routed), optional
+// costumes, a color wash over the static rooms and animated decor.
+const THEMES = {
+  classic: { name: 'Classic Office', stations: STA },
+  dev: { name: 'Dev Shop', stations: DEV, routed: true },
+  scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
+  horror: { name: 'Haunted House', stations: HORROR, routed: true, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
+};
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
 function themeStations() { return THEMES[THEME].stations; }
@@ -919,6 +1440,12 @@ function themeStations() { return THEMES[THEME].stations; }
 // ============================================================================================
 function hairBack(Lk, view, hy) {
   const hc = Lk.hair, st = Lk.hairStyle;
+  if (Lk.collar && view !== 'back') {     // Dracula's high collar, behind the head
+    if (view === 'side') poly([-3, hy + 9, -9, hy - 5, -2, hy + 5], Lk.capeLining);
+    else { poly([-6, hy + 8, -12, hy - 5, -4, hy + 5], Lk.capeLining); poly([6, hy + 8, 12, hy - 5, 4, hy + 5], Lk.capeLining); }
+  }
+  if (st === 'none') return;
+  if (st === 'hood') { E(0, hy, 11.5, 12, hc); return; }
   if (st === 'afro') C(0, hy - 3, 12.5, hc);
   else if (st === 'long' || st === 'braid') { if (view !== 'back') RR(-9.5, hy - 3, 19, 13, 4, hc); }
   else if (st === 'bob') { if (view !== 'back') RR(-10, hy - 4, 20, 10, 4, hc); }
@@ -930,7 +1457,8 @@ function hairBack(Lk, view, hy) {
 }
 function hairFront(Lk, view, hy) {
   const hc = Lk.hair, st = Lk.hairStyle;
-  if (st === 'hijab') {
+  if (st === 'none') return;
+  if (st === 'hijab' || st === 'hood') {
     if (view === 'back') { C(0, hy, 10.5, hc); return; }
     g.beginPath();
     if (view === 'side') { g.arc(-0.5, hy, 10, Math.PI * 0.55, Math.PI * 1.95); g.closePath(); }
@@ -954,6 +1482,8 @@ function hairFront(Lk, view, hy) {
   else { g.arc(0, hy - 1, st === 'fade' ? 8.8 : 9.2, Math.PI * 1.02, Math.PI * 1.98); g.closePath(); }
   g.fillStyle = hc; g.fill();
   if (view === 'front' && st !== 'fade' && st !== 'afro') { R(-8.8, hy - 2, 2.4, 5, hc); R(6.4, hy - 2, 2.4, 5, hc); }
+  if (st === 'widow' && view === 'front') poly([-3.5, hy - 5, 3.5, hy - 5, 0, hy - 1.5], hc);
+  if (st === 'flattop') R(-9, hy - 13, 18, 7, hc);
   if (st === 'spiky') for (let i = -6; i <= 6; i += 3) poly([i - 2, hy - 7, i + 2, hy - 7, i * 1.15, hy - 13.5], hc);
   if (st === 'afro' && view !== 'back') { /* back part carries the shape */ }
   if (st === 'afro' && view === 'back') C(0, hy - 3, 12.5, hc);
@@ -993,6 +1523,11 @@ function drawItem(it, hx, hy, ang, st) {
       else if (it === 'paddle') { L(0, 0, 0, 5, '#8b5a2b', 2.4); E(0, 9, 4.5, 5.5, '#d63c3c'); }
       else if (it === 'brush') { L(0, -2, 0, 12, '#c08b5c', 1.6); C(0, 13, 1.8, '#e74c3c'); }
       else if (it === 'rod') { L(0, -2, 0, 16, 'rgba(220,240,255,.95)', 1.5); }
+      else if (it === 'saber') {
+        L(0, -3, 0, 4, '#9aa3ad', 2.8); L(0, -1, 0, 1, '#333', 2.8);
+        g.globalAlpha = 0.35 + Math.sin(T * 30) * 0.05; L(0, 5, 0, 28, st.saberColor || '#4da3ff', 5.5); g.globalAlpha = 1;
+        L(0, 5, 0, 28, '#fff', 1.6);
+      }
       else if (it === 'pointer') { L(0, -2, 0, 22, '#3b2a1a', 1.4); C(0, 22, 1.4, '#e74c3c'); }
       else if (it === 'wrench') { L(0, -2, 0, 13, '#9aa3ad', 2.4); C(0, 15, 3.6, '#9aa3ad'); R(-1.1, 14, 2.2, 5, '#6b7280'); }
       else if (it === 'magnifier') { L(0, -1, 0, 7, '#5b3a1a', 2.2); C(0, 12, 5, 'rgba(190,230,255,.55)'); g.beginPath(); g.arc(0, 12, 5, 0, TAU); g.strokeStyle = '#333'; g.lineWidth = 1.4; g.stroke(); }
@@ -1012,6 +1547,7 @@ function drawPerson(Lk, x, y, st) {
   else E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
   if (f === 'left') g.scale(-1, 1);
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
+  if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
   const walking = st.moving && pose === 'stand';
   if (walking) g.translate(0, -Math.abs(Math.sin(st.walk)) * 1.6);
   const bo = pose === 'sit' ? 6 : pose === 'chair' ? 4 : 0;
@@ -1025,6 +1561,11 @@ function drawPerson(Lk, x, y, st) {
     if (!side) { E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); }
   }
   // legs
+  if (Lk.cape && !back) {                  // cape behind the body (front of it when seen from the back)
+    const cty = -37 + bo;
+    if (side) poly([-2, cty + 2, -6, cty + 1, -13, -2, -2, -2], Lk.cape);
+    else { poly([-10, cty + 2, 10, cty + 2, 14, -2, -14, -2], Lk.cape); poly([-8, cty + 4, 8, cty + 4, 11, -3, -11, -3], Lk.capeLining); }
+  }
   const s = st.moving ? Math.sin(st.walk) : 0;
   if (pose === 'stand') {
     if (side) {
@@ -1038,7 +1579,8 @@ function drawPerson(Lk, x, y, st) {
       if (mob === 'crutches') R(0.5, -9 - l2, 4.5, 7, '#f4f4f4');
     }
     if (Lk.skirt) {
-      if (side) poly([-5, -18, 5, -18, 6.5, -8, -6.5, -8], pants); else poly([-7, -18, 7, -18, 8.5, -8, -8.5, -8], pants);
+      const sb = Lk.hood ? -1 : -8;     // a wizard's robe goes to the floor
+      if (side) poly([-5, -18, 5, -18, 6.5, sb, -6.5, sb], pants); else poly([-7, -18, 7, -18, 8.5, sb, -8.5, sb], pants);
     }
   } else if (pose === 'sit' || pose === 'chair') {
     const hipY = pose === 'chair' ? -14 : -10;
@@ -1078,6 +1620,22 @@ function drawPerson(Lk, x, y, st) {
     for (let j = 0; j <= 22; j += 4) L(-8, ty + j, 8, ty + j, 'rgba(0,0,0,.18)', 1);
     g.restore();
   }
+  if (Lk.patch) {                         // astronaut: mission patch, belt, life-support pack
+    if (!back) R(side ? -1 : 2, ty + 5, 4, 4, Lk.patch);
+    R(side ? -6 : -8, ty + 15, side ? 12 : 16, 2.5, '#9aa3ad');
+    if (back) RR(-7, ty + 2, 14, 16, 3, '#c9ced6');
+  }
+  if (Lk.wraps) {
+    g.save(); g.beginPath(); g.roundRect(side ? -6 : -8, ty, side ? 12 : 16, 22, 4); g.clip();
+    for (let j = -2; j < 26; j += 4) L(-9, ty + j, 9, ty + j + 3, '#cbbf9f', 1.2);
+    g.restore();
+  }
+  if (Lk.ribs) {
+    const cx = side ? 1 : 0, w2 = side ? 3 : 5.5;
+    L(cx, ty + 3, cx, ty + 19, '#f2efe6', 1.4);
+    for (let j = 0; j < 4; j++) L(cx - w2, ty + 5 + j * 3.6, cx + w2, ty + 5 + j * 3.6, '#f2efe6', 1.2);
+  }
+  if (Lk.cape && back) poly([-10, ty + 1, 10, ty + 1, 14, -2, -14, -2], Lk.cape);
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], shade(Lk.shirt, -0.2));
   if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.shirt);
   else { arm(-7.5, st.la ?? 0.12, -1, Lk.shirt); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.shirt); }
@@ -1097,15 +1655,28 @@ function drawPerson(Lk, x, y, st) {
   if (!back) {
     const ex = side ? [4.5] : [-3, 3];
     for (const e of ex) {
-      if (st.eyesClosed || st.blink) L(e - 1.3, hy + 0.4, e + 1.3, hy + 0.4, '#2b2b2b', 1);
+      if (Lk.alienEyes) {
+        g.beginPath(); g.ellipse(side ? e : e * 1.15, hy + 0.3, 2.3, st.blink ? 0.4 : 3.4, side ? 0 : (e < 0 ? 0.45 : -0.45), 0, TAU);
+        g.fillStyle = '#0b0b0b'; g.fill(); C((side ? e : e * 1.15) + 0.6, hy - 1, 0.6, '#fff');
+      }
+      else if (Lk.skull) C(e, hy, 2.2, '#1b1b1b');
+      else if (st.eyesClosed || st.blink) L(e - 1.3, hy + 0.4, e + 1.3, hy + 0.4, '#2b2b2b', 1);
       else C(e, hy, 1.25, '#1b1b1b');
     }
+    if (Lk.skull) {
+      const nx = side ? 6.5 : 0; poly([nx - 1, hy + 2, nx + 1, hy + 2, nx, hy + 3.6], '#1b1b1b');
+      for (let i = -2; i <= 2; i++) L(nx + i * 1.2, hy + 5, nx + i * 1.2, hy + 6.5, '#1b1b1b', 0.6);
+    }
+    if (Lk.snout) { E(side ? 6 : 0, hy + 3.6, side ? 5 : 4.2, 2.8, shade(Lk.skin, 0.14)); C(side ? 10 : 0, hy + 2.4, 1.3, '#1b1b1b'); }
+    if (Lk.stitches) { L(-5, hy - 5, 5, hy - 5, '#2b2b2b', 0.7); for (let i = -4; i <= 4; i += 2) L(i, hy - 6, i, hy - 4, '#2b2b2b', 0.6); }
+    if (Lk.wraps) for (const [a, b] of [[-6, -4], [-2.5, -1.5], [3.5, 5]]) L(-8.5, hy + a, 8.5, hy + b, '#cbbf9f', 1.4);
     if (Lk.beard) { if (side) E(3, hy + 5, 5.5, 3.6, Lk.hair); else { g.beginPath(); g.ellipse(0, hy + 4.6, 6.8, 4.2, 0, 0, Math.PI); g.fillStyle = Lk.hair; g.fill(); } }
     if (Lk.mustache) R(side ? 3 : -3.5, hy + 2.3, side ? 4.5 : 7, 1.6, Lk.hair);
     const mc = Lk.beard ? '#e8b9a8' : '#6b2f2f';
     if (st.open) C(side ? 5.5 : 0, hy + 4, 1.7, '#5a1f1f');
     else if (side) L(4.5, hy + 4, 6.5, hy + 3.6, mc, 1);
     else { g.beginPath(); g.arc(0, hy + 2.6, st.happy ? 2.6 : 2, 0.2, Math.PI - 0.2); g.strokeStyle = mc; g.lineWidth = 1; g.stroke(); }
+    if (Lk.fangs) { const fx = side ? 5 : 0; poly([fx - 1.6, hy + 3.4, fx - 0.7, hy + 3.4, fx - 1.15, hy + 5], '#fff'); poly([fx + 0.7, hy + 3.4, fx + 1.6, hy + 3.4, fx + 1.15, hy + 5], '#fff'); }
     if (Lk.glasses) {
       g.strokeStyle = '#222'; g.lineWidth = 0.9; g.beginPath();
       if (side) { g.arc(4.5, hy, 2.6, 0, TAU); g.moveTo(2, hy - 0.5); g.lineTo(-3, hy - 1); }
@@ -1114,8 +1685,116 @@ function drawPerson(Lk, x, y, st) {
     }
   }
   hairFront(Lk, view, hy);
-  if (st.item) drawItem(st.item, hand[0], hand[1], st.ra ?? 0, st);
+  costumeTop(Lk, view, hy, side);
+  const item = st.item || (Lk.saber && !st.moving ? 'saber' : null);   // a space wizard's laser sword
+  if (item) { st.saberColor = Lk.saber; drawItem(item, hand[0], hand[1], st.ra ?? 0, st); }
   g.restore();
+}
+
+// ---- costumes: some themes dress the staff up (same people, same mobility aids) ----------
+function costumeTop(Lk, view, hy, side) {
+  if (Lk.bolts && !side) { R(-11, hy + 5, 3.2, 2.4, '#9aa3ad'); R(7.8, hy + 5, 3.2, 2.4, '#9aa3ad'); }
+  if (Lk.wolfEars) { poly([-8, hy - 4, -7, hy - 13, -2.5, hy - 7], Lk.hair); poly([8, hy - 4, 7, hy - 13, 2.5, hy - 7], Lk.hair); }
+  if (Lk.antennae) for (const d of [-1, 1]) { L(d * 3.5, hy - 7, d * 6.5, hy - 15, Lk.skin, 1.4); C(d * 6.5, hy - 15, 1.9, '#ffde59'); }
+  if (Lk.witchHat) {
+    E(0, hy - 6.5, 13, 3, '#1c1328'); poly([-7, hy - 7, 7, hy - 7, 3, hy - 21, 8, hy - 26, 0, hy - 22], '#1c1328');
+    R(-6.5, hy - 10.5, 13, 2.4, Lk.hatBand);
+  }
+  if (Lk.helmet) {
+    g.globalAlpha = 0.22; C(0, hy, 12.5, '#cfe8ff'); g.globalAlpha = 1;
+    g.beginPath(); g.arc(0, hy, 12.5, 0, TAU); g.strokeStyle = '#e6eef7'; g.lineWidth = 1.6; g.stroke();
+    g.beginPath(); g.arc(0, hy, 9.5, Math.PI * 1.15, Math.PI * 1.45); g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.4; g.stroke();
+    E(0, hy + 11, 9, 2.4, '#c9ced6');
+  }
+}
+// A ghost is a floating sheet, with a little sheet-arm holding whatever they're holding.
+function drawGhost(Lk, st, pose, view, side) {
+  const bob = -4 - Math.sin(T * 2.2 + (st.walk || 0)) * 2.5;
+  const top = (pose === 'sit' || pose === 'chair' ? -48 : -54) + bob, bot = -3 + bob;
+  g.globalAlpha = 0.93;
+  g.beginPath(); g.moveTo(-11, bot); g.lineTo(-11, top + 11); g.arc(0, top + 11, 11, Math.PI, 0); g.lineTo(11, bot);
+  for (let i = 0; i < 4; i++) g.quadraticCurveTo(11 - i * 5.5 - 2.75, bot + (i % 2 ? -4 : 4) + Math.sin(T * 4 + i) * 1.5, 11 - (i + 1) * 5.5, bot);
+  g.closePath(); g.fillStyle = '#f4f4ff'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.2)'; g.lineWidth = 0.8; g.stroke(); g.globalAlpha = 1;
+  if (view !== 'back') {
+    for (const e of side ? [4] : [-3.5, 3.5]) E(e, top + 10, 1.8, st.blink ? 0.3 : 2.8, '#1b1b1b');
+    E(side ? 5 : 0, top + 17, 1.6, st.open ? 2.4 : 1.4, '#1b1b1b');
+  }
+  const ra = st.ra ?? 0.12, shY = top + 22, hx = 8 + Math.sin(ra) * 10, hy = shY + Math.cos(ra) * 10;
+  L(7, shY, hx, hy, '#f4f4ff', 4);
+  if (st.item) drawItem(st.item, hx, hy, ra, st);
+}
+const _looks = {};
+// What a worker looks like in the current theme (cached per theme and worker).
+function lookOf(w) {
+  const set = THEMES[THEME].costumes; if (!set) return w.L;
+  const key = THEME + ':' + w.id;
+  return _looks[key] || (_looks[key] = dress(w.L, set[w.id % set.length], w.id));
+}
+function dress(L0, kind, id) {
+  const o = { ...L0, costume: kind };
+  const plain = { beard: false, mustache: false, glasses: false, plaid: false, skirt: false };
+  switch (kind) {
+    case 'astronaut': Object.assign(o, { shirt: '#eef1f5', pants: '#dfe3ea', plaid: false, skirt: false, helmet: true, patch: L0.shirt }); break;
+    case 'alien': Object.assign(o, plain, { skin: ['#7ed957', '#6fc3df', '#b48cf2', '#9be564'][id % 4], hairStyle: 'none', alienEyes: true,
+      antennae: true, shirt: ['#3b3f58', '#5b2a86', '#1f6f5c'][id % 3], pants: '#2b2e3b' }); break;
+    case 'wizard': { const robe = ['#6b4f32', '#2b2b2b', '#d9d2bf', '#4a3a2a'][id % 4];
+      Object.assign(o, { shirt: robe, pants: shade(robe, -0.08), plaid: false, skirt: true, hood: true, hairStyle: 'hood', hair: shade(robe, -0.12),
+        saber: ['#4da3ff', '#55e36b', '#ff4d4d', '#c77dff'][id % 4] }); break; }
+    case 'dracula': Object.assign(o, plain, { hair: '#121212', hairStyle: 'widow', shirt: '#1a1a1a', pants: '#141414', cape: '#111111',
+      capeLining: '#a4161a', fangs: true, collar: true }); break;
+    case 'frank': Object.assign(o, plain, { skin: '#8db86b', hair: '#161616', hairStyle: 'flattop', shirt: '#3d3a35', pants: '#2b2b2b',
+      bolts: true, stitches: true }); break;
+    case 'wolf': Object.assign(o, plain, { skin: '#8a6a4a', hair: '#5a3f28', hairStyle: 'curly', snout: true, wolfEars: true,
+      shirt: '#7a2e2e', plaid: true, pants: '#3b4a6b' }); break;
+    case 'mummy': Object.assign(o, plain, { skin: '#e6dcc3', hair: '#e6dcc3', hairStyle: 'none', shirt: '#e6dcc3', pants: '#d8ccb0', wraps: true }); break;
+    case 'witch': Object.assign(o, { shirt: '#2a1a3d', pants: '#1c1328', plaid: false, skirt: true, witchHat: true,
+      hatBand: ['#7cd650', '#f28c28', '#b23a48'][id % 3] }); break;
+    case 'skeleton': Object.assign(o, plain, { skin: '#f2efe6', hairStyle: 'none', shirt: '#151515', pants: '#151515', ribs: true, skull: true }); break;
+    case 'ghost': Object.assign(o, { sheet: true }); break;
+  }
+  return o;
+}
+
+// ---- theme scenery: a color wash on the static rooms plus a few animated extras ----------
+function windowScene(sky, frame, draw) {
+  g.save(); g.beginPath(); g.rect(670, 30, 116, 54); g.clip(); R(670, 30, 116, 54, sky); draw(); g.restore();
+  L(728, 30, 728, 84, frame, 3); L(670, 57, 786, 57, frame, 3);
+}
+function decorScifi() {
+  windowScene('#0b1030', '#cfd8e3', () => {
+    for (let i = 0; i < 18; i++) C(670 + (hh(i) % 116 + T * 3 * (1 + i % 3)) % 116, 30 + hh(i + 50) % 54, i % 4 ? 0.7 : 1.2, '#fff');
+    C(756, 52, 11, '#e07a5f'); E(756, 52, 18, 3, 'rgba(255,220,180,.5)');
+  });
+  const ux = 50 + (T * 18) % 250, uy = 662 + Math.sin(T * 1.3) * 8;      // a UFO over the patio
+  g.globalAlpha = 0.12; poly([ux - 6, uy + 4, ux + 6, uy + 4, ux + 16, uy + 70, ux - 16, uy + 70], '#b6f3ff'); g.globalAlpha = 1;
+  E(ux, uy, 16, 5, '#9aa3ad'); E(ux, uy - 4, 7, 5, 'rgba(160,220,255,.9)');
+  for (let i = -1; i <= 1; i++) C(ux + i * 9, uy + 1, 1.4, Math.floor(T * 4 + i) % 2 ? '#ffde59' : '#ff5c8a');
+  const rx = 330 + Math.sin(T * 0.23) * 200, ry = 446 + Math.sin(T * 0.37) * 18;   // robot vacuum
+  E(rx, ry, 9, 4, '#3b3f4a'); E(rx, ry - 2, 8, 3, '#5b6170'); C(rx + 3, ry - 2, 1.2, Math.floor(T * 2) % 2 ? '#22c55e' : '#14532d');
+}
+function pumpkin(x, y) {
+  E(x, y, 10, 8, '#f28c28'); E(x - 4, y, 4, 7.5, '#e07b1a'); E(x + 4, y, 4, 7.5, '#e07b1a'); R(x - 1, y - 11, 2.5, 4, '#3f6b2a');
+  const glow = 'rgba(255,214,90,' + (0.65 + Math.sin(T * 9 + x) * 0.3) + ')';
+  poly([x - 6, y - 1, x - 2, y - 1, x - 4, y - 5], glow); poly([x + 2, y - 1, x + 6, y - 1, x + 4, y - 5], glow);
+  poly([x - 6, y + 2, x - 3, y + 4, x, y + 2, x + 3, y + 4, x + 6, y + 2, x + 4, y + 6, x - 4, y + 6], glow);
+}
+function web(cx, cy, a0) {
+  for (let r = 6; r <= 18; r += 6) { g.beginPath(); g.arc(cx, cy, r, a0, a0 + Math.PI / 2); g.strokeStyle = 'rgba(230,230,230,.4)'; g.lineWidth = 0.8; g.stroke(); }
+  for (let a = 0; a <= 2; a++) { const an = a0 + a * Math.PI / 4; L(cx, cy, cx + Math.cos(an) * 20, cy + Math.sin(an) * 20, 'rgba(230,230,230,.4)', 0.8); }
+}
+function decorHorror() {
+  windowScene('#1b1033', '#8a7f99', () => {
+    C(760, 48, 10, '#f5f0c8'); C(765, 45, 9, '#1b1033');
+    for (let i = 0; i < 2; i++) { const bx = 660 + (T * 20 + i * 70) % 150, by = 50 + Math.sin(T * 3 + i) * 6, f = Math.sin(T * 12 + i) * 3;
+      poly([bx - 6, by - f, bx, by, bx + 6, by - f, bx, by + 2], '#000'); }
+  });
+  for (const [cx, cy, a0] of [[24, 24, 0], [611, 24, Math.PI / 2], [644, 24, 0], [971, 24, Math.PI / 2], [984, 24, 0], [1286, 24, Math.PI / 2], [1304, 24, 0], [1591, 24, Math.PI / 2]]) web(cx, cy, a0);
+  for (const [px, py] of [[44, 300], [596, 466], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
+  g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip(); g.globalAlpha = 0.2;
+  for (let i = 0; i < 4; i++) E(((T * 8 + i * 90) % 400) - 40, 860 + i * 18, 80, 12, '#e9e3ff');
+  g.restore(); g.globalAlpha = 1;
+  if ((T % 13) < 3) { const k = (T % 13) / 3, bx = 640 + k * 960, by = 314 + Math.sin(k * 20) * 6, f = Math.sin(T * 14) * 3;   // a bat down the hall
+    poly([bx - 7, by - f, bx, by, bx + 7, by - f, bx, by + 2], '#111'); }
 }
 
 // ============================================================================================
@@ -1191,7 +1870,7 @@ function desiredKind(j) {
 }
 // The station a job works at: in the Dev Shop, the one matching the kind of work (if known yet).
 function stationOf(j) {
-  const set = themeStations(), slot = (THEME === 'dev' && j.area && AREA_SLOT[j.area]) || j.station;
+  const set = themeStations(), slot = (THEMES[THEME].routed && j.area && AREA_SLOT[j.area]) || j.station;
   return set[slot] || set.workbench;
 }
 function stationName(s) { return s.name || s.label.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
@@ -1439,7 +2118,7 @@ function drawWorker(w) {
     g.globalAlpha = 0.6 + Math.sin(T * 6) * 0.3; g.beginPath(); g.ellipse(w.x, w.y, 17, 6, 0, 0, TAU);
     g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
   }
-  drawPerson(w.L, w.x, w.y, poseFor(w));
+  drawPerson(lookOf(w), w.x, w.y, poseFor(w));
 }
 
 // ============================================================================================
@@ -1471,6 +2150,13 @@ function drawBoss() {
   if (blink) { L(x - 4.5, hy - 1, x - 1.5, hy - 1, '#2b1a12', 1.2); L(x + 1.5, hy - 1, x + 4.5, hy - 1, '#2b1a12', 1.2); }
   else { C(x - 3, hy - 1, 1.5, '#2b1a12'); C(x + 3, hy - 1, 1.5, '#2b1a12'); }
   g.beginPath(); g.arc(x, hy + 1.8, 2.6, 0.2, Math.PI - 0.2); g.strokeStyle = '#2b1a12'; g.lineWidth = 1.1; g.stroke();
+  if (THEME === 'scifi') {           // the boss's space helmet
+    g.globalAlpha = 0.18; C(x, hy, 19, '#cfe8ff'); g.globalAlpha = 1;
+    g.beginPath(); g.arc(x, hy, 19, 0, TAU); g.strokeStyle = '#e6eef7'; g.lineWidth = 1.8; g.stroke(); E(x, hy + 17, 12, 3, '#c9ced6');
+  } else if (THEME === 'horror') {   // and a witch's hat for Halloween
+    E(x, hy - 12, 18, 4, '#1c1328'); poly([x - 10, hy - 13, x + 10, hy - 13, x + 4, hy - 33, x + 11, hy - 39, x, hy - 34], '#1c1328');
+    R(x - 9, hy - 17, 18, 3, '#f28c28');
+  }
 }
 function drawBossDesk() {
   R(716, 192, 168, 12, '#7a4e2d'); R(720, 204, 160, 34, '#5e3b22'); L(720, 204, 880, 204, '#4a2e1a', 2);
@@ -1686,6 +2372,8 @@ function drawStatic() {
   wall(640, 20, 1595, 20); wall(1595, 20, 1595, 940); wall(975, 20, 975, 300); wall(1290, 20, 1290, 300);
   wall(615, 300, 778, 300); wall(822, 300, 1108, 300); wall(1152, 300, 1428, 300); wall(1472, 300, 1595, 300);
   wall(615, 940, 1595, 940);
+  const wash = THEMES[THEME].wash;
+  if (wash) { g.globalAlpha = wash[1]; R(0, 0, W, H, wash[0]); g.globalAlpha = 1; }
 }
 
 // animated bits of the scenery (drawn every frame, under the people)
@@ -1742,6 +2430,7 @@ function drawDynamicBg() {
   R(66, 690, 12, 50, '#7a4b28'); C(72 + sway, 680, 26, '#3f8f3a'); C(56 + sway, 690, 18, '#4f9a45'); C(90 + sway, 690, 18, '#4f9a45'); C(72 + sway, 664, 16, '#58b052');
   // stations
   for (const id of STATION_ORDER) { const s = themeStations()[id]; s.draw(s.x0, s.y0, T, stationActive(s)); }
+  if (THEMES[THEME].decor) THEMES[THEME].decor();
 }
 function stationWorker(s) {
   return workers.find(w => w.mode === 'job' && w.job && w.arrived && w.locKind === 'st' && stationOf(w.job) === s && !w.spot.temp);

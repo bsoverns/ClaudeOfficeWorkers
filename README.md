@@ -23,8 +23,18 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
 
 - **Classic Office**: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse,
   pizzeria, art studio, lumber yard, chem lab, server room, shipping. Stations are random.
-- **Dev Shop**: the same floor re-skinned as where dev work happens, and workers go to the
-  station that matches what Claude is doing:
+- **Sci-Fi Station**: the staff become astronauts, aliens and space wizards with laser
+  swords; stations are Mission Control, Orbital Cloud, Wormhole, Hull Breach, Data Core,
+  Launch Pad, Engine Room, Xeno Lab, Alien Nest, Simulation Deck, Robot Bay and Cargo Bay.
+  The boss wears a space helmet and a UFO drifts over the patio.
+- **Haunted House**: Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and
+  ghosts; stations are the Ticket Crypt, Storm Tower, Branching Woods, Cursed Junk, Witch's
+  Cauldron, Gravedigging, Mad Lab, Snake Pit, the Dungeon, Potion Testing, Igor's Workshop and
+  Coffin Shipping. Jack-o'-lanterns, cobwebs, fog and bats; the boss wears a witch's hat.
+- **Dev Shop**: the same floor re-skinned as where dev work happens.
+
+Dev Shop, Sci-Fi and Haunted House all send workers to the station that matches what Claude
+is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |
 |---|---|
