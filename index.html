@@ -1428,9 +1428,9 @@ const AREA_SLOT = { ado: 'workbench', azure: 'forge', github: 'dairy', support: 
 const THEMES = {
   classic: { name: 'Classic Office', stations: STA },
   dev: { name: 'Dev Shop', stations: DEV, routed: true },
-  scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
+  scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, swaps: { 5: 'pirate', 9: 'pirate', 12: 'robot', 15: 'robot' }, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
   horror: { name: 'Haunted House', stations: HORROR, routed: true,
-    swaps: { 2: 'demon', 7: 'zombie', 8: 'slime', 11: 'demon', 12: 'slime', 15: 'zombie' }, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
+    swaps: { 2: 'demon', 7: 'zombie', 8: 'slime', 10: 'pumpkin', 11: 'demon', 12: 'slime', 14: 'pumpkin', 15: 'zombie' }, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -1656,6 +1656,16 @@ function drawPerson(Lk, x, y, st) {
   }
   if (Lk.cape && back) poly([-10, ty + 1, 10, ty + 1, 14, -2, -14, -2], Lk.cape);
   if (Lk.wings && back) wing(ty, [-1, 1]);
+  if (Lk.robot && !back) {                // robot chest panel with blinking lights
+    RR(side ? -3 : -5, ty + 5, side ? 7 : 10, 8, 1.5, '#2b3340');
+    for (let i = 0; i < 3; i++) C((side ? -1 : -2.5) + i * (side ? 2 : 2.5), ty + 9, 0.9, Math.floor(T * 3 + i + (Lk.id || 0)) % 3 ? '#22d3ee' : '#f43f5e');
+    L(side ? -6 : -8, ty + 16, side ? 6 : 8, ty + 16, shade(Lk.robot, -0.3), 1);
+  }
+  if (Lk.belt) { R(side ? -6 : -8, ty + 16, side ? 12 : 16, 3, '#2a1a10'); if (!back) R(side ? 1 : -1.5, ty + 15.5, 3, 4, '#d4af37'); }
+  if (Lk.straw) {
+    if (!back) { R(side ? -2 : 2, ty + 10, 4, 4, '#c19a6b'); L(side ? -2 : 2, ty + 10, side ? 2 : 6, ty + 14, '#6b4423', 0.5); }
+    for (const d of side ? [1] : [-1, 1]) for (let i = 0; i < 3; i++) L(d * 6, ty, d * (5 + i * 2), ty - 3, '#e3c46b', 1);
+  }
   if (Lk.zombie) {                        // torn shirt hem and a stain
     const x0 = side ? -6 : -8, wd = side ? 12 : 16;
     for (let i = 0; i < 3; i++) poly([x0 + 1 + i * wd / 3, ty + 22, x0 + 3 + i * wd / 3, ty + 17, x0 + 5 + i * wd / 3, ty + 22], Lk.skin);
@@ -1698,6 +1708,7 @@ function drawPerson(Lk, x, y, st) {
     if (Lk.snout) { E(side ? 6 : 0, hy + 3.6, side ? 5 : 4.2, 2.8, shade(Lk.skin, 0.14)); C(side ? 10 : 0, hy + 2.4, 1.3, '#1b1b1b'); }
     if (Lk.stitches) { L(-5, hy - 5, 5, hy - 5, '#2b2b2b', 0.7); for (let i = -4; i <= 4; i += 2) L(i, hy - 6, i, hy - 4, '#2b2b2b', 0.6); }
     if (Lk.wraps) for (const [a, b] of [[-6, -4], [-2.5, -1.5], [3.5, 5]]) L(-8.5, hy + a, 8.5, hy + b, '#cbbf9f', 1.4);
+    if (Lk.eyepatch) { C(side ? 4.5 : 3, hy, 2.3, '#111'); L(side ? 6 : 5, hy - 1, side ? -6 : -8.5, hy - 4.5, '#111', 0.8); }
     if (Lk.zombie) { C(side ? -1 : -4.5, hy - 4, 1.7, '#7a1f1f'); L(side ? 1 : 2, hy - 6, side ? 4 : 5.5, hy - 3, '#3a2a2a', 0.7); }
     if (Lk.beard) { if (side) E(3, hy + 5, 5.5, 3.6, Lk.hair); else { g.beginPath(); g.ellipse(0, hy + 4.6, 6.8, 4.2, 0, 0, Math.PI); g.fillStyle = Lk.hair; g.fill(); } }
     if (Lk.mustache) R(side ? 3 : -3.5, hy + 2.3, side ? 4.5 : 7, 1.6, Lk.hair);
@@ -1730,6 +1741,40 @@ function drawPerson(Lk, x, y, st) {
 
 // ---- costumes: some themes dress the staff up (same people, same mobility aids) ----------
 function costumeTop(Lk, view, hy, side) {
+  if (Lk.robot) {                          // boxy robot head with a scanning visor and antenna
+    const m = Lk.robot;
+    L(0, hy - 9, 0, hy - 15, shade(m, -0.3), 1.2); C(0, hy - 16, 1.8, Math.floor(T * 2 + (Lk.id || 0)) % 2 ? '#f43f5e' : '#7f1d1d');
+    RR(-9, hy - 9, 18, 17, 3, m, shade(m, -0.35), 1);
+    R(-10.5, hy - 2, 2, 5, shade(m, -0.2)); R(8.5, hy - 2, 2, 5, shade(m, -0.2));
+    if (view !== 'back') {
+      R(side ? -2 : -7, hy - 3, side ? 10 : 14, 4, '#1b2330');
+      const sx = side ? 3 + Math.sin(T * 2) * 3 : Math.sin(T * 2 + (Lk.id || 0)) * 5;
+      g.globalAlpha = 0.5; C(sx, hy - 1, 2.6, '#22d3ee'); g.globalAlpha = 1; C(sx, hy - 1, 1.2, '#a5f3fc');
+      for (let i = 0; i < 4; i++) R((side ? 0 : -3) + i * 1.8, hy + 3.5, 1, 2, shade(m, -0.4));
+    }
+  }
+  if (Lk.pumpkinHead) {                    // jack-o'-lantern head, glowing, under a straw hat
+    E(0, hy, 10.5, 9, '#f28c28'); E(-4.5, hy, 4, 8.6, '#e07b1a'); E(4.5, hy, 4, 8.6, '#e07b1a'); E(0, hy, 3, 8.8, '#f39a3c');
+    if (view !== 'back') {
+      const glow = 'rgba(255,214,90,' + (0.7 + Math.sin(T * 9 + (Lk.id || 0)) * 0.3) + ')', fx = side ? 3 : 0;
+      for (const e of side ? [fx + 1] : [-3.5, 3.5]) poly([e - 2, hy - 1, e + 2, hy - 1, e, hy - 4.5], glow);
+      poly([fx - 5, hy + 2, fx - 2.5, hy + 4, fx, hy + 2, fx + 2.5, hy + 4, fx + 5, hy + 2, fx + 3.5, hy + 6, fx - 3.5, hy + 6], glow);
+    }
+    E(0, hy - 8, 14, 3, '#c9a35a'); RR(-6, hy - 15, 12, 8, [4, 4, 0, 0], '#b8914a'); R(-6, hy - 10, 12, 2, '#7a1f1f');
+    for (let i = -1; i <= 1; i++) L(i * 5, hy + 8, i * 6, hy + 11, '#e3c46b', 1);
+  }
+  if (Lk.pirateHat) {                      // tricorn with a skull, and a robot parrot on the shoulder
+    poly([-12, hy - 5, 12, hy - 5, 8, hy - 10, 0, hy - 15, -8, hy - 10], '#1a1a1a');
+    L(-12, hy - 5, 12, hy - 5, '#d4af37', 1);
+    if (view !== 'back') { C(side ? 3 : 0, hy - 10, 1.8, '#fff'); L((side ? 3 : 0) - 1.5, hy - 7.5, (side ? 3 : 0) + 1.5, hy - 7.5, '#fff', 0.8); }
+  }
+  if (Lk.parrot) {
+    const px = side ? -1 : 9, py = hy + 6, bob = Math.sin(T * 4 + (Lk.id || 0)) * 0.6;
+    L(px - 1, py + 4, px - 3, py + 9, '#1f8f7f', 1.6);
+    E(px, py + bob, 3, 4, '#2bb5a0'); C(px + 0.5, py - 4 + bob, 2.4, '#2bb5a0');
+    poly([px + 2.5, py - 4.5 + bob, px + 5, py - 3.5 + bob, px + 2.5, py - 2.5 + bob], '#f59e0b');
+    C(px + 1.2, py - 4.6 + bob, 0.7, Math.floor(T * 2) % 2 ? '#f43f5e' : '#fff');
+  }
   if (Lk.horns) {
     for (const d of side ? [1] : [-1, 1]) poly([d * 3.5, hy - 6.5, d * 7, hy - 5, d * 10, hy - 13, d * 9, hy - 17, d * 7, hy - 12], '#2a1a14');
   }
@@ -1841,6 +1886,13 @@ function dress(L0, kind, id) {
     case 'slime': Object.assign(o, { slime: ['#7be04a', '#b06ae0'][(id >> 2) % 2] }); break;
     case 'zombie': Object.assign(o, { skin: mix(L0.skin, '#8aa36b', 0.55), shirt: shade(L0.shirt, -0.18), pants: shade(L0.pants, -0.1),
       plaid: false, glasses: false, zombie: true }); break;
+    case 'robot': { const metal = ['#b8c0cc', '#c9a227'][id % 2];
+      Object.assign(o, { skin: metal, hairStyle: 'none', beard: false, mustache: false, glasses: false, plaid: false, skirt: false,
+        shirt: shade(metal, -0.1), pants: shade(metal, -0.22), robot: metal }); break; }
+    case 'pirate': Object.assign(o, { shirt: ['#7a1f1f', '#1f3a7a'][(id >> 2) % 2], pants: '#2b2b2b', plaid: false, skirt: false, glasses: false,
+      pirateHat: true, eyepatch: true, belt: true, parrot: true }); break;
+    case 'pumpkin': Object.assign(o, { skin: '#e3c46b', hairStyle: 'none', beard: false, mustache: false, glasses: false, skirt: false,
+      shirt: ['#a0522d', '#5b7a3a'][(id >> 2) % 2], plaid: true, pants: '#4a5a7a', pumpkinHead: true, straw: true }); break;
     case 'demon': Object.assign(o, { skin: ['#c0392b', '#a3213a'][id % 2], shirt: '#1c1c1c', pants: '#121212', plaid: false, skirt: false,
       glasses: false, horns: true, glowEyes: '#ffd23f', fangs: true, wings: '#5a1414', tail: true }); break;
   }

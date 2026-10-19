@@ -23,12 +23,12 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
 
 - **Classic Office**: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse,
   pizzeria, art studio, lumber yard, chem lab, server room, shipping. Stations are random.
-- **Sci-Fi Station**: the staff become astronauts, aliens (including xenomorph-style ones) and space wizards with laser
+- **Sci-Fi Station**: the staff become astronauts, aliens (including xenomorph-style ones), robots, space pirates (with robot parrots) and space wizards with laser
   swords; stations are Mission Control, Orbital Cloud, Wormhole, Hull Breach, Data Core,
   Launch Pad, Engine Room, Xeno Lab, Alien Nest, Simulation Deck, Robot Bay and Cargo Bay.
   The boss wears a space helmet and a UFO drifts over the patio.
 - **Haunted House**: Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons, ghosts,
-  zombies, slime monsters and demons; stations are the Ticket Crypt, Storm Tower, Branching Woods, Cursed Junk, Witch's
+  zombies, slime monsters, demons and pumpkin-head scarecrows; stations are the Ticket Crypt, Storm Tower, Branching Woods, Cursed Junk, Witch's
   Cauldron, Gravedigging, Mad Lab, Snake Pit, the Dungeon, Potion Testing, Igor's Workshop and
   Coffin Shipping. Jack-o'-lanterns, cobwebs, fog and bats; the boss wears a witch's hat.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
