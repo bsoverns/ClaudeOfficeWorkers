@@ -1444,6 +1444,10 @@ function hairBack(Lk, view, hy) {
     if (view === 'side') poly([-3, hy + 9, -9, hy - 5, -2, hy + 5], Lk.capeLining);
     else { poly([-6, hy + 8, -12, hy - 5, -4, hy + 5], Lk.capeLining); poly([6, hy + 8, 12, hy - 5, 4, hy + 5], Lk.capeLining); }
   }
+  if (Lk.xenoHead) {                       // xeno: long curved dome sweeping back from the head
+    if (view === 'side') { g.save(); g.translate(-6, hy - 4); g.rotate(-0.45); E(0, 0, 15, 6.5, Lk.skin); g.restore(); }
+    else E(0, hy - 8, 7.5, view === 'back' ? 15 : 13, Lk.skin);
+  }
   if (st === 'none') return;
   if (st === 'hood') { E(0, hy, 11.5, 12, hc); return; }
   if (st === 'afro') C(0, hy - 3, 12.5, hc);
@@ -1561,6 +1565,12 @@ function drawPerson(Lk, x, y, st) {
     if (!side) { E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); }
   }
   // legs
+  if (Lk.tail) {                          // xeno tail with a pointed tip, swishing
+    const sw = Math.sin(T * 2 + (Lk.id || 0)) * 3, dir = side ? -1 : 1;
+    g.beginPath(); g.moveTo(0, -15); g.quadraticCurveTo(dir * 14, -4 + sw, dir * 20, -16 + sw);
+    g.strokeStyle = Lk.skin; g.lineWidth = 3; g.lineCap = 'round'; g.stroke();
+    poly([dir * 18, -15 + sw, dir * 25, -22 + sw, dir * 21, -13 + sw], Lk.skin);
+  }
   if (Lk.cape && !back) {                  // cape behind the body (front of it when seen from the back)
     const cty = -37 + bo;
     if (side) poly([-2, cty + 2, -6, cty + 1, -13, -2, -2, -2], Lk.cape);
@@ -1632,8 +1642,9 @@ function drawPerson(Lk, x, y, st) {
   }
   if (Lk.ribs) {
     const cx = side ? 1 : 0, w2 = side ? 3 : 5.5;
-    L(cx, ty + 3, cx, ty + 19, '#f2efe6', 1.4);
-    for (let j = 0; j < 4; j++) L(cx - w2, ty + 5 + j * 3.6, cx + w2, ty + 5 + j * 3.6, '#f2efe6', 1.2);
+    const rc = Lk.ribColor || '#f2efe6';
+    L(cx, ty + 3, cx, ty + 19, rc, 1.4);
+    for (let j = 0; j < 4; j++) L(cx - w2, ty + 5 + j * 3.6, cx + w2, ty + 5 + j * 3.6, rc, 1.2);
   }
   if (Lk.cape && back) poly([-10, ty + 1, 10, ty + 1, 14, -2, -14, -2], Lk.cape);
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], shade(Lk.shirt, -0.2));
@@ -1655,7 +1666,8 @@ function drawPerson(Lk, x, y, st) {
   if (!back) {
     const ex = side ? [4.5] : [-3, 3];
     for (const e of ex) {
-      if (Lk.alienEyes) {
+      if (Lk.noEyes) { if (e === ex[0]) { g.globalAlpha = 0.35; E(side ? 3 : 0, hy - 3, 4, 1.5, '#9aa3ad'); g.globalAlpha = 1; } }
+      else if (Lk.alienEyes) {
         g.beginPath(); g.ellipse(side ? e : e * 1.15, hy + 0.3, 2.3, st.blink ? 0.4 : 3.4, side ? 0 : (e < 0 ? 0.45 : -0.45), 0, TAU);
         g.fillStyle = '#0b0b0b'; g.fill(); C((side ? e : e * 1.15) + 0.6, hy - 1, 0.6, '#fff');
       }
@@ -1673,7 +1685,11 @@ function drawPerson(Lk, x, y, st) {
     if (Lk.beard) { if (side) E(3, hy + 5, 5.5, 3.6, Lk.hair); else { g.beginPath(); g.ellipse(0, hy + 4.6, 6.8, 4.2, 0, 0, Math.PI); g.fillStyle = Lk.hair; g.fill(); } }
     if (Lk.mustache) R(side ? 3 : -3.5, hy + 2.3, side ? 4.5 : 7, 1.6, Lk.hair);
     const mc = Lk.beard ? '#e8b9a8' : '#6b2f2f';
-    if (st.open) C(side ? 5.5 : 0, hy + 4, 1.7, '#5a1f1f');
+    if (Lk.teeth) {
+      const tx = side ? 5 : 0; R(tx - 3, hy + 3, 6, 2.2, '#c9ced6');
+      for (let i = -2; i <= 2; i++) L(tx + i * 1.2, hy + 3, tx + i * 1.2, hy + 5.2, '#6b7280', 0.4);
+    }
+    else if (st.open) C(side ? 5.5 : 0, hy + 4, 1.7, '#5a1f1f');
     else if (side) L(4.5, hy + 4, 6.5, hy + 3.6, mc, 1);
     else { g.beginPath(); g.arc(0, hy + 2.6, st.happy ? 2.6 : 2, 0.2, Math.PI - 0.2); g.strokeStyle = mc; g.lineWidth = 1; g.stroke(); }
     if (Lk.fangs) { const fx = side ? 5 : 0; poly([fx - 1.6, hy + 3.4, fx - 0.7, hy + 3.4, fx - 1.15, hy + 5], '#fff'); poly([fx + 0.7, hy + 3.4, fx + 1.6, hy + 3.4, fx + 1.15, hy + 5], '#fff'); }
@@ -1693,6 +1709,11 @@ function drawPerson(Lk, x, y, st) {
 
 // ---- costumes: some themes dress the staff up (same people, same mobility aids) ----------
 function costumeTop(Lk, view, hy, side) {
+  if (Lk.tubes) {
+    const ty = hy + 9;
+    if (side) L(-3, ty + 2, -9, ty - 7, Lk.skin, 2.6);
+    else { L(-6, ty + 2, -10, ty - 7, Lk.skin, 2.6); L(6, ty + 2, 10, ty - 7, Lk.skin, 2.6); }
+  }
   if (Lk.bolts && !side) { R(-11, hy + 5, 3.2, 2.4, '#9aa3ad'); R(7.8, hy + 5, 3.2, 2.4, '#9aa3ad'); }
   if (Lk.wolfEars) { poly([-8, hy - 4, -7, hy - 13, -2.5, hy - 7], Lk.hair); poly([8, hy - 4, 7, hy - 13, 2.5, hy - 7], Lk.hair); }
   if (Lk.antennae) for (const d of [-1, 1]) { L(d * 3.5, hy - 7, d * 6.5, hy - 15, Lk.skin, 1.4); C(d * 6.5, hy - 15, 1.9, '#ffde59'); }
@@ -1735,12 +1756,19 @@ function lookOf(w) {
   const key = THEME + ':' + w.id;
   return _looks[key] || (_looks[key] = dress(w.L, set[w.id % set.length], w.id));
 }
+const XENO_IDS = [4, 7, 10];   // Maria, Raj, Mei: xenomorph-style aliens in the Sci-Fi theme
 function dress(L0, kind, id) {
   const o = { ...L0, costume: kind };
   const plain = { beard: false, mustache: false, glasses: false, plaid: false, skirt: false };
   switch (kind) {
     case 'astronaut': Object.assign(o, { shirt: '#eef1f5', pants: '#dfe3ea', plaid: false, skirt: false, helmet: true, patch: L0.shirt }); break;
-    case 'alien': Object.assign(o, plain, { skin: ['#7ed957', '#6fc3df', '#b48cf2', '#9be564'][id % 4], hairStyle: 'none', alienEyes: true,
+    case 'alien':
+      if (XENO_IDS.includes(id)) {           // a few of the aliens are the scary movie kind
+        Object.assign(o, plain, { costume: 'xeno', skin: '#24272e', hair: '#24272e', hairStyle: 'none', xenoHead: true, noEyes: true,
+          teeth: true, tubes: true, tail: true, ribs: true, ribColor: '#4a4f5a', shirt: '#2b2f37', pants: '#202329' });
+        break;
+      }
+      Object.assign(o, plain, { skin: ['#7ed957', '#6fc3df', '#b48cf2', '#9be564'][id % 4], hairStyle: 'none', alienEyes: true,
       antennae: true, shirt: ['#3b3f58', '#5b2a86', '#1f6f5c'][id % 3], pants: '#2b2e3b' }); break;
     case 'wizard': { const robe = ['#6b4f32', '#2b2b2b', '#d9d2bf', '#4a3a2a'][id % 4];
       Object.assign(o, { shirt: robe, pants: shade(robe, -0.08), plaid: false, skirt: true, hood: true, hairStyle: 'hood', hair: shade(robe, -0.12),
