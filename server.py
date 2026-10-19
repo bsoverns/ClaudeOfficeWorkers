@@ -86,7 +86,53 @@ SESSION_END_DONE = {"clear": "you cleared the session", "logout": "you logged ou
                     "prompt_input_exit": "you closed the session"}
 
 PUBLIC_JOB_KEYS = ("id", "title", "project", "kind", "parent", "status", "message", "activity",
-                   "worker", "station", "created", "updated", "prompt")
+                   "worker", "station", "created", "updated", "prompt", "area")
+
+# Work areas: what kind of work a job is doing, guessed from the prompt, the project folder
+# and the tools Claude uses. Themes that label their stations by kind of work (Dev Shop) send
+# the worker to the matching station; the Classic theme ignores it. Keep the keys in step with
+# AREA_SLOT in index.html.
+AREA_RULES = {
+    "support": r"\bsupport (?:ticket|case|request)s?\b|\bincidents?\b|\boutages?\b|\bprod(?:uction)? (?:issue|is down|down)\b"
+               r"|\bhot ?fix\b|\bnot working\b|\bbroken\b|\bcustomer (?:issue|complaint)\b",
+    "dbproj": r"\.dacpac\b|\bdacpacs?\b|\.sqlproj\b|\bsqlpackage\b|\bpublish profile\b|\bpre-?deployment\b"
+              r"|\bpost-?deployment\b|\bscripted deploy|\bdatabase projects?\b|\bdb projects?\b|\bschema compare\b",
+    "sql": r"\.sql\b|\bstored proc(?:edure)?s?\b|\bsprocs?\b|\bsql server\b|\bt-?sql\b|\bsqlcmd\b|\binvoke-sqlcmd\b"
+           r"|\bselect\s+[^;]{1,200}?\s+from\s|\bssms\b|\bcreate (?:table|view|procedure|function)\b",
+    "azure": r"portal\.azure\.com|\bazure portal\b|\baz (?:sql|webapp|functionapp|keyvault|group|resource|storage|vm|login|account)\b"
+             r"|\bresource groups?\b|\bkey ?vaults?\b|\bapp services?\b|\bazure sql\b|\bfunction apps?\b|\bazure (?:database|storage|subscription)",
+    "ado": r"dev\.azure\.com|visualstudio\.com|\bazure devops\b|\bado\b|\bab#\d+|\bwork ?items?\b|\buser stor(?:y|ies)\b"
+           r"|\bpbis?\b|\baz (?:devops|boards|repos|pipelines)\b|\bsprint\b|\bbacklog\b",
+    "github": r"github\.com|\bgithub\b|\bgh (?:pr|repo|issue|run|api)\b|\bpull requests?\b|\bgit (?:push|pull|merge|rebase|branch|commit|clone|fetch|cherry-pick)\b"
+              r"|\bgit checkout -b\b|\bbranch(?:es)?\b|\bmerge conflicts?\b",
+    "impl": r"\bimplementation\b|appsettings|\bweb\.config\b|\bapp\.config\b|\bconfiguration (?:change|update|file)s?\b"
+            r"|\bfeature flags?\b|\bclient config",
+    "python": r"\.py\b|\bpython\b|\bpip install\b|\bpy (?:-m|[\w./\\-]+\.py)\b|\bdjango\b|\bflask\b|\bpandas\b|\bpyinstaller\b",
+    "service": r"\bservice code\b|\bwindows services?\b|\bworker services?\b|\bhosted services?\b|\.services?\b|\bservices?\.cs\b|\blegacy\b",
+    "qa": r"\bunit tests?\b|\bintegration tests?\b|\bnpm (?:run )?test\b|\bdotnet test\b|\bpytest\b|\bplaywright\b|\bselenium\b"
+          r"|\bregression tests?\b|\bqa\b|\btest (?:plan|case)s?\b",
+    "hardware": r"\bprinters?\b|\bdrivers?\b|\bbios\b|\bfirmware\b|\bgpu\b|\bdisk space\b|\bssd\b|\busb\b|\bdocking station\b"
+                r"|\bhardware\b|\bbluetooth\b|\bwebcam\b",
+    "tracking": r"\btracking (?:number|info|board|sheet)s?\b|\bshipments?\b|\btime ?sheets?\b|\btaskmaskitator\b|\btime ?tracking\b"
+                r"|\bstatus reports?\b|\bdaily reports?\b|\btrack (?:time|hours|shipments?|packages?)\b",
+}
+AREA_RES = {k: re.compile(v, re.I) for k, v in AREA_RULES.items()}
+AREA_MIN_SECONDS = 20      # a worker stays at a station at least this long before tools move them
+AREA_TEXT_MAX = 6000
+
+
+def classify(text: str) -> list[str]:
+    """Work areas whose keywords appear in text."""
+    text = str(text or "")[:AREA_TEXT_MAX]
+    return [k for k, rx in AREA_RES.items() if rx.search(text)]
+
+
+def tool_text(name: str, inp: object) -> str:
+    """Tool name (split into words, so mcp__azure-devops__wit_get_work_item reads as
+    'azure devops ... work item') plus the tool input values the hook keeps."""
+    words = re.sub(r"[_\-]+", " ", name or "")
+    vals = " ".join(str(v) for v in inp.values()) if isinstance(inp, dict) else ""
+    return f"{words} {vals}"
 
 
 PASTE_RE = re.compile(r"<pasted_content\b[^>]*>(.*?)(?:</pasted_content>|\Z)", re.S | re.I)
@@ -266,7 +312,8 @@ class Office:
         job = {"id": jid, "title": clip(title, 120) or "(untitled task)", "project": clip(project, 40),
                "kind": kind, "parent": parent, "status": "working", "message": "", "activity": "",
                "prompt": "", "worker": None, "station": None, "created": now, "updated": now,
-               "status_ts": ts or now, "seq": self.seq, "key": key or jid}
+               "status_ts": ts or now, "seq": self.seq, "key": key or jid,
+               "area": "", "area_ts": 0.0, "scores": {}}
         self._staff(job)
         self.jobs[jid] = job
         return job
@@ -300,6 +347,30 @@ class Office:
                 if queued["worker"] is None:
                     break
 
+    def _signal(self, job: dict, text: str, weight: float, fresh: bool = False) -> None:
+        """Score the work areas named in text and move the job to the leader. A new prompt
+        (fresh) is a new focus: old scores mostly fade and the area may change at once; tool
+        calls only move it once the new area clearly leads and the worker has settled in."""
+        hits = classify(text)
+        scores = job.setdefault("scores", {})
+        if not hits and not fresh:
+            return
+        for k in list(scores):
+            scores[k] = round(scores[k] * (0.3 if fresh else 0.85), 3)
+        for a in hits:
+            scores[a] = scores.get(a, 0) + weight
+        if not scores:
+            return
+        best = max(scores, key=scores.get)
+        cur = job.get("area") or ""
+        if best == cur or scores[best] < 2:
+            return
+        if cur and not fresh and (time.time() - job.get("area_ts", 0) < AREA_MIN_SECONDS
+                                  or scores[best] < scores.get(cur, 0) * 1.5 + 1):
+            return
+        job["area"] = best
+        job["area_ts"] = time.time()
+
     def _resolve(self, jid: str) -> dict | None:
         if jid and jid != "last":
             return self.jobs.get(jid)
@@ -332,6 +403,8 @@ class Office:
                     job["prompt"] = clip(prompt, 200)
                     job["activity"] = "Reading your message"
                     self._set_status(job, "working", "", ts)
+                    self._signal(job, plain_text(p.get("prompt")), 4, fresh=True)
+                    self._signal(job, cwd, 2)
             elif ev == "PreToolUse":
                 if sid in self.closed:
                     return
@@ -342,6 +415,9 @@ class Office:
                     target = job
                 target["activity"] = describe_tool(str(p.get("tool_name") or ""), p.get("tool_input"))
                 self._set_status(target, "working", "", ts)
+                if not target.get("area"):
+                    self._signal(target, cwd, 2)
+                self._signal(target, tool_text(str(p.get("tool_name") or ""), p.get("tool_input")), 1)
             elif ev == "PostToolUseFailure":
                 target = (self.jobs.get(f"{sid}:{agent_id}") if agent_id else None) or job
                 if not target:
@@ -368,8 +444,10 @@ class Office:
                 parent_title = job["title"] if job else ""
                 title = f"{kind} helper" + (f" for: {parent_title}" if parent_title else "")
                 if f"{sid}:{agent_id}" not in self.jobs:
-                    self._new_job(f"{sid}:{agent_id}", title, project, kind="helper",
-                                  parent=sid if job else None, ts=ts, key=f"{sid}:{kind}")
+                    helper = self._new_job(f"{sid}:{agent_id}", title, project, kind="helper",
+                                           parent=sid if job else None, ts=ts, key=f"{sid}:{kind}")
+                    if job and job.get("area"):        # helpers start on their lead's kind of work
+                        helper["area"], helper["area_ts"] = job["area"], 0.0
             elif ev == "SubagentStop":
                 self._finish(f"{sid}:{agent_id}", "helper finished")
             elif ev == "SessionEnd":
@@ -405,6 +483,8 @@ class Office:
                     return {"ok": False, "error": f"job {jid} already exists"}
                 job = self._new_job(jid, str(p.get("title") or "Test task"),
                                     str(p.get("project") or "cmd"), kind="cli")
+                if p.get("area") in AREA_RULES:
+                    job["area"] = p["area"]
                 self._bump()
                 who = ROSTER[job["worker"]]["name"] if job["worker"] is not None else None
                 return {"ok": True, "id": jid, "worker": who, "station": job["station"]}
@@ -432,12 +512,14 @@ class Office:
                 return {"ok": False, "error": f"unknown command {cmd!r}"}
             if p.get("activity") is not None and job["id"] in self.jobs:
                 job["activity"] = clip(p.get("activity"), 60)
+            if p.get("area") in AREA_RULES and job["id"] in self.jobs:
+                job["area"], job["area_ts"] = p["area"], time.time()
             self._bump()
             return {"ok": True, "id": job["id"]}
 
     # ---- state for the page -----------------------------------------------------------
     def _public_jobs(self) -> list[dict]:
-        return [{k: j[k] for k in PUBLIC_JOB_KEYS}
+        return [{k: j.get(k) for k in PUBLIC_JOB_KEYS}
                 for j in sorted(self.jobs.values(), key=lambda j: j["seq"])]
 
     def snapshot(self, since: int = 0, wait: float = 0) -> dict:

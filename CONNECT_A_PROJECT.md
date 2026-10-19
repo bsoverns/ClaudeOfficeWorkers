@@ -131,6 +131,11 @@ the URL in it too).
 
 ## What you'll see
 
+Pick a theme on the clock-in screen: **Classic Office**, **Dev Shop**, **Sci-Fi Station** or
+**Haunted House**. In all but Classic, workers go to the station for the kind of work (Azure
+DevOps, GitHub, SQL Server, Python…); see README.
+
+
 | Claude is…                                 | The worker…                                     |
 |--------------------------------------------|-------------------------------------------------|
 | given a new prompt                         | is paged by the boss, gets a work slip, goes to a station (same worker for the same session) |
