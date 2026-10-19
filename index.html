@@ -1429,7 +1429,8 @@ const THEMES = {
   classic: { name: 'Classic Office', stations: STA },
   dev: { name: 'Dev Shop', stations: DEV, routed: true },
   scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
-  horror: { name: 'Haunted House', stations: HORROR, routed: true, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
+  horror: { name: 'Haunted House', stations: HORROR, routed: true,
+    swaps: { 2: 'demon', 7: 'zombie', 8: 'slime', 11: 'demon', 12: 'slime', 15: 'zombie' }, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -1552,6 +1553,8 @@ function drawPerson(Lk, x, y, st) {
   if (f === 'left') g.scale(-1, 1);
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
+  if (Lk.slime) { drawSlime(Lk, st, pose, view, side); g.restore(); return; }
+  if (Lk.zombie && st.moving && side) st = { ...st, ra: 1.45 + Math.sin(st.walk) * 0.08, la: 1.4 };   // shambling, arms out
   const walking = st.moving && pose === 'stand';
   if (walking) g.translate(0, -Math.abs(Math.sin(st.walk)) * 1.6);
   const bo = pose === 'sit' ? 6 : pose === 'chair' ? 4 : 0;
@@ -1571,6 +1574,11 @@ function drawPerson(Lk, x, y, st) {
     g.strokeStyle = Lk.skin; g.lineWidth = 3; g.lineCap = 'round'; g.stroke();
     poly([dir * 18, -15 + sw, dir * 25, -22 + sw, dir * 21, -13 + sw], Lk.skin);
   }
+  const wing = (ty0, flip) => {
+    const f = Math.sin(T * 5 + (Lk.id || 0)) * 2;
+    for (const d of flip) poly([d * 6, ty0 + 4, d * 18, ty0 - 6 - f, d * 23, ty0 + 6, d * 18, ty0 + 3, d * 16, ty0 + 12, d * 12, ty0 + 8, d * 7, ty0 + 14], Lk.wings);
+  };
+  if (Lk.wings && !back) wing(-37 + bo, side ? [-1] : [-1, 1]);
   if (Lk.cape && !back) {                  // cape behind the body (front of it when seen from the back)
     const cty = -37 + bo;
     if (side) poly([-2, cty + 2, -6, cty + 1, -13, -2, -2, -2], Lk.cape);
@@ -1647,6 +1655,12 @@ function drawPerson(Lk, x, y, st) {
     for (let j = 0; j < 4; j++) L(cx - w2, ty + 5 + j * 3.6, cx + w2, ty + 5 + j * 3.6, rc, 1.2);
   }
   if (Lk.cape && back) poly([-10, ty + 1, 10, ty + 1, 14, -2, -14, -2], Lk.cape);
+  if (Lk.wings && back) wing(ty, [-1, 1]);
+  if (Lk.zombie) {                        // torn shirt hem and a stain
+    const x0 = side ? -6 : -8, wd = side ? 12 : 16;
+    for (let i = 0; i < 3; i++) poly([x0 + 1 + i * wd / 3, ty + 22, x0 + 3 + i * wd / 3, ty + 17, x0 + 5 + i * wd / 3, ty + 22], Lk.skin);
+    C(side ? 2 : 4, ty + 8, 1.7, 'rgba(90,20,20,.6)');
+  }
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], shade(Lk.shirt, -0.2));
   if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.shirt);
   else { arm(-7.5, st.la ?? 0.12, -1, Lk.shirt); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.shirt); }
@@ -1666,7 +1680,9 @@ function drawPerson(Lk, x, y, st) {
   if (!back) {
     const ex = side ? [4.5] : [-3, 3];
     for (const e of ex) {
-      if (Lk.noEyes) { if (e === ex[0]) { g.globalAlpha = 0.35; E(side ? 3 : 0, hy - 3, 4, 1.5, '#9aa3ad'); g.globalAlpha = 1; } }
+      if (Lk.glowEyes) { g.globalAlpha = 0.35; C(e, hy, 2.6, Lk.glowEyes); g.globalAlpha = 1; C(e, hy, 1.3, Lk.glowEyes); }
+      else if (Lk.zombie) { E(e, hy + 0.3, 2.3, 1.9, 'rgba(60,20,40,.45)'); C(e, hy, 1.4, '#f5f0d6'); C(e + 0.3, hy + 0.2, 0.5, '#1b1b1b'); }
+      else if (Lk.noEyes) { if (e === ex[0]) { g.globalAlpha = 0.35; E(side ? 3 : 0, hy - 3, 4, 1.5, '#9aa3ad'); g.globalAlpha = 1; } }
       else if (Lk.alienEyes) {
         g.beginPath(); g.ellipse(side ? e : e * 1.15, hy + 0.3, 2.3, st.blink ? 0.4 : 3.4, side ? 0 : (e < 0 ? 0.45 : -0.45), 0, TAU);
         g.fillStyle = '#0b0b0b'; g.fill(); C((side ? e : e * 1.15) + 0.6, hy - 1, 0.6, '#fff');
@@ -1682,12 +1698,17 @@ function drawPerson(Lk, x, y, st) {
     if (Lk.snout) { E(side ? 6 : 0, hy + 3.6, side ? 5 : 4.2, 2.8, shade(Lk.skin, 0.14)); C(side ? 10 : 0, hy + 2.4, 1.3, '#1b1b1b'); }
     if (Lk.stitches) { L(-5, hy - 5, 5, hy - 5, '#2b2b2b', 0.7); for (let i = -4; i <= 4; i += 2) L(i, hy - 6, i, hy - 4, '#2b2b2b', 0.6); }
     if (Lk.wraps) for (const [a, b] of [[-6, -4], [-2.5, -1.5], [3.5, 5]]) L(-8.5, hy + a, 8.5, hy + b, '#cbbf9f', 1.4);
+    if (Lk.zombie) { C(side ? -1 : -4.5, hy - 4, 1.7, '#7a1f1f'); L(side ? 1 : 2, hy - 6, side ? 4 : 5.5, hy - 3, '#3a2a2a', 0.7); }
     if (Lk.beard) { if (side) E(3, hy + 5, 5.5, 3.6, Lk.hair); else { g.beginPath(); g.ellipse(0, hy + 4.6, 6.8, 4.2, 0, 0, Math.PI); g.fillStyle = Lk.hair; g.fill(); } }
     if (Lk.mustache) R(side ? 3 : -3.5, hy + 2.3, side ? 4.5 : 7, 1.6, Lk.hair);
     const mc = Lk.beard ? '#e8b9a8' : '#6b2f2f';
     if (Lk.teeth) {
       const tx = side ? 5 : 0; R(tx - 3, hy + 3, 6, 2.2, '#c9ced6');
       for (let i = -2; i <= 2; i++) L(tx + i * 1.2, hy + 3, tx + i * 1.2, hy + 5.2, '#6b7280', 0.4);
+    }
+    else if (Lk.zombie) {
+      const mx = side ? 4.5 : 0; poly([mx - 2.5, hy + 3, mx + 2.5, hy + 3.6, mx + 1.5, hy + 5.4, mx - 1.8, hy + 5], '#3a1010');
+      R(mx - 1.4, hy + 3.1, 1.1, 1.1, '#efe6c8');
     }
     else if (st.open) C(side ? 5.5 : 0, hy + 4, 1.7, '#5a1f1f');
     else if (side) L(4.5, hy + 4, 6.5, hy + 3.6, mc, 1);
@@ -1709,6 +1730,9 @@ function drawPerson(Lk, x, y, st) {
 
 // ---- costumes: some themes dress the staff up (same people, same mobility aids) ----------
 function costumeTop(Lk, view, hy, side) {
+  if (Lk.horns) {
+    for (const d of side ? [1] : [-1, 1]) poly([d * 3.5, hy - 6.5, d * 7, hy - 5, d * 10, hy - 13, d * 9, hy - 17, d * 7, hy - 12], '#2a1a14');
+  }
   if (Lk.tubes) {
     const ty = hy + 9;
     if (side) L(-3, ty + 2, -9, ty - 7, Lk.skin, 2.6);
@@ -1729,6 +1753,31 @@ function costumeTop(Lk, view, hy, side) {
   }
 }
 // A ghost is a floating sheet, with a little sheet-arm holding whatever they're holding.
+function drawSlime(Lk, st, pose, view, side) {
+  const c = Lk.slime, wob = Math.sin(T * 3 + (Lk.id || 0)) * 1.2;
+  if (pose === 'chair') {
+    if (side) { C(-2, -9.5, 10, '#1d2027'); C(-2, -9.5, 7.5, '#3a3f4a'); C(10, -2.5, 2.5, '#1d2027'); }
+    else { E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); R(-7, -2, 14, 2, '#30343c'); }
+    g.translate(0, -10);
+  }
+  const top = (pose === 'sit' ? -40 : -46) - wob, half = 12 + wob * 0.6;
+  E(0, 0, 15, 4, shade(c, -0.25));
+  g.globalAlpha = 0.9;
+  g.beginPath(); g.moveTo(-half - 2, -1);
+  g.bezierCurveTo(-half - 3, top + 18, -half + 2, top, 0, top); g.bezierCurveTo(half - 2, top, half + 3, top + 18, half + 2, -1);
+  g.closePath(); g.fillStyle = c; g.fill(); g.globalAlpha = 1;
+  for (const [dx, len] of [[-7, 6], [3, 9], [9, 5]]) { const l = len + Math.sin(T * 2 + dx) * 2; RR(dx - 1.5, -4, 3, l, 1.5, c); C(dx, -4 + l, 1.9, c); }
+  g.globalAlpha = 0.45; E(-5, top + 9, 2.5, 5, '#fff'); g.globalAlpha = 1;
+  for (let i = 0; i < 3; i++) C(-3 + i * 4, -8 - ((T * 6 + i * 9) % 26), 1 + i * 0.3, shade(c, 0.25));
+  if (view !== 'back') {
+    const fx = side ? 4 : 0, ey = top + 13;
+    for (const e of side ? [fx] : [-4, 4]) { C(e, ey, 3.2, '#fff'); C(e + (side ? 1 : 0.6), ey + 0.6, st.blink ? 0.4 : 1.5, '#111'); }
+    g.beginPath(); g.arc(fx, ey + 7, 3, 0.15, Math.PI - 0.15); g.strokeStyle = shade(c, -0.45); g.lineWidth = 1.2; g.stroke();
+  }
+  const ra = st.ra ?? 0.12, shY = top + 22, hx = 9 + Math.sin(ra) * 10, hy = shY + Math.cos(ra) * 10;
+  L(8, shY, hx, hy, c, 4.5);
+  if (st.item) drawItem(st.item, hx, hy, ra, st);
+}
 function drawGhost(Lk, st, pose, view, side) {
   const chair = pose === 'chair';          // a ghost who uses a wheelchair still rides it
   if (chair) {
@@ -1754,7 +1803,12 @@ const _looks = {};
 function lookOf(w) {
   const set = THEMES[THEME].costumes; if (!set) return w.L;
   const key = THEME + ':' + w.id;
-  return _looks[key] || (_looks[key] = dress(w.L, set[w.id % set.length], w.id));
+  const kind = (THEMES[THEME].swaps || {})[w.id] || set[w.id % set.length];
+  return _looks[key] || (_looks[key] = dress(w.L, kind, w.id));
+}
+function mix(a, b, k) {           // blend two #rrggbb colors
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join('');
 }
 const XENO_IDS = [4, 7, 10];   // Maria, Raj, Mei: xenomorph-style aliens in the Sci-Fi theme
 function dress(L0, kind, id) {
@@ -1784,6 +1838,11 @@ function dress(L0, kind, id) {
       hatBand: ['#7cd650', '#f28c28', '#b23a48'][id % 3] }); break;
     case 'skeleton': Object.assign(o, plain, { skin: '#f2efe6', hairStyle: 'none', shirt: '#151515', pants: '#151515', ribs: true, skull: true }); break;
     case 'ghost': Object.assign(o, { sheet: true }); break;
+    case 'slime': Object.assign(o, { slime: ['#7be04a', '#b06ae0'][(id >> 2) % 2] }); break;
+    case 'zombie': Object.assign(o, { skin: mix(L0.skin, '#8aa36b', 0.55), shirt: shade(L0.shirt, -0.18), pants: shade(L0.pants, -0.1),
+      plaid: false, glasses: false, zombie: true }); break;
+    case 'demon': Object.assign(o, { skin: ['#c0392b', '#a3213a'][id % 2], shirt: '#1c1c1c', pants: '#121212', plaid: false, skirt: false,
+      glasses: false, horns: true, glowEyes: '#ffd23f', fangs: true, wings: '#5a1414', tail: true }); break;
   }
   return o;
 }
