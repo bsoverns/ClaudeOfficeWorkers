@@ -17,6 +17,37 @@ a chime plays and the tab shows a red icon. Say "done" and they go back on break
 Everything is drawn in code (no images or libraries) and runs on your own PC: prompts and
 tool activity go only to the local server on `127.0.0.1`, never anywhere else.
 
+## Themes
+
+Pick one on the clock-in screen; your pick becomes the default (change it under Settings).
+
+- **Classic Office**: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse,
+  pizzeria, art studio, lumber yard, chem lab, server room, shipping. Stations are random.
+- **Dev Shop**: the same floor re-skinned as where dev work happens, and workers go to the
+  station that matches what Claude is doing:
+
+| Station | Work that sends a worker there |
+|---|---|
+| Azure DevOps | work items, `AB#123`, comments, linking PRs, `dev.azure.com`, ADO MCP tools |
+| Azure Portal | `portal.azure.com`, `az` CLI, resource groups, key vaults, Azure SQL |
+| GitHub | `gh`, `git push/pull/merge/rebase/commit`, branches, pull requests |
+| Support Tickets | support tickets, incidents, outages, "broken", "not working" |
+| SQL Server | `.sql` files, stored procedures, T-SQL, `sqlcmd` |
+| DB Projects | dacpacs, `.sqlproj`, `sqlpackage`, publish profiles, scripted deployments |
+| Implementation | the Implementation project, appsettings / `.config`, client config, feature flags |
+| Python | `.py` files, `python`, `pip` |
+| Service Code | `*.Service` projects, Windows/worker/hosted services, legacy code (it's dark in there) |
+| QA Test Lab | unit/integration tests, `pytest`, `dotnet test`, `npm test` |
+| Hardware | printers, drivers, docks, USB, firmware |
+| Tracking | time tracking, Taskmaskitator, status/daily reports, shipments |
+
+The server scores those keywords from your prompt (strongest), the project folder, and each
+tool call (file paths, commands, URLs, MCP tool names). A new prompt can move the worker
+straight away; tool calls only move them once another area clearly leads and they've been at
+their station 20 seconds, so they don't ping-pong. Until there's a clue, the worker uses
+their usual station. Rules live in `AREA_RULES` in `server.py`.
+Test a station: `py office.py start "Fix the sproc" --area sql`.
+
 ## Get it
 
 Requirements: Windows 10/11, Python 3.9+ (`py`), and Edge or Chrome. No packages to install.

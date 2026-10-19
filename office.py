@@ -51,9 +51,9 @@ def show(res: dict) -> None:
 def demo() -> None:
     """A two-minute show: three jobs that start, hit trouble, wait on you and finish."""
     steps = [
-        (0, {"cmd": "start", "id": "demo-1", "title": "Refactor the billing module", "project": "demo"}),
-        (3, {"cmd": "start", "id": "demo-2", "title": "Write tests for the date parser", "project": "demo"}),
-        (6, {"cmd": "start", "id": "demo-3", "title": "Update the README", "project": "demo"}),
+        (0, {"cmd": "start", "id": "demo-1", "title": "Refactor the billing module", "project": "demo", "area": "python"}),
+        (3, {"cmd": "start", "id": "demo-2", "title": "Write tests for the date parser", "project": "demo", "area": "qa"}),
+        (6, {"cmd": "start", "id": "demo-3", "title": "Update the README", "project": "demo", "area": "github"}),
         (14, {"cmd": "activity", "id": "demo-1", "activity": "Editing billing.py"}),
         (18, {"cmd": "trouble", "id": "demo-2", "message": "AssertionError: expected 2024-02-29"}),
         (28, {"cmd": "working", "id": "demo-2", "activity": "Fixing the leap-year bug"}),
@@ -81,18 +81,22 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--project", default="cmd")
     ap.add_argument("--message", "-m")
     ap.add_argument("--activity", "-a")
+    ap.add_argument("--area", help="kind of work, for the Dev Shop theme: ado, azure, github, support, sql, "
+                                   "dbproj, impl, python, service, qa, hardware, tracking")
     a = ap.parse_args(argv)
     if a.cmd == "demo":
         demo()
         return
     if a.cmd == "start":
-        show(send({"cmd": "start", "title": a.arg or "Test task", "id": a.id, "project": a.project}))
+        show(send({"cmd": "start", "title": a.arg or "Test task", "id": a.id, "project": a.project, "area": a.area}))
         return
     body = {"cmd": a.cmd, "id": a.arg or a.id or ""}
     if a.message is not None:
         body["message"] = a.message
     if a.activity is not None:
         body["activity"] = a.activity
+    if a.area is not None:
+        body["area"] = a.area
     show(send(body))
 
 
