@@ -37,7 +37,10 @@ hooks that run `claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.md`.
 - Every `<input>` needs a distinct `name=` and `autocomplete="off"`.
 - The repo is public: no personal paths, tokens or prompts in commits. Never commit `dist/`,
   `build/` or settings backups.
-- Base branch `main`; work on feature branches merged by PR.
+- Base branch `main` (read "master" as `main`). **Never push to `main`**, not even a one-line
+  fix: work on a feature branch named `YYYY-MM-DD_Short_Description` and open a PR; the owner
+  merges. `.githooks/pre-push` refuses pushes to `main`; enable it in each clone with
+  `git config core.hooksPath .githooks`. Never bypass it (`--no-verify`).
 
 ## Documentation
 

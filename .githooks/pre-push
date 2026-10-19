@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refuse pushes to main: changes reach main only through a pull request.
+# Enabled per clone with: git config core.hooksPath .githooks
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Push to main refused: main only changes through a pull request." >&2
+    echo "Push a feature branch (YYYY-MM-DD_Short_Description) and open a PR instead." >&2
+    exit 1
+  fi
+done
+exit 0
