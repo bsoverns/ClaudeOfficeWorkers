@@ -28,6 +28,7 @@ RESOURCES = getattr(sys, "_MEIPASS", HERE)   # where index.html lives (bundled i
 DEFAULT_PORT = 8777
 EXPIRE_HOURS = 12      # a job with no news for this long is sent home
 RECENT_MAX = 12        # finished jobs kept for the "Recently finished" list
+AFFINITY_MAX = 300     # sessions whose worker we remember
 LONG_POLL_SECONDS = 25
 
 # The staff. The page draws them from these fields, so this is the only list.
@@ -168,6 +169,9 @@ class Office:
         self.closed: set[str] = set()          # sessions marked done while their turn finishes
         self.cli_n = 0
         self.state_path = ""                   # set by load(); empty means don't save
+        # who did each session's last task, so the same task keeps the same worker and station:
+        # key (session id, or "<session>:<agent type>" for helpers) -> [worker, station]
+        self.affinity: dict[str, list] = {}
 
     # ---- internals (caller holds the lock) -------------------------------------------
     def _bump(self) -> None:
@@ -180,7 +184,7 @@ class Office:
         if not self.state_path:
             return
         data = {"jobs": self.jobs, "seq": self.seq, "used": sorted(self.used), "recent": self.recent,
-                "closed": sorted(self.closed), "cli_n": self.cli_n}
+                "closed": sorted(self.closed), "cli_n": self.cli_n, "affinity": self.affinity}
         try:
             tmp = self.state_path + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
@@ -204,6 +208,7 @@ class Office:
             self.recent = list(data.get("recent") or [])[:RECENT_MAX]
             self.closed = set(data.get("closed") or [])
             self.cli_n = int(data.get("cli_n") or 0)
+            self.affinity = {k: v for k, v in (data.get("affinity") or {}).items() if isinstance(v, list) and len(v) == 2}
 
     def _busy(self) -> set[int]:
         return {j["worker"] for j in self.jobs.values() if j["worker"] is not None}
@@ -235,19 +240,33 @@ class Office:
         return pick
 
     def _staff(self, job: dict) -> None:
-        if job["worker"] is None:
+        """Give the job a worker: the one who did this session's last task if they're free,
+        otherwise the next in the rotation."""
+        if job["worker"] is not None:
+            return
+        key = job.get("key") or job["id"]
+        pref = self.affinity.get(key)
+        if pref and pref[0] not in self._busy() and 0 <= pref[0] < len(ROSTER):
+            job["worker"], job["station"] = pref[0], pref[1] if pref[1] in STATIONS else self._pick_station()
+            self.used.add(pref[0])
+        else:
             job["worker"] = self._pick_worker()
-            if job["worker"] is not None:
-                job["station"] = self._pick_station()
+            if job["worker"] is None:
+                return
+            job["station"] = self._pick_station()
+        self.affinity.pop(key, None)
+        self.affinity[key] = [job["worker"], job["station"]]
+        while len(self.affinity) > AFFINITY_MAX:
+            self.affinity.pop(next(iter(self.affinity)))
 
     def _new_job(self, jid: str, title: str, project: str = "", kind: str = "main",
-                 parent: str | None = None, ts: float | None = None) -> dict:
+                 parent: str | None = None, ts: float | None = None, key: str | None = None) -> dict:
         now = time.time()
         self.seq += 1
         job = {"id": jid, "title": clip(title, 120) or "(untitled task)", "project": clip(project, 40),
                "kind": kind, "parent": parent, "status": "working", "message": "", "activity": "",
                "prompt": "", "worker": None, "station": None, "created": now, "updated": now,
-               "status_ts": ts or now, "seq": self.seq}
+               "status_ts": ts or now, "seq": self.seq, "key": key or jid}
         self._staff(job)
         self.jobs[jid] = job
         return job
@@ -350,7 +369,7 @@ class Office:
                 title = f"{kind} helper" + (f" for: {parent_title}" if parent_title else "")
                 if f"{sid}:{agent_id}" not in self.jobs:
                     self._new_job(f"{sid}:{agent_id}", title, project, kind="helper",
-                                  parent=sid if job else None, ts=ts)
+                                  parent=sid if job else None, ts=ts, key=f"{sid}:{kind}")
             elif ev == "SubagentStop":
                 self._finish(f"{sid}:{agent_id}", "helper finished")
             elif ev == "SessionEnd":

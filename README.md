@@ -3,11 +3,14 @@
 An animated office that shows what Claude Code is doing, so you notice when it's done.
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
-machine, arcade, nap beanbag, smoking patio with a cat). When you give Claude a task, a
-random worker walks to the boss (Claude, at the big desk) for a work slip and heads to a
-station: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse, pizzeria,
+machine, arcade, nap beanbag, smoking patio with a cat). When you give Claude a task, the
+boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss for a work
+slip and head to a station: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse, pizzeria,
 art studio, lumber yard, chem lab, server room or shipping. Everyone gets a turn before
-anyone goes twice. A failed tool sends the worker to the Troubleshooting desk (staffed by a
+anyone goes twice, and a session keeps the same worker and station for every task it
+gives (as long as they're free). When Claude starts subagents, the session's worker becomes
+team lead: they run a meeting at the whiteboard, page each helper to the meeting room, hand
+them their slips there, and supervise until the helpers are done. A failed tool sends the worker to the Troubleshooting desk (staffed by a
 rubber duck); when Claude stops or needs permission, the worker waits in the mailroom,
 a chime plays and the tab shows a red icon. Say "done" and they go back on break.
 
@@ -108,7 +111,7 @@ The office remembers its jobs in `%LOCALAPPDATA%\ClaudeOffice\state.json`, so re
 | `PreToolUse` | Working; bubble shows the tool |
 | `PostToolUseFailure` | Troubleshooting desk (an interrupt → mailroom) |
 | `Notification`, `Stop` | Mailroom, waiting on you |
-| `SubagentStart` / `SubagentStop` | A helper worker joins / leaves |
+| `SubagentStart` / `SubagentStop` | A helper is paged to the meeting room by the team lead / goes back on break |
 | `SessionEnd` | `/clear`, `/logout` or exiting at the prompt: back to the break room. Any other end (e.g. the app closing an idle session): keeps waiting until you say done |
 
 All hooks are async and time-stamped, so the server ignores events that arrive out of order.

@@ -249,6 +249,7 @@ const SOUNDS = {
   waiting() { tone(784, 0, 0.6, 'sine', 0.28); tone(1175, 0.16, 0.8, 'sine', 0.24); tone(1568, 0.32, 1.1, 'triangle', 0.12); },
   start() { tone(523, 0, 0.14, 'triangle', 0.07); tone(784, 0.09, 0.2, 'triangle', 0.07); },
   done() { tone(659, 0, 0.12, 'triangle', 0.09); tone(880, 0.09, 0.12, 'triangle', 0.09); tone(1319, 0.18, 0.3, 'triangle', 0.09); },
+  page() { tone(988, 0, 0.25, 'sine', 0.06); tone(784, 0.22, 0.4, 'sine', 0.06); },
   trouble() { tone(330, 0, 0.16, 'square', 0.035); tone(247, 0.14, 0.28, 'square', 0.035); },
 };
 function play(name) {
@@ -295,7 +296,8 @@ const BREAK_IN = [wp(632, HY, 'hall'), wp(596, HY, 'break'), wp(596, 440, 'break
 const ROUTES = {
   hall: [],
   break: BREAK_IN,
-  patio: [...BREAK_IN, wp(330, 440, 'break'), wp(330, 612, 'break'), wp(330, 690, 'patio')],
+  patio: [...BREAK_IN, wp(225, 450, 'break'), wp(225, 612, 'break'), wp(225, 690, 'patio')],
+  meet: [wp(656, HY, 'hall'), wp(656, 700, 'meet'), wp(598, 700, 'meet')],
   boss: [wp(800, HY, 'hall'), wp(800, 302, 'boss')],
   trouble: [wp(1130, HY, 'hall'), wp(1130, 302, 'trouble')],
   mail: [wp(1450, HY, 'hall'), wp(1450, 302, 'mail')],
@@ -326,19 +328,23 @@ const IDLE_SPOTS = [
   { id: 'cool2', x: 298, y: 470, face: 'left', act: 'chat', partner: 'cool1' },
   { id: 'nap', x: 92, y: 566, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },
   { id: 'bean', x: 172, y: 584, face: 'down', pose: 'sit', act: 'phone', couch: true },
-  { id: 'smoke1', x: 392, y: 772, face: 'down', act: 'smoke', area: 'patio', smoke: true },
-  { id: 'smoke2', x: 446, y: 800, face: 'down', act: 'smoke', area: 'patio', smoke: true },
-  { id: 'smoke3', x: 500, y: 768, face: 'down', act: 'smoke', area: 'patio', smoke: true },
-  { id: 'smoke4', x: 552, y: 806, face: 'down', act: 'smoke', area: 'patio', smoke: true },
-  { id: 'bench1', x: 158, y: 790, face: 'down', pose: 'sit', act: 'bench', area: 'patio' },
-  { id: 'bench2', x: 220, y: 790, face: 'down', pose: 'sit', act: 'bench', area: 'patio', couch: true },
-  { id: 'stretch', x: 300, y: 878, face: 'down', act: 'stretch', area: 'patio' },
+  { id: 'smoke1', x: 206, y: 770, face: 'down', act: 'smoke', area: 'patio', smoke: true },
+  { id: 'smoke2', x: 262, y: 798, face: 'down', act: 'smoke', area: 'patio', smoke: true },
+  { id: 'smoke3', x: 292, y: 758, face: 'down', act: 'smoke', area: 'patio', smoke: true },
+  { id: 'smoke4', x: 234, y: 852, face: 'down', act: 'smoke', area: 'patio', smoke: true },
+  { id: 'bench1', x: 64, y: 790, face: 'down', pose: 'sit', act: 'bench', area: 'patio' },
+  { id: 'bench2', x: 122, y: 790, face: 'down', pose: 'sit', act: 'bench', area: 'patio', couch: true },
+  { id: 'stretch', x: 96, y: 880, face: 'down', act: 'stretch', area: 'patio' },
 ];
 IDLE_SPOTS.forEach(s => { s.area = s.area || 'break'; s.by = null; });
 const SPOT_BY_ID = Object.fromEntries(IDLE_SPOTS.map(s => [s.id, s]));
 const mk = (arr, area, face) => arr.map(([x, y]) => ({ x, y, area, face, by: null }));
 const VISIT_SPOTS = mk([[800, 282], [756, 288], [844, 288]], 'boss', 'up');
 const TROUBLE_SPOTS = mk([[1100, 252], [1160, 252], [1042, 262], [1218, 262], [1130, 290]], 'trouble', 'up');
+// Meeting room: the team lead stands at the whiteboard, helpers sit around the table.
+const LEAD_SPOT = { x: 592, y: 728, area: 'meet', face: 'left', by: null };
+const SEATS = [[410, 754, 'down'], [470, 754, 'down'], [530, 754, 'down'], [356, 802, 'right'], [584, 802, 'left'],
+  [410, 864, 'up'], [470, 864, 'up'], [530, 864, 'up']].map(([x, y, face]) => ({ x, y, face, area: 'meet', pose: 'sit', by: null }));
 const MAIL_SPOTS = mk([[1352, 222], [1448, 222], [1544, 222], [1400, 274], [1496, 274], [1330, 282]], 'mail', 'down');
 
 const ACT_NAMES = { tv: 'watching TV', fridge: 'raiding the fridge', coffee: 'getting coffee', micro: 'microwaving lunch',
@@ -368,6 +374,9 @@ const BRIEF_LINES = ["Here's your slip!", 'Make it shine.', "You've got this!", 
 const DONE_LINES = ['Done! ✓', 'Nailed it!', 'Clocking out!', 'Break time!', 'Easy.'];
 const DUCK_LINES = ['Quack. Read the error.', 'Tried turning it off and on?', 'Explain it to me, line by line.',
   "Quack. It's always DNS.", 'Check the logs, friend.', 'Did you save the file?'];
+const MEET_LINES = ['Team meeting!', 'Huddle time!', 'Coming, lead!', "What's the plan?"];
+const LEAD_LINES = ["Here's your piece.", 'You take this one.', 'Report back when done!', 'Divide and conquer!'];
+const LEAD_TALK = ['Status check, team?', 'Keep it moving!', 'Almost there.', 'Ping me if stuck.', 'Great progress!'];
 const BOSS_IDLE = ['Quiet day...', 'Anyone want coffee?', '*spins in chair*', 'Team meeting at 3? Kidding.'];
 const BOSS_BUSY = ['Keep it up, team!', 'Love the hustle.', 'Shipping it!', 'Great work, everyone.'];
 const STATUS_COLOR = { working: '#22c55e', trouble: '#f59e0b', waiting: '#ef4444' };
@@ -713,6 +722,7 @@ function drawItem(it, hx, hy, ang, st) {
       else if (it === 'paddle') { L(0, 0, 0, 5, '#8b5a2b', 2.4); E(0, 9, 4.5, 5.5, '#d63c3c'); }
       else if (it === 'brush') { L(0, -2, 0, 12, '#c08b5c', 1.6); C(0, 13, 1.8, '#e74c3c'); }
       else if (it === 'rod') { L(0, -2, 0, 16, 'rgba(220,240,255,.95)', 1.5); }
+      else if (it === 'pointer') { L(0, -2, 0, 22, '#3b2a1a', 1.4); C(0, 22, 1.4, '#e74c3c'); }
   }
   g.restore();
 }
@@ -895,11 +905,20 @@ function firstFree(list, w) {
   const b = pick(list);
   return { x: b.x + rand(-22, 22), y: b.y + rand(6, 16), area: b.area, face: b.face, temp: true };
 }
-function desiredKind(j) { return j.status === 'trouble' ? 'trouble' : j.status === 'waiting' ? 'mail' : 'st'; }
+function jobById(id) { return STATE ? STATE.jobs.find(j => j.id === id) : null; }
+function helpersOf(id) { return STATE ? STATE.jobs.filter(j => j.parent === id && j.worker != null) : []; }
+function leaderOf(j) { const p = j && j.parent ? jobById(j.parent) : null; return p && p.worker != null ? workers[p.worker] : null; }
+// Where a job's worker should be. A session with helpers working runs a meeting, unless it needs you.
+function desiredKind(j) {
+  if (j.status === 'trouble') return 'trouble';
+  if (j.status === 'waiting') return 'mail';
+  return j.kind !== 'helper' && helpersOf(j.id).length ? 'meet' : 'st';
+}
 function stationOf(j) { return STA[j.station] || STA.workbench; }
 function jobSpot(w, kind) {
   if (kind === 'trouble') return firstFree(TROUBLE_SPOTS, w);
   if (kind === 'mail') return firstFree(MAIL_SPOTS, w);
+  if (kind === 'meet') return firstFree([LEAD_SPOT], w);
   const sp = stationOf(w.job).spot;
   if (sp.by !== null && sp.by !== w.id) return { ...sp, x: sp.x - 30, y: sp.y + 14, temp: true };
   return sp;
@@ -907,9 +926,45 @@ function jobSpot(w, kind) {
 function assignJob(w, j, instant) {
   w.job = j; w.mode = 'job'; w.locKind = null; w.dwellUntil = 0; w.paperSent = false; w._p = undefined;
   if (instant) { w.slip = true; w.jobPhase = 'go'; w.locKind = desiredKind(j); teleport(w, jobSpot(w, w.locKind)); }
-  else { w.slip = false; w.jobPhase = 'toBoss'; say(w, pick(GO_LINES), 2.5); goTo(w, firstFree(VISIT_SPOTS, w)); }
+  else {
+    // Nobody wanders off on their own: the boss (or the team lead, for a helper) pages them first.
+    const lead = j.kind === 'helper' ? leaderOf(j) : null;
+    w.slip = false; w.jobPhase = 'paged'; w.pagedAt = T; w.pagedBy = lead; w.path = [];
+    const where = lead ? 'the meeting room' : 'my office';
+    if (lead) say(lead, 'Paging ' + w.L.name + ' to ' + where + '!', 3);
+    else bossSay('\ud83d\udce2 Paging ' + w.L.name + ' to ' + where + '!', 3);
+    PAGE.until = T + 2.2; PAGE.text = w.L.name.toUpperCase() + ', ' + where.toUpperCase();
+    play('page');
+    puff(w.x, w.y + headTop(w) - 8, { kind: 'text', text: '!', vy: -12, life: 1.3, color: '#ffd23f', font: 'bold 18px system-ui' });
+  }
 }
-function finishJob(w, celebrate) {
+// Called once the page has sunk in: head to the boss, or to the meeting room for a helper.
+function answerPage(w) {
+  const lead = w.job && w.job.kind === 'helper' ? leaderOf(w.job) : null;
+  say(w, lead ? pick(MEET_LINES) : pick(GO_LINES), 2.5);
+  if (lead) { w.jobPhase = 'toMeet'; goTo(w, firstFree(SEATS, w)); }
+  else { w.jobPhase = 'toBoss'; goTo(w, firstFree(VISIT_SPOTS, w)); }
+}
+const PAGE = { until: 0, text: '' };
+function drawPager() {
+  // PA speakers in the break room and over the work floor; they pulse while someone is paged
+  for (const [x, y] of [[598, 32], [1586, 360]]) {
+    RR(x - 9, y - 7, 18, 14, 3, '#3b3f4a'); C(x, y, 4.5, '#6b7280'); C(x, y, 2, '#2b2f3a');
+    if (T < PAGE.until) for (let k = 0; k < 3; k++) {
+      const r = 8 + ((T * 30 + k * 8) % 24);
+      g.globalAlpha = 1 - r / 32; g.beginPath(); g.arc(x, y, r, Math.PI * 0.6, Math.PI * 1.4);
+      g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
+    }
+  }
+  if (T < PAGE.until) {
+    g.font = 'bold 11px system-ui'; const tw = g.measureText(PAGE.text).width + 30;
+    RR(1100 - tw / 2, 302, tw, 20, 10, 'rgba(20,22,28,.85)', '#ffd23f', 1.5);
+    TXT('\ud83d\udce2 ' + PAGE.text, 1100, 312.5, 'bold 11px system-ui', '#ffd23f');
+  }
+}
+function finishJob(w, celebrate, old) {
+  const lead = old && old.kind === 'helper' ? leaderOf(old) : null;
+  if (celebrate && lead && lead.locKind === 'meet') say(lead, 'Thanks, ' + w.L.name + '!', 2.5);
   w.job = null; w.slip = false; w.mode = 'returning'; w.jobPhase = null; w.locKind = null;
   if (BOSS.visitor === w) BOSS.visitor = null;
   if (celebrate) { say(w, pick(DONE_LINES), 3); confetti(w.x, w.y - 50); play('done'); bossSay(`Nice work, ${w.L.name}!`); }
@@ -920,6 +975,8 @@ function arrive(w) {
   if (w.mode === 'idle' || w.mode === 'returning') { w.mode = 'idle'; w.actUntil = T + rand(12, 28); w.food = pick(['pizza', 'sandwich']); }
   else if (w.mode === 'job') {
     if (w.jobPhase === 'toBoss') { w.jobPhase = 'brief'; w.briefStart = T; BOSS.visitor = w; bossSay(pick(BRIEF_LINES)); }
+    else if (w.jobPhase === 'toMeet') { w.jobPhase = 'meetWait'; w.waitStart = T; }
+    else if (w.locKind === 'meet') { w.nextChat = T + 2; }
     else if (w.locKind === 'trouble') { w.dwellUntil = T + 6; troubleNo++; w.nextChat = T + 1.2; }
     else if (w.locKind === 'mail') { w.nextChat = T + 0.8; }
   }
@@ -954,12 +1011,28 @@ function updateWorker(w, dt) {
       if (!w.paperSent && T - w.briefStart > 0.7) { w.paperSent = true; puff(BOSS.x + 16, BOSS.y - 14, { kind: 'paper', x0: BOSS.x + 16, y0: BOSS.y - 14, x1: w.x + 6, y1: w.y - 30, life: 0.7 }); }
       if (!w.slip && T - w.briefStart > 1.4) w.slip = true;
       if (T - w.briefStart > 2.3) { w.jobPhase = 'go'; if (BOSS.visitor === w) BOSS.visitor = null; }
+    } else if (w.jobPhase === 'paged') {
+      if (T - w.pagedAt > 1.3) answerPage(w);
+    } else if (w.jobPhase === 'meetWait') {
+      // wait (up to 10s) for the lead to reach the whiteboard, then get the slip from them
+      const lead = leaderOf(w.job), ready = lead && lead.arrived && lead.locKind === 'meet';
+      if (ready || T - w.waitStart > 10) { w.jobPhase = 'meetBrief'; w.briefStart = T; w.briefer = ready ? lead : null; if (ready) say(lead, pick(LEAD_LINES), 2.5); }
+    } else if (w.jobPhase === 'meetBrief') {
+      const src = w.briefer || LEAD_SPOT;
+      if (!w.paperSent && T - w.briefStart > 0.7) { w.paperSent = true; puff(src.x + 8, src.y - 40, { kind: 'paper', x0: src.x + 8, y0: src.y - 40, x1: w.x + 6, y1: w.y - 26, life: 0.7 }); }
+      if (!w.slip && T - w.briefStart > 1.4) w.slip = true;
+      if (T - w.briefStart > 2.6) w.jobPhase = 'go';
     } else if (w.jobPhase === 'go') {
       const want = desiredKind(w.job);
       if (w.locKind !== want && T >= w.dwellUntil) { w.locKind = want; goTo(w, jobSpot(w, want)); }
       if (w.arrived) {
         if (w.locKind === 'st' && w.job.status === 'working' && !dozing(w)) { const s = stationOf(w.job); s.tick(s.x0, s.y0, w, dt, t); }
         if (w.locKind === 'st' && dozing(w) && Math.random() < dt * 0.7) puff(w.x + 8, w.y - 58, { kind: 'text', text: 'z', vx: 8, vy: -14, life: 1.6, color: '#fff', font: 'bold 11px system-ui' });
+        if (w.locKind === 'meet' && T > w.nextChat) {
+          const team = helpersOf(w.job.id), h = team.length ? workers[pick(team).worker] : null;
+          say(w, h && Math.random() < 0.5 ? h.L.name + ", how's it going?" : pick(LEAD_TALK), 3);
+          w.nextChat = T + rand(8, 14);
+        }
         if ((w.locKind === 'mail' || w.locKind === 'trouble') && T > w.nextChat) {
           say(w, w.job.message || (w.locKind === 'mail' ? 'Your turn!' : 'Hmm...'), 4.5);
           w.nextChat = T + (w.locKind === 'mail' ? 9 : 7);
@@ -1039,8 +1112,9 @@ function poseFor(w) {
   if (w.spot && w.spot.pose) st.pose = w.spot.pose;
   if (w.mode === 'job' && w.job) {
     st.busyHands = true;
-    if (w.jobPhase === 'brief' || w.jobPhase === 'toBoss') { st.ra = w.slip ? 0.5 : 1.25; st.item = w.slip ? 'slip' : null; st.busyHands = false; return st; }
+    if (['paged', 'brief', 'toBoss', 'toMeet', 'meetWait', 'meetBrief'].includes(w.jobPhase)) { st.ra = w.slip ? 0.5 : 1.25; st.item = w.slip ? 'slip' : null; st.busyHands = false; return st; }
     if (w.locKind === 'trouble') { st.ra = 2.75 + Math.sin(t * 9) * 0.15; st.la = 0.2; return st; }
+    if (w.locKind === 'meet') { st.ra = 2.7 + Math.sin(t * 2) * 0.25; st.la = 0.3; st.item = 'pointer'; st.open = Math.sin(t * 7) > 0.2; return st; }
     if (w.locKind === 'mail') { st.ra = 2.8 + Math.sin(t * 5) * 0.3; st.la = 0.25; st.item = 'envelope'; st.open = Math.sin(t * 2) > 0; return st; }
     if (w.locKind === 'st') {
       if (dozing(w)) { st.eyesClosed = true; st.ra = st.la = 0.15; return st; }
@@ -1170,6 +1244,31 @@ function drawPingPongBall() {
   } else for (const w of [wa, wb]) if (ready(w)) { const dir = w.facing === 'right' ? 1 : -1; C(w.x + dir * 18, w.y - 40 - Math.abs(Math.sin(T * 5)) * 16, 2.4, '#fff'); }
 }
 
+function drawMeetingTable() {
+  RR(375, 764, 190, 62, 12, '#8a5a36'); RR(381, 768, 178, 52, 9, '#9c6a42');
+  for (const [x, y] of [[410, 778], [470, 776], [530, 778], [420, 810], [520, 810]]) RR(x - 5, y - 4, 10, 7, 1, '#fffef5');
+  RR(462, 800, 7, 8, 2, '#fff', '#999', 0.8); RR(492, 786, 7, 8, 2, '#d97757');
+  R(380, 826, 6, 12, '#5e3b22'); R(554, 826, 6, 12, '#5e3b22');
+}
+function drawWhiteboard() {
+  RR(370, 636, 200, 48, 3, '#fdfdfd', '#9aa3ad', 3); R(378, 684, 184, 3, '#9aa3ad');
+  const lead = workers.find(w => w.mode === 'job' && w.job && w.locKind === 'meet');
+  if (!lead) {
+    TXT('NEXT MEETING: TBD', 470, 650, 'bold 9px system-ui', '#3b82f6');
+    L(400, 674, 430, 664, '#22c55e', 2); L(430, 664, 460, 670, '#22c55e', 2); L(460, 670, 500, 656, '#22c55e', 2);
+    TXT('\u2191 morale', 530, 668, '8px system-ui', '#888');
+    return;
+  }
+  TXT('TEAM LEAD: ' + lead.L.name.toUpperCase(), 378, 645, 'bold 8px system-ui', '#d97757', 'left');
+  const team = helpersOf(lead.job.id);
+  g.font = '7.5px system-ui';
+  team.slice(0, 4).forEach((h, i) => {
+    const hw = workers[h.worker], kind = h.title.split(' helper')[0];
+    TXT(fitText('\u2022 ' + (hw ? hw.L.name : '?') + ': ' + kind, 92), 378 + (i >> 1) * 96, 657 + (i & 1) * 11, '7.5px system-ui', '#333', 'left');
+  });
+  if (team.length > 4) TXT('+' + (team.length - 4) + ' more', 564, 679, '7px system-ui', '#777', 'right');
+}
+
 // ============================================================================================
 // Static background (cached to an offscreen canvas)
 // ============================================================================================
@@ -1213,26 +1312,33 @@ function drawStatic() {
   plant(595, 140, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
   // walls
   wall(20, 20, 615, 20); wall(20, 20, 20, 615); wall(615, 20, 615, 300); wall(615, 345, 615, 615);
-  wall(20, 615, 304, 615); wall(356, 615, 615, 615);
+  wall(20, 615, 200, 615); wall(250, 615, 615, 615);
 
-  // ---- patio
-  R(20, 630, 595, 310, '#7cb26a');
-  for (let i = 0; i < 6; i++) R(20, 630 + i * 52, 595, 26, 'rgba(255,255,255,.05)');
-  R(304, 615, 52, 90, '#b7b2a8'); RR(330, 700, 270, 200, 8, '#b7b2a8');
-  for (let i = 0; i < 6; i++) L(330 + i * 45, 700, 330 + i * 45, 900, 'rgba(0,0,0,.08)', 1);
-  R(20, 916, 595, 4, '#e8dcc8'); for (let x = 26; x < 612; x += 14) RR(x, 904, 8, 30, 2, '#f3ead8');
-  R(130, 778, 140, 7, '#8b5a2b'); R(130, 760, 140, 6, '#8b5a2b'); R(136, 785, 5, 12, '#5e3b22'); R(258, 785, 5, 12, '#5e3b22');
-  L(425, 770, 425, 742, '#666', 3); E(425, 740, 9, 3.5, '#888'); E(425, 739, 6, 2, '#444');
-  L(588, 760, 588, 690, '#555', 3); RR(548, 668, 80, 24, 3, '#2e7d4f', '#fff', 1.5); TXT('SMOKING AREA', 588, 680, 'bold 9px system-ui', '#fff');
-  for (const [x, y] of [[40, 860], [110, 890], [520, 920], [600, 860], [250, 900]]) { C(x, y, 10, '#4f9a45'); C(x + 8, y - 4, 8, '#5fae52'); C(x + 4, y + 2, 2, pick(['#f9e04b', '#ff7eb6', '#fff'])); }
-  wall(20, 630, 20, 940); wall(615, 630, 615, 940);
+  // ---- patio (left) and meeting room (right) under the break room
+  R(20, 630, 298, 310, '#7cb26a');
+  for (let i = 0; i < 6; i++) R(20, 630 + i * 52, 298, 26, 'rgba(255,255,255,.05)');
+  R(200, 615, 50, 90, '#b7b2a8'); RR(186, 700, 124, 200, 8, '#b7b2a8');
+  for (let i = 1; i < 4; i++) L(186 + i * 31, 700, 186 + i * 31, 900, 'rgba(0,0,0,.08)', 1);
+  R(20, 916, 298, 4, '#e8dcc8'); for (let x = 26; x < 312; x += 14) RR(x, 904, 8, 30, 2, '#f3ead8');
+  R(36, 778, 130, 7, '#8b5a2b'); R(36, 760, 130, 6, '#8b5a2b'); R(42, 785, 5, 12, '#5e3b22'); R(154, 785, 5, 12, '#5e3b22');
+  L(246, 768, 246, 740, '#666', 3); E(246, 738, 9, 3.5, '#888'); E(246, 737, 6, 2, '#444');
+  L(300, 750, 300, 692, '#555', 3); RR(238, 668, 76, 24, 3, '#2e7d4f', '#fff', 1.5); TXT('SMOKING AREA', 276, 680, 'bold 9px system-ui', '#fff');
+  for (const [x, y] of [[40, 860], [150, 896], [290, 918]]) { C(x, y, 10, '#4f9a45'); C(x + 8, y - 4, 8, '#5fae52'); C(x + 4, y + 2, 2, pick(['#f9e04b', '#ff7eb6', '#fff'])); }
+  R(318, 630, 297, 60, '#e4e8f0'); R(318, 680, 297, 10, '#b9c2d3');
+  R(318, 690, 297, 250, '#56637b');
+  for (let x = 330; x < 615; x += 22) for (let y = 700; y < 940; y += 22) C(x, y, 1.1, 'rgba(255,255,255,.07)');
+  RR(330, 642, 34, 34, 3, '#2b2f3a'); TXT('MEETING', 347, 654, 'bold 6.5px system-ui', '#ffd479'); TXT('ROOM', 347, 664, 'bold 6.5px system-ui', '#ffd479');
+  for (const s of SEATS) { RR(s.x - 9, s.y - 13, 18, 6, 2, '#2f3542'); R(s.x - 8, s.y - 7, 3, 8, '#1f232c'); R(s.x + 5, s.y - 7, 3, 8, '#1f232c'); }
+  plant(600, 930, 0.9); plant(336, 930, 0.9);
+  wall(20, 630, 20, 940); wall(318, 630, 318, 940); wall(20, 630, 615, 630);
+  wall(615, 630, 615, 676); wall(615, 724, 615, 940); wall(20, 940, 615, 940);
 
   // ---- hall + work floor
   R(615, 300, 985, 45, '#59606e'); R(615, 316, 985, 12, '#6c7383');
   R(640, 345, 960, 595, '#a2a7ad');
   for (let x = 640; x < 1600; x += 40) L(x, 345, x, 940, 'rgba(0,0,0,.05)', 1);
   for (let y = 345; y < 940; y += 40) L(640, y, 1600, y, 'rgba(0,0,0,.05)', 1);
-  R(615, 345, 25, 595, '#3b3f4a');
+  R(615, 345, 25, 331, '#3b3f4a'); R(615, 724, 25, 216, '#3b3f4a'); R(615, 676, 25, 48, '#7d8290');
   L(640, 347, 1600, 347, '#f1c40f', 3);
   for (const id of STATION_ORDER) {
     const s = STA[id], x = s.x0, y = s.y0;
@@ -1325,8 +1431,9 @@ function drawDynamicBg() {
   RR(1062, 56, 96, 30, 3, '#111'); TXT('NOW SERVING', 1110, 64, 'bold 7px system-ui', '#888'); TXT(String(troubleNo), 1110, 77, 'bold 13px monospace', '#ff4d4d');
   // patio cat on the bench
   const br = Math.sin(T * 1.6) * 0.8;
-  E(258, 774, 12 + br * 0.4, 6 + br * 0.3, '#f39c4a'); C(268, 771, 5, '#f39c4a'); poly([265, 768, 267, 763, 269, 768], '#f39c4a'); poly([269, 768, 271, 763, 273, 768], '#f39c4a');
-  L(247, 776, 241, 772 + Math.sin(T) * 2, '#f39c4a', 2.5);
+  E(150, 774, 12 + br * 0.4, 6 + br * 0.3, '#f39c4a'); C(160, 771, 5, '#f39c4a'); poly([157, 768, 159, 763, 161, 768], '#f39c4a'); poly([161, 768, 163, 763, 165, 768], '#f39c4a');
+  L(139, 776, 133, 772 + Math.sin(T) * 2, '#f39c4a', 2.5);
+  drawWhiteboard();
   // tree
   const sway = Math.sin(T * 0.8) * 2;
   R(66, 690, 12, 50, '#7a4b28'); C(72 + sway, 680, 26, '#3f8f3a'); C(56 + sway, 690, 18, '#4f9a45'); C(90 + sway, 690, 18, '#4f9a45'); C(72 + sway, 664, 16, '#58b052');
@@ -1380,6 +1487,8 @@ function drawTooltip(w) {
     lines.push(STATUS_LABEL[w.job.status] || w.job.status);
     if (w.job.activity && w.job.status === 'working') lines.push(w.job.activity);
     if (w.job.message && w.job.status !== 'working') lines.push(w.job.message);
+    if (w.locKind === 'meet') lines.push('Leading a team of ' + helpersOf(w.job.id).length);
+    const lead = leaderOf(w.job); if (lead) lines.push('Reports to ' + lead.L.name);
   } else lines.push(w.mode === 'returning' ? 'Heading back to the break room' : 'On break — ' + (ACT_NAMES[w.spot && w.spot.act] || 'wandering'));
   g.font = '12px system-ui';
   const ls = lines.map((l, i) => i === 0 ? l : fitText(l, 240));
@@ -1405,7 +1514,7 @@ function update(dt) {
 const PROPS = [
   { y: 258, draw: drawCouch }, { y: 299, draw: drawDiningTable }, { y: 384, draw: drawPoolTable },
   { y: 540, draw: drawPingPong }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
-  { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter },
+  { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
 ];
 function render() {
   g = mainCtx;
@@ -1419,6 +1528,7 @@ function render() {
   for (const it of items) it.f();
   for (const id of STATION_ORDER) { const s = STA[id]; if (s.fx && stationActive(s)) { const w = stationWorker(s); s.fx(s.x0, s.y0, w, T + w.seed); } }
   drawPingPongBall();
+  drawPager();
   drawParticles();
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
@@ -1500,7 +1610,7 @@ function apply(s) {
   }
   for (const id of Object.keys(JOBS)) if (!seenIds.has(id)) {
     const j = JOBS[id]; delete JOBS[id]; delete prevStatus[id];
-    if (j.worker != null && workers[j.worker]) { const w = workers[j.worker]; if (w.job && w.job.id === id) finishJob(w, !firstLoad); }
+    if (j.worker != null && workers[j.worker]) { const w = workers[j.worker]; if (w.job && w.job.id === id) finishJob(w, !firstLoad, j); }
   }
   firstLoad = false;
   renderPanel(); updateTitle();
@@ -1534,13 +1644,19 @@ function ago(sec) {
   if (sec < 60) return sec + 's'; if (sec < 3600) return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
   return Math.floor(sec / 3600) + 'h ' + Math.floor(sec % 3600 / 60) + 'm';
 }
+function teamLine(j, w) {
+  const team = helpersOf(j.id).length, lead = leaderOf(j);
+  const bits = [j.project, j.kind === 'helper' ? (lead ? 'helper \u00b7 reports to ' + lead.L.name : 'helper') : '',
+    team ? 'team lead of ' + team : '', j.station && w ? stationOf(j).label.toLowerCase() : ''].filter(Boolean);
+  return bits.length ? '<div class="proj">' + esc(bits.join(' \u00b7 ')) + '</div>' : '';
+}
 function jobCard(j) {
   const w = j.worker != null ? workers[j.worker] : null;
   return `<div class="job ${esc(j.status)}" data-id="${esc(j.id)}">
     <div class="jt"><span class="dot" style="background:${w ? w.L.shirt : '#777'}"></span><b>${w ? esc(w.L.name) : 'Waiting for a free worker'}</b>
       <span class="pill">${esc(STATUS_LABEL[j.status] || j.status)}</span><span class="age" data-since="${j.created}"></span></div>
     <div class="title">${esc(j.title)}</div>
-    ${j.project || j.kind === 'helper' ? `<div class="proj">${esc(j.project)}${j.kind === 'helper' ? ' · helper' : ''}${j.station && w ? ' · ' + esc(stationOf(j).label.toLowerCase()) : ''}</div>` : ''}
+    ${teamLine(j, w)}
     ${j.status === 'working' && j.activity ? `<div class="act">${esc(j.activity)}</div>` : ''}
     ${j.message && j.status !== 'working' ? `<div class="msg">${esc(j.message)}</div>` : ''}
     <div class="btns">${w ? '<button data-act="find">Find</button>' : ''}<button data-act="done">Done ✓</button></div>
