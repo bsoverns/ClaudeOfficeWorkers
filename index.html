@@ -1558,7 +1558,7 @@ function renderPanel() {
   const now = serverNow();
   $('#listRecent').innerHTML = (STATE.recent || []).map(r => {
     const w = r.worker != null ? workers[r.worker] : null;
-    return `<div class="recent"><b>${w ? esc(w.L.name) : '?'}</b> finished “${esc(r.title)}” <span>· ${ago(now - r.finished)} ago</span></div>`;
+    return `<div class="recent"><b>${w ? esc(w.L.name) : '?'}</b> finished “${esc(r.title)}” <span>· ${ago(now - r.finished)} ago${r.reason ? ' · ' + esc(r.reason) : ''}</span></div>`;
   }).join('') || '<div class="empty">Nothing yet.</div>';
   tickAges();
 }

@@ -80,6 +80,10 @@ DONE_RE = re.compile(
     r"finished|we'?re\s+done|that'?s\s+all|thanks?(?:\s+you)?|thank\s+you|thx|ty)\s*[.!]*\s*$",
     re.I)
 
+# SessionEnd reasons that mean you finished the session on purpose.
+SESSION_END_DONE = {"clear": "you cleared the session", "logout": "you logged out",
+                    "prompt_input_exit": "you closed the session"}
+
 PUBLIC_JOB_KEYS = ("id", "title", "project", "kind", "parent", "status", "message", "activity",
                    "worker", "station", "created", "updated", "prompt")
 
@@ -163,11 +167,43 @@ class Office:
         self.recent: list[dict] = []
         self.closed: set[str] = set()          # sessions marked done while their turn finishes
         self.cli_n = 0
+        self.state_path = ""                   # set by load(); empty means don't save
 
     # ---- internals (caller holds the lock) -------------------------------------------
     def _bump(self) -> None:
         self.rev += 1
         self.lock.notify_all()
+        self._save()
+
+    # ---- saved state, so restarting the office keeps everyone where they were ----------
+    def _save(self) -> None:
+        if not self.state_path:
+            return
+        data = {"jobs": self.jobs, "seq": self.seq, "used": sorted(self.used), "recent": self.recent,
+                "closed": sorted(self.closed), "cli_n": self.cli_n}
+        try:
+            tmp = self.state_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            os.replace(tmp, self.state_path)
+        except OSError:
+            pass
+
+    def load(self, path: str) -> None:
+        """Remember jobs in path from now on, starting from what was saved there."""
+        with self.lock:
+            self.state_path = path
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except (OSError, ValueError):
+                return
+            self.jobs = {k: v for k, v in (data.get("jobs") or {}).items() if isinstance(v, dict)}
+            self.seq = int(data.get("seq") or 0)
+            self.used = set(data.get("used") or [])
+            self.recent = list(data.get("recent") or [])[:RECENT_MAX]
+            self.closed = set(data.get("closed") or [])
+            self.cli_n = int(data.get("cli_n") or 0)
 
     def _busy(self) -> set[int]:
         return {j["worker"] for j in self.jobs.values() if j["worker"] is not None}
@@ -228,15 +264,16 @@ class Office:
         if message is not None:
             job["message"] = clip(message, 200)
 
-    def _finish(self, jid: str) -> None:
+    def _finish(self, jid: str, reason: str) -> None:
+        """Send the job's worker home. reason shows in "Recently finished" so you can tell why."""
         job = self.jobs.pop(jid, None)
         if not job:
             return
         for child in [j for j in self.jobs.values() if j["parent"] == jid]:
-            self._finish(child["id"])
+            self._finish(child["id"], reason)
         self.recent.insert(0, {"id": job["id"], "title": job["title"], "project": job["project"],
                                "worker": job["worker"], "created": job["created"],
-                               "finished": time.time()})
+                               "finished": time.time(), "reason": reason})
         del self.recent[RECENT_MAX:]
         for queued in sorted(self.jobs.values(), key=lambda j: j["seq"]):
             if queued["worker"] is None:
@@ -265,7 +302,7 @@ class Office:
                 prompt = prompt_title(p.get("prompt"))
                 if DONE_RE.match(prompt):
                     if job:
-                        self._finish(sid)
+                        self._finish(sid, f'you said "{prompt}"')
                     self.closed.add(sid)
                 else:
                     self.closed.discard(sid)
@@ -315,10 +352,20 @@ class Office:
                     self._new_job(f"{sid}:{agent_id}", title, project, kind="helper",
                                   parent=sid if job else None, ts=ts)
             elif ev == "SubagentStop":
-                self._finish(f"{sid}:{agent_id}")
+                self._finish(f"{sid}:{agent_id}", "helper finished")
             elif ev == "SessionEnd":
-                self._finish(sid)
-                self.closed.discard(sid)
+                # Only an end you chose (/clear, /logout, /exit or Ctrl+C at the prompt) sends the
+                # worker home. Anything else (an app closing or recycling an idle session) keeps
+                # them waiting until you say done, press Done, or 12 hours pass.
+                reason = str(p.get("reason") or "")
+                if reason in SESSION_END_DONE:
+                    self._finish(sid, SESSION_END_DONE[reason])
+                    self.closed.discard(sid)
+                elif job:
+                    self._set_status(job, "waiting", "Session closed — still waiting on you", ts)
+                    job["activity"] = ""
+                else:
+                    return
             else:
                 return
             self._bump()
@@ -346,7 +393,7 @@ class Office:
                 return {"ok": True, "jobs": self._public_jobs()}
             if cmd == "clear" or (cmd == "done" and jid == "all"):
                 for k in list(self.jobs):
-                    self._finish(k)
+                    self._finish(k, "sent everyone home")
                 self.closed.clear()
                 self._bump()
                 return {"ok": True}
@@ -361,7 +408,7 @@ class Office:
             elif cmd in ("wait", "waiting"):
                 self._set_status(job, "waiting", str(msg or "Waiting on you"))
             elif cmd == "done":
-                self._finish(job["id"])
+                self._finish(job["id"], "marked done")
             elif cmd != "activity":
                 return {"ok": False, "error": f"unknown command {cmd!r}"}
             if p.get("activity") is not None and job["id"] in self.jobs:
@@ -388,7 +435,7 @@ class Office:
         with self.lock:
             stale = [k for k, j in self.jobs.items() if j["updated"] < cutoff]
             for k in stale:
-                self._finish(k)
+                self._finish(k, f"no news for {EXPIRE_HOURS} hours")
             if stale:
                 self._bump()
 
@@ -500,9 +547,20 @@ def default_port() -> int:
     return int(os.environ.get("CLAUDE_OFFICE_PORT") or DEFAULT_PORT)
 
 
+def state_file(port: int) -> str:
+    """Where the office remembers its jobs: %LOCALAPPDATA%/ClaudeOffice/state.json, one per port
+    (state-8790.json on port 8790), so a test office never touches the real one."""
+    base = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice")
+    os.makedirs(base, exist_ok=True)
+    return os.path.join(base, "state.json" if port == DEFAULT_PORT else f"state-{port}.json")
+
+
 def make_server(port: int) -> ThreadingHTTPServer:
-    """Bind the office on 127.0.0.1:port and start the stale-job reaper (raises OSError if taken)."""
+    """Bind the office on 127.0.0.1:port, reload its saved jobs and start the stale-job reaper
+    (raises OSError if the port is taken)."""
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    OFFICE.load(state_file(port))
+    OFFICE.reap()
     httpd.daemon_threads = True
     threading.Thread(target=_reaper, daemon=True).start()
     return httpd

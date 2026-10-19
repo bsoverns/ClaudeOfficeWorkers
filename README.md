@@ -78,7 +78,11 @@ Chime when someone waits, soft blips on start/finish, re-chime every 5 minutes w
 anyone waits, and desktop notifications. Stored in the browser. **Done ✓** on a card ends
 that task; **Find** highlights the worker. Hover or click a worker to see what they're up to.
 A worker whose Claude has gone quiet for 5 minutes dozes at their station; jobs with no
-news for 12 hours are sent home automatically.
+news for 12 hours are sent home automatically. "Recently finished" says why each worker
+went home (you said done, Done button, `/clear`, helper finished, 12 hours).
+
+The office remembers its jobs in `%LOCALAPPDATA%\ClaudeOffice\state.json`, so restarting it
+(or the exe quitting after its window closes) puts everyone back where they were.
 
 ## Files
 
@@ -105,6 +109,6 @@ news for 12 hours are sent home automatically.
 | `PostToolUseFailure` | Troubleshooting desk (an interrupt → mailroom) |
 | `Notification`, `Stop` | Mailroom, waiting on you |
 | `SubagentStart` / `SubagentStop` | A helper worker joins / leaves |
-| `SessionEnd` | Back to the break room |
+| `SessionEnd` | `/clear`, `/logout` or exiting at the prompt: back to the break room. Any other end (e.g. the app closing an idle session): keeps waiting until you say done |
 
 All hooks are async and time-stamped, so the server ignores events that arrive out of order.
