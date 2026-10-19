@@ -84,6 +84,34 @@ PUBLIC_JOB_KEYS = ("id", "title", "project", "kind", "parent", "status", "messag
                    "worker", "station", "created", "updated", "prompt")
 
 
+PASTE_RE = re.compile(r"<pasted_content\b[^>]*>(.*?)(?:</pasted_content>|\Z)", re.S | re.I)
+TAG_RE = re.compile(r"</?[A-Za-z][\w:-]*(?:\s[^<>]*)?/?>")
+LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s*|>\s*|[-*+]\s+|\d+[.)]\s+)")
+
+
+def plain_text(text: object) -> str:
+    """Markup-free one-liner for a slip or bubble: drops tags Claude Code wraps around
+    prompts (e.g. <pasted_content>) and Markdown (#, **, `, list bullets, links)."""
+    text = TAG_RE.sub(" ", str(text or ""))
+    text = " ".join(LINE_MARK_RE.sub("", line) for line in text.splitlines())
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"\*\*|__|~~|`+", "", text)
+    return " ".join(text.split())
+
+
+def prompt_title(prompt: object) -> str:
+    """What a prompt is about: your own words if you typed any, else the start of what you pasted."""
+    prompt = str(prompt or "")
+    own = plain_text(PASTE_RE.sub(" ", prompt))
+    if own:
+        return own
+    for m in PASTE_RE.finditer(prompt):
+        pasted = plain_text(m.group(1))
+        if pasted:
+            return pasted
+    return ""
+
+
 def clip(text: object, n: int) -> str:
     """One line, collapsed whitespace, at most n characters."""
     text = " ".join(str(text or "").split())
@@ -234,7 +262,7 @@ class Office:
         with self.lock:
             job = self.jobs.get(sid)
             if ev == "UserPromptSubmit":
-                prompt = str(p.get("prompt") or "")
+                prompt = prompt_title(p.get("prompt"))
                 if DONE_RE.match(prompt):
                     if job:
                         self._finish(sid)
@@ -270,11 +298,11 @@ class Office:
             elif ev == "Notification":
                 if not job or sid in self.closed:
                     return
-                self._set_status(job, "waiting", str(p.get("message") or "Waiting on you"), ts)
+                self._set_status(job, "waiting", plain_text(p.get("message")) or "Waiting on you", ts)
             elif ev == "Stop":
                 if not job or sid in self.closed:
                     return
-                last = clip(p.get("last_assistant_message") or "", 140)
+                last = clip(plain_text(p.get("last_assistant_message")), 140)
                 self._set_status(job, "waiting", last or "Finished — your turn!", ts)
                 job["activity"] = ""
             elif ev == "SubagentStart":
