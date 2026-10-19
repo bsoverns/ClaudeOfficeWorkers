@@ -23,7 +23,7 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
 
 - **Classic Office**: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse,
   pizzeria, art studio, lumber yard, chem lab, server room, shipping. Stations are random.
-- **Sci-Fi Station**: the staff become astronauts, aliens (including xenomorph-style ones), robots, space pirates (with robot parrots) and space wizards with laser
+- **Sci-Fi Station**: the staff become astronauts, aliens (including xenomorph-style ones), robots, cyborgs and space wizards with laser
   swords; stations are Mission Control, Orbital Cloud, Wormhole, Hull Breach, Data Core,
   Launch Pad, Engine Room, Xeno Lab, Alien Nest, Simulation Deck, Robot Bay and Cargo Bay.
   The boss wears a space helmet and a UFO drifts over the patio.
