@@ -8,3 +8,4 @@
 *.exe binary
 *.png binary
 *.zip binary
+.githooks/* text eol=lf

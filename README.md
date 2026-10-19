@@ -28,6 +28,9 @@ py install_hooks.py
 start.bat
 ```
 
+If you'll change the code, also run `git config core.hooksPath .githooks` once: it turns on a
+guard that refuses pushes to `main` (changes go through pull requests).
+
 `install_hooks.py` connects Claude Code once for every project. Restart open Claude Code
 sessions afterwards. For a PC without Python, build the standalone app (below) and copy the zip.
 
