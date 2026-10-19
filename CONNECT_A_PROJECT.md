@@ -133,12 +133,12 @@ the URL in it too).
 
 | Claude is…                                 | The worker…                                     |
 |--------------------------------------------|-------------------------------------------------|
-| given a new prompt                         | leaves the break room, gets a work slip from the boss, goes to a station |
+| given a new prompt                         | is paged by the boss, gets a work slip, goes to a station (same worker for the same session) |
 | using tools                                | works at the station; a bubble shows the tool ("Editing app.js") |
 | hitting a failed tool or command           | queues at the Troubleshooting help desk          |
 | asking permission, or finished its turn    | waits in the mailroom waving an envelope; chime + red tab icon |
-| told "done" / "thanks", or the session ends | celebrates and goes back to the break room      |
-| starting a subagent                        | a second worker joins as a helper               |
+| told "done" / "thanks", Done ✓, or `/clear` | celebrates and goes back to the break room      |
+| starting subagents                         | becomes team lead in the meeting room; each helper is paged there for their slip |
 
 ## Quick reference
 
