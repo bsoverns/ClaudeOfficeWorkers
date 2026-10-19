@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Build output (build.bat / PyInstaller). Rebuild instead of committing.
+build/
+dist/
+*.spec
+office.ico
+
+# Backups install_hooks.py writes next to a settings file
+*.bak-office-*
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# Editors and OS clutter
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

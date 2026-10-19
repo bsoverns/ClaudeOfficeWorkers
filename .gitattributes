@@ -1,0 +1,10 @@
+# Normalise text files to LF in the repo; check out with native line endings.
+* text=auto
+
+# Windows batch files must be CRLF or cmd misreads labels and goto.
+*.bat text eol=crlf
+
+*.ico binary
+*.exe binary
+*.png binary
+*.zip binary
