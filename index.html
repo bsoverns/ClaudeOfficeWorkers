@@ -1709,8 +1709,13 @@ function costumeTop(Lk, view, hy, side) {
 }
 // A ghost is a floating sheet, with a little sheet-arm holding whatever they're holding.
 function drawGhost(Lk, st, pose, view, side) {
-  const bob = -4 - Math.sin(T * 2.2 + (st.walk || 0)) * 2.5;
-  const top = (pose === 'sit' || pose === 'chair' ? -48 : -54) + bob, bot = -3 + bob;
+  const chair = pose === 'chair';          // a ghost who uses a wheelchair still rides it
+  if (chair) {
+    if (side) { C(-2, -9.5, 10, '#1d2027'); C(-2, -9.5, 7.5, '#3a3f4a'); C(10, -2.5, 2.5, '#1d2027'); L(-9, -14, 8, -14, '#30343c', 2.5); }
+    else { E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); R(-7, -2, 14, 2, '#30343c'); }
+  }
+  const bob = chair ? -10 - Math.sin(T * 2.2) * 1 : -4 - Math.sin(T * 2.2 + (st.walk || 0)) * 2.5;
+  const top = (pose === 'sit' || chair ? -48 : -54) + bob, bot = -3 + bob;
   g.globalAlpha = 0.93;
   g.beginPath(); g.moveTo(-11, bot); g.lineTo(-11, top + 11); g.arc(0, top + 11, 11, Math.PI, 0); g.lineTo(11, bot);
   for (let i = 0; i < 4; i++) g.quadraticCurveTo(11 - i * 5.5 - 2.75, bot + (i % 2 ? -4 : 4) + Math.sin(T * 4 + i) * 1.5, 11 - (i + 1) * 5.5, bot);
