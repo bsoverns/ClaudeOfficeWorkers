@@ -12,7 +12,9 @@ Both halves live on the same machine. Each machine gets its own copy.
 
 ## 0. Easiest: the standalone app (no Python needed)
 
-`dist\ClaudeOffice.zip` (built by `build.bat`) is the whole office in one program.
+Download `ClaudeOffice.zip` from the latest release
+(<https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest>), or build it yourself with
+`build.bat` (it lands in `dist\`). It's the whole office in one program.
 
 1. Copy `ClaudeOffice.zip` to the PC and unzip it somewhere it can stay, e.g.
    `C:\Tools\ClaudeOffice\`. Keep the `_internal` folder next to the exe.
