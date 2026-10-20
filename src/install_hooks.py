@@ -45,7 +45,9 @@ def hook_command() -> str:
     """The command Claude Code runs: the exe itself when frozen, else python + claude_hook.py."""
     if getattr(sys, "frozen", False):
         return f'"{sys.executable.replace(chr(92), "/")}" --hook'
-    py = sys.executable.replace("\\", "/")
+    # The Mac launcher passes the stable python3 path (e.g. /opt/homebrew/bin/python3) so a
+    # Python upgrade doesn't break the hook.
+    py = (os.environ.get("CLAUDE_OFFICE_PYTHON") or sys.executable).replace("\\", "/")
     hook = os.path.join(HERE, "claude_hook.py").replace("\\", "/")
     return f'"{py}" "{hook}"'
 

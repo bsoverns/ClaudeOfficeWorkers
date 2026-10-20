@@ -1,8 +1,9 @@
 name: Build
 
-# Pull requests: check the Python, build ClaudeOffice.exe the same way scripts/build.bat does, and
-# smoke-test it. Pushes to main (merged PRs): the same, then publish a GitHub Release with
-# ClaudeOffice.zip attached and release notes generated from the merged PRs.
+# Pull requests: check the Python, build ClaudeOffice.exe the same way scripts/build.bat does and
+# ClaudeOffice.app the same way scripts/build_mac.sh does, and smoke-test both. Pushes to main
+# (merged PRs): the same, then publish a GitHub Release with ClaudeOffice.zip and
+# ClaudeOffice-mac.zip attached and release notes generated from the merged PRs.
 
 on:
   push:
@@ -16,8 +17,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build-mac:
+    runs-on: macos-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        id: version
+        run: |
+          # e.g. 2026.10.19.7  (UTC date + workflow run number); the Windows job reuses it
+          version="$(date -u +%Y.%-m.%-d).$GITHUB_RUN_NUMBER"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version: $version"
+
+      - name: Build ClaudeOffice.app (scripts/build_mac.sh)
+        run: VERSION="${{ steps.version.outputs.version }}" scripts/build_mac.sh
+
+      - name: Smoke test the app
+        run: |
+          # Same as the Windows smoke test: start the built server on a spare port, send one Claude
+          # hook event through the app's own --hook mode, and check the job shows up as SQL work.
+          app="dist/ClaudeOffice-mac/ClaudeOffice.app/Contents/MacOS/ClaudeOffice"
+          export CLAUDE_OFFICE_PORT=8799
+          "$app" --server 8799 &
+          server=$!
+          for i in $(seq 30); do curl -sf http://127.0.0.1:8799/api/ping >/dev/null && break; sleep 0.5; done
+          echo '{"hook_event_name":"UserPromptSubmit","session_id":"ci","cwd":"/tmp/ci","prompt":"Write a stored procedure"}' | "$app" --hook
+          curl -sf http://127.0.0.1:8799/api/state > state.json
+          kill $server
+          python3 -c "import json, sys; jobs = json.load(open('state.json'))['jobs']; print(jobs); sys.exit(0 if any(j['id'] == 'ci' and j['area'] == 'sql' for j in jobs) else 'Smoke test failed: no SQL job from the hook.')"
+
+      - name: Upload ClaudeOffice-mac.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeOffice-mac
+          path: dist/ClaudeOffice-mac.zip
+
   build:
     runs-on: windows-latest
+    needs: build-mac
     permissions:
       contents: write   # to create tags and releases
 
@@ -31,8 +72,8 @@ jobs:
       - name: Compute version
         shell: pwsh
         run: |
-          # e.g. 2026.10.19.7  (UTC date + workflow run number)
-          $version = "{0}.{1}" -f (Get-Date).ToUniversalTime().ToString('yyyy.M.d'), $env:GITHUB_RUN_NUMBER
+          # e.g. 2026.10.19.7  (UTC date + workflow run number), computed once by the Mac job
+          $version = "${{ needs.build-mac.outputs.version }}"
           "VERSION=$version" >> $env:GITHUB_ENV
           Write-Host "Version: $version"
 
@@ -78,6 +119,13 @@ jobs:
           name: ClaudeOffice-win-x64
           path: dist/ClaudeOffice.zip
 
+      - name: Download ClaudeOffice-mac.zip
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: ClaudeOffice-mac
+          path: dist
+
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         shell: pwsh
@@ -86,11 +134,13 @@ jobs:
         run: |
           $tag = "v$env:VERSION"
           $intro = @"
-          **Download:** ``ClaudeOffice.zip`` below (64-bit Windows, no Python needed). Unzip it somewhere it can stay, run **Connect Claude Code.bat** once, then open **ClaudeOffice.exe**.
+          **Windows:** ``ClaudeOffice.zip`` below (64-bit, no Python needed). Unzip it somewhere it can stay, run **Connect Claude Code.bat** once, then open **ClaudeOffice.exe**.
 
           > Windows SmartScreen may warn because the exe isn't code-signed. Click **More info > Run anyway**, or right-click the zip > **Properties** > **Unblock** before unzipping.
+
+          **Mac:** ``ClaudeOffice-mac.zip`` below (uses the Mac's own Python 3). Unzip it somewhere it can stay, run ``xattr -dr com.apple.quarantine <that folder>`` once in Terminal (the app isn't signed), run **Connect Claude Code.command**, then open **ClaudeOffice.app**.
           "@
-          gh release create $tag dist/ClaudeOffice.zip `
+          gh release create $tag dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip `
             --repo "$env:GITHUB_REPOSITORY" `
             --target "$env:GITHUB_SHA" `
             --title "Claude Office $env:VERSION" `
