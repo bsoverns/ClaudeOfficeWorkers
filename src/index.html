@@ -332,9 +332,10 @@ const FLOORS = [
 // (right of the worker, x0 + 92 onward) is blocked in stationBlocks().
 const FURNITURE = [
   [266, 222, 168, 36], [70, 276, 132, 48],      // couch, dining table
-  [396, 296, 178, 98], [380, 470, 180, 89],     // pool table, ping pong table
+  [48, 476, 178, 98], [380, 470, 180, 89],      // pool table, ping pong table
   [259, 376, 22, 64],                           // water cooler
-  [62, 551, 60, 30], [152, 566, 40, 32],        // beanbags
+  [455, 351, 11, 8], [510, 351, 105, 8], [451, 351, 8, 98], [451, 441, 164, 8],   // nap room walls (door in the top)
+  [510, 380, 74, 24], [510, 414, 74, 24], [460, 414, 44, 28],                     // nap room cots and beanbag
   [32, 596, 16, 16], [592, 596, 16, 16],        // break room plants
   [34, 756, 134, 30], [240, 734, 12, 36], [296, 690, 8, 62],   // patio bench, ashtray, sign post
   [62, 722, 20, 20], [30, 846, 28, 26], [140, 882, 28, 22],    // tree trunk, bushes
@@ -449,15 +450,16 @@ const IDLE_SPOTS = [
   { id: 'eat3', x: 105, y: 262, face: 'down', pose: 'sit', act: 'eat' },
   { id: 'eat4', x: 165, y: 262, face: 'down', pose: 'sit', act: 'eat' },
   { id: 'eat5', x: 135, y: 340, face: 'up', pose: 'sit', act: 'eat' },
-  { id: 'pool1', x: 382, y: 345, face: 'right', act: 'pool', partner: 'pool2' },
-  { id: 'pool2', x: 590, y: 335, face: 'left', act: 'pool', partner: 'pool1' },
-  { id: 'pool3', x: 485, y: 406, face: 'up', act: 'poolwatch' },
+  { id: 'pool1', x: 34, y: 525, face: 'right', act: 'pool', partner: 'pool2' },
+  { id: 'pool2', x: 242, y: 515, face: 'left', act: 'pool', partner: 'pool1' },
+  { id: 'pool3', x: 137, y: 586, face: 'up', act: 'poolwatch' },
   { id: 'pp1', x: 356, y: 512, face: 'right', act: 'pingpong', partner: 'pp2' },
   { id: 'pp2', x: 584, y: 512, face: 'left', act: 'pingpong', partner: 'pp1' },
   { id: 'cool1', x: 246, y: 470, face: 'right', act: 'cooler', partner: 'cool2' },
   { id: 'cool2', x: 298, y: 470, face: 'left', act: 'chat', partner: 'cool1' },
-  { id: 'nap', x: 92, y: 566, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },
-  { id: 'bean', x: 172, y: 584, face: 'down', pose: 'sit', act: 'phone', couch: true },
+  { id: 'nap', x: 548, y: 398, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },     // nap room cots
+  { id: 'nap2', x: 548, y: 432, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },
+  { id: 'bean', x: 482, y: 428, face: 'down', pose: 'sit', act: 'phone', couch: true },
   { id: 'smoke1', x: 206, y: 770, face: 'down', act: 'smoke', area: 'patio', smoke: true },
   { id: 'smoke2', x: 262, y: 798, face: 'down', act: 'smoke', area: 'patio', smoke: true },
   { id: 'smoke3', x: 292, y: 758, face: 'down', act: 'smoke', area: 'patio', smoke: true },
@@ -2785,7 +2787,7 @@ function decorScifi() {
   g.globalAlpha = 0.12; poly([ux - 6, uy + 4, ux + 6, uy + 4, ux + 16, uy + 70, ux - 16, uy + 70], '#b6f3ff'); g.globalAlpha = 1;
   E(ux, uy, 16, 5, '#9aa3ad'); E(ux, uy - 4, 7, 5, 'rgba(160,220,255,.9)');
   for (let i = -1; i <= 1; i++) C(ux + i * 9, uy + 1, 1.4, Math.floor(T * 4 + i) % 2 ? '#ffde59' : '#ff5c8a');
-  const rx = 330 + Math.sin(T * 0.23) * 200, ry = 446 + Math.sin(T * 0.37) * 18;   // robot vacuum
+  const rx = 355 + Math.sin(T * 0.23) * 95, ry = 455 + Math.sin(T * 0.37) * 6;   // robot vacuum
   E(rx, ry, 9, 4, '#3b3f4a'); E(rx, ry - 2, 8, 3, '#5b6170'); C(rx + 3, ry - 2, 1.2, Math.floor(T * 2) % 2 ? '#22c55e' : '#14532d');
 }
 function pumpkin(x, y) {
@@ -2870,7 +2872,7 @@ function decorHorror() {
       poly([bx - 6, by - f, bx, by, bx + 6, by - f, bx, by + 2], '#000'); }
   });
   for (const [cx, cy, a0] of [[24, 24, 0], [611, 24, Math.PI / 2], [644, 24, 0], [971, 24, Math.PI / 2], [984, 24, 0], [1286, 24, Math.PI / 2], [1304, 24, 0], [1591, 24, Math.PI / 2]]) web(cx, cy, a0);
-  for (const [px, py] of [[44, 300], [596, 466], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
+  for (const [px, py] of [[44, 300], [300, 600], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip(); g.globalAlpha = 0.2;
   for (let i = 0; i < 4; i++) E(((T * 8 + i * 90) % 400) - 40, 860 + i * 18, 80, 12, '#e9e3ff');
   g.restore(); g.globalAlpha = 1;
@@ -3342,11 +3344,12 @@ function updPool(dt) {
     if (b.y < 4 || b.y > 64) { b.vy *= -1; b.y = clamp(b.y, 4, 64); }
   }
 }
+const PX = 48, PY = 476;                 // pool table top-left: left of the ping pong table
 function drawPoolTable() {
-  RR(396, 296, 178, 88, 10, '#6b3e1f'); R(406, 306, 158, 68, '#2e7d4f');
-  for (const [px, py] of [[408, 308], [485, 305], [562, 308], [408, 372], [485, 375], [562, 372]]) C(px, py, 4, '#16261c');
-  for (const b of POOL.balls) C(406 + b.x, 306 + b.y, 3.2, b.c);
-  R(404, 384, 8, 10, '#4a2a14'); R(558, 384, 8, 10, '#4a2a14');
+  RR(PX, PY, 178, 88, 10, '#6b3e1f'); R(PX + 10, PY + 10, 158, 68, '#2e7d4f');
+  for (const [px, py] of [[12, 12], [89, 9], [166, 12], [12, 76], [89, 79], [166, 76]]) C(PX + px, PY + py, 4, '#16261c');
+  for (const b of POOL.balls) C(PX + 10 + b.x, PY + 10 + b.y, 3.2, b.c);
+  R(PX + 8, PY + 88, 8, 10, '#4a2a14'); R(PX + 162, PY + 88, 8, 10, '#4a2a14');
 }
 function drawPingPong() {
   RR(380, 480, 180, 58, 3, '#1f6f9e'); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.strokeRect(383, 483, 174, 52); L(383, 509, 557, 509, 'rgba(255,255,255,.6)', 1);
@@ -3425,8 +3428,14 @@ function drawStatic() {
   R(259, 400, 22, 40, '#f0f0f0'); R(263, 416, 6, 4, '#4aa3ff'); R(271, 416, 6, 4, '#e74c3c'); E(270, 388, 11, 14, 'rgba(120,190,255,.75)');
   // dining chairs (people sit on them)
   for (const s of ['eat1', 'eat2', 'eat3', 'eat4', 'eat5']) { const sp = SPOT_BY_ID[s]; RR(sp.x - 9, sp.y - 13, 18, 6, 2, '#7a4f2e'); R(sp.x - 8, sp.y - 7, 3, 8, '#5e3b22'); R(sp.x + 5, sp.y - 7, 3, 8, '#5e3b22'); }
-  // beanbags + rug
-  E(92, 566, 30, 15, '#e76f51'); E(172, 582, 20, 16, '#2a9d8f'); E(166, 576, 12, 8, '#34b3a4');
+  // nap room (top right of the break room): dim carpet, two cots, a beanbag, a door in the top wall
+  R(455, 355, 160, 90, '#2f3a56');
+  for (let i = 0; i < 14; i++) C(462 + hh(i) % 146, 362 + hh(i + 7) % 78, 0.9, 'rgba(255,255,255,.22)');
+  for (const y of [380, 414]) { RR(510, y, 74, 24, 4, '#6b7280'); RR(512, y + 2, 70, 20, 3, '#c7d2fe'); RR(514, y + 4, 16, 16, 4, '#fff'); RR(544, y + 2, 38, 20, 3, '#818cf8'); }
+  E(482, 428, 22, 14, '#2a9d8f'); E(476, 422, 13, 8, '#34b3a4');
+  C(601, 368, 5, 'rgba(253,230,138,.35)'); C(601, 368, 2.4, '#fde68a');
+  wall(455, 355, 466, 355); wall(510, 355, 615, 355); wall(455, 355, 455, 445); wall(455, 445, 615, 445);
+  RR(530, 349, 66, 12, 3, '#1e293b'); TXT('NAP ROOM · shhh', 563, 355.5, 'bold 6.5px system-ui', '#c7d2fe');
   plant(595, 140, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
   // walls
   wall(20, 20, 615, 20); wall(20, 20, 20, 615); wall(615, 20, 615, 300); wall(615, 345, 615, 615);
@@ -3676,7 +3685,7 @@ function update(dt) {
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
-  { y: 258, draw: drawCouch }, { y: 299, draw: drawDiningTable }, { y: 384, draw: drawPoolTable },
+  { y: 258, draw: drawCouch }, { y: 299, draw: drawDiningTable }, { y: PY + 88, draw: drawPoolTable },
   { y: 540, draw: drawPingPong }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
   { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
 ];

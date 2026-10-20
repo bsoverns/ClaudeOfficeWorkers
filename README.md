@@ -19,7 +19,7 @@ For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, doubl
 > **More info → Run anyway**, or right-click the zip → **Properties** → tick **Unblock** before unzipping.
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
-machine, arcade, nap beanbag, smoking patio with a cat). When you give Claude a task, the
+machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
 boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss for a work
 slip and head to a station: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse, pizzeria,
 art studio, lumber yard, chem lab, server room or shipping. Everyone gets a turn before
