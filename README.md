@@ -78,8 +78,8 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   beach with a palm tree and a treasure chest; the boss wears a captain's tricorn, and the break
   room talk turns to grog and buried treasure.
 - **Stone Age**: cave people in spotted fur tunics with bones in their hair, hunters with fang
-  necklaces and face paint, shamans in feathered headdresses, and coworkers in dinosaur and woolly
-  mammoth onesies (nobody's turban or hijab gets a hood or headdress). Real dinosaurs do the heavy
+  necklaces and face paint, shamans in triceratops-skull caps, and coworkers in dinosaur and woolly
+  mammoth onesies (nobody's turban or hijab gets a hood or skull cap). Real dinosaurs do the heavy
   lifting. Stations are the Stone Tablets, Pterodactyl Airlift, the Fossil Dig, Fire Support, the
   Stone Table, the Catapult, the Wheel (reinvented again), Cave Paintings, the T-Rex Den, Volcano
   Testing, Dino Power and Dino Express. A smoking volcano out the window, and the patio becomes a
