@@ -19,7 +19,7 @@ For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, doubl
 > **More info → Run anyway**, or right-click the zip → **Properties** → tick **Unblock** before unzipping.
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
-machine, arcade, nap beanbag, smoking patio with a cat). When you give Claude a task, the
+machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
 boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss for a work
 slip and head to a station: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse, pizzeria,
 art studio, lumber yard, chem lab, server room or shipping. Everyone gets a turn before
@@ -29,6 +29,14 @@ team lead: they run a meeting at the whiteboard, page each helper to the meeting
 them their slips there, and supervise until the helpers are done. A failed tool sends the worker to the Troubleshooting desk (staffed by a
 rubber duck); when Claude stops or needs permission, the worker waits in the mailroom,
 a chime plays and the tab shows a red icon. Say "done" and they go back on break.
+
+On break, people chat with whoever is nearby: short back-and-forth exchanges about fish in the
+microwave, last night's game, the stock market, reply-all disasters, TPS reports and the
+cover-sheet memo, being asked to come in on Saturday (and Sunday), and more. The break room TV
+flips channels every 40 seconds (the match, a paternity-test talk show, a survey game show and
+a soap opera), and the couch reacts to the big moments. Everyone walks around the furniture:
+paths go around tables, counters and station equipment, and only step onto a couch, beanbag or
+chair to sit on it.
 
 Everything is drawn in code (no images or libraries) and runs on your own PC: prompts and
 tool activity go only to the local server on `127.0.0.1`, never anywhere else.
@@ -54,9 +62,16 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   Ripperdoc Clinic, Data Vault, Drop Zone, Mod Garage, Snake Arcade, the Blackwall, Sim Dojo,
   Chop Shop and Surveillance. Rain, neon signs, a skyline window, a hover car; the boss wears
   an AR visor.
+- **North Pole** (Christmas): elves with jingle-bell hats, Santa and Mrs. Claus, reindeer (one with
+  a glowing red nose), gingerbread people, snowmen and ugly-sweater wearers (nobody's turban or
+  hijab gets a hat or antlers). Stations are the Nice List, Sleigh Hangar, Tree Farm, Toy Repair,
+  Cookie Kitchen, Chimney Drop, Snow Machine, Letters to Santa, the Yeti Cave, Toy Testing,
+  Lights & Wiring and Gift Wrapping. Falling snow, string lights, stockings, a wreath, a tree in
+  the boss's office, a snowman on the patio and Santa's sleigh across the moon; the boss wears
+  a Santa hat, and the break room talk turns to Secret Santa and eggnog.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
-Dev Shop, Sci-Fi, Haunted House and Neon City all send workers to the station that matches what Claude
+Dev Shop, Sci-Fi, Haunted House, Neon City and North Pole all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |

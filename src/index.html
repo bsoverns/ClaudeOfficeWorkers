@@ -104,7 +104,7 @@
       <label>Theme <select id="optTheme" name="office-theme" autocomplete="off">
         <option value="classic">Classic Office</option><option value="dev">Dev Shop</option>
         <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option>
-        <option value="cyber">Neon City (cyberpunk)</option></select></label>
+        <option value="cyber">Neon City (cyberpunk)</option><option value="xmas">North Pole (Christmas)</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
@@ -142,6 +142,7 @@ py src\office.py demo</pre>
     <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python… Workers go to the station that matches what Claude is doing.</span></button>
     <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad… (also follows the work)</span></button>
     <button class="theme" data-theme="horror"><b>🎃 Haunted House</b><span>Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and ghosts. The Crypt, the Cauldron, the Dungeon… (also follows the work)</span></button>
+    <button class="theme" data-theme="xmas"><b>🎄 North Pole</b><span>Christmas at Santa's workshop: elves, Santa and Mrs. Claus, reindeer (one with a very red nose), gingerbread people, snowmen and ugly sweaters. The Nice List, the Cookie Kitchen, the Yeti Cave, Gift Wrapping… (also follows the work)</span></button>
     <button class="theme" data-theme="cyber"><b>🌃 Neon City</b><span>Cyberpunk: netrunners, street samurai with neon katanas, LED-mask punks, holo-idols, corpos, ripperdocs, drone couriers and androids. The Gig Board, Fork Alley, the Blackwall… (also follows the work)</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
@@ -152,7 +153,7 @@ py src\office.py demo</pre>
 // ============================================================================================
 // Basics
 // ============================================================================================
-const W = 1600, H = 960, HY = 322;            // world size, hallway walking line
+const W = 1600, H = 960;                     // world size
 const $ = s => document.querySelector(s);
 const cv = $('#c'), stage = $('#stage');
 const mainCtx = cv.getContext('2d');
@@ -311,17 +312,143 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) seen
 // ============================================================================================
 // World layout
 // ============================================================================================
-const wp = (x, y, area) => ({ x, y, area });
-const BREAK_IN = [wp(632, HY, 'hall'), wp(596, HY, 'break'), wp(596, 440, 'break')];
-const ROUTES = {
-  hall: [],
-  break: BREAK_IN,
-  patio: [...BREAK_IN, wp(225, 450, 'break'), wp(225, 612, 'break'), wp(225, 690, 'patio')],
-  meet: [wp(656, HY, 'hall'), wp(656, 700, 'meet'), wp(598, 700, 'meet')],
-  boss: [wp(800, HY, 'hall'), wp(800, 302, 'boss')],
-  trouble: [wp(1130, HY, 'hall'), wp(1130, 302, 'trouble')],
-  mail: [wp(1450, HY, 'hall'), wp(1450, 302, 'mail')],
-};
+// Walking: people stay on the floor and go around furniture. The floor is a grid of 8px cells;
+// a cell is free when its center is on a FLOORS rect and off every furniture footprint (plus a
+// margin for the body). Paths are A* over that grid, then straightened where the line is clear.
+// Rects are [x, y, w, h] in feet coordinates (where a person's feet would be).
+const FLOORS = [
+  [28, 158, 580, 450],                          // break room, below the counters, TV and machines
+  [596, 304, 54, 38], [202, 600, 46, 44],       // break room doors: to the hall, to the patio
+  [28, 640, 282, 262],                          // patio, above the fence
+  [326, 692, 282, 240], [596, 680, 54, 40],     // meeting room, below the whiteboard + its door
+  [615, 304, 977, 38],                          // hall
+  [644, 340, 948, 594],                         // work floor
+  [648, 100, 320, 198], [780, 290, 40, 20],     // boss's office + door
+  [988, 100, 296, 198], [1110, 290, 40, 20],    // help desk + door
+  [1308, 100, 284, 198], [1430, 290, 40, 20],   // mailroom + door
+];
+// Spots on or in furniture (couch, beanbags, a desk chair) are reached by stepping in from the
+// nearest free cell. Themes add their own pieces with `blocks`; every station's equipment
+// (right of the worker, x0 + 92 onward) is blocked in stationBlocks().
+const FURNITURE = [
+  [266, 222, 168, 36], [70, 276, 132, 48],      // couch, dining table
+  [48, 476, 178, 98], [380, 470, 180, 89],      // pool table, ping pong table
+  [259, 376, 22, 64],                           // water cooler
+  [510, 380, 74, 24], [510, 414, 74, 24], [460, 414, 44, 28],                     // nap room cots and beanbag
+  [32, 596, 16, 16], [592, 596, 16, 16],        // break room plants
+  [34, 756, 134, 30], [240, 734, 12, 36], [296, 690, 8, 62],   // patio bench, ashtray, sign post
+  [62, 722, 20, 20], [30, 846, 28, 26], [140, 882, 28, 22],    // tree trunk, bushes
+  [375, 764, 190, 74], [328, 916, 16, 16], [592, 916, 16, 16], // meeting table, plants
+  [716, 130, 168, 108], [878, 100, 78, 54],     // boss's desk and chair, bookshelf
+  [652, 276, 16, 16], [942, 276, 16, 16],       // boss's plants
+  [996, 100, 268, 126], [1250, 204, 26, 44],    // help desk counter, extinguisher
+  [1318, 100, 264, 84], [1538, 242, 48, 44],    // mail counter and pigeonholes, mail bin
+];
+// Walls inside a FLOORS rect (the nap room, with its door in the top wall). Off-floor cells are walls too.
+const WALLS = [[455, 351, 11, 8], [510, 351, 105, 8], [451, 351, 8, 98], [451, 441, 164, 8]];
+const NAV = 8, NAV_COLS = W / NAV, NAV_ROWS = H / NAV, NAV_PAD = 7;
+let navGrid = null, wallGrid = null;            // 1 = blocked / 1 = wall; rebuilt when the theme changes
+function stationBlocks() { return STATION_ORDER.map(id => [STA[id].x0 + 92, STA[id].y0 + 26, 142, 160]); }
+function buildNav() {
+  navGrid = new Uint8Array(NAV_COLS * NAV_ROWS).fill(1);
+  const mark = (rect, v, pad) => { markIn(navGrid, rect, v, pad); };
+  for (const f of FLOORS) mark(f, 0, 0);
+  for (const f of [...WALLS, ...FURNITURE, ...stationBlocks(), ...(THEMES[THEME].blocks || [])]) mark(f, 1, NAV_PAD);
+  wallGrid = new Uint8Array(NAV_COLS * NAV_ROWS).fill(1);
+  for (const f of FLOORS) markIn(wallGrid, f, 0, 0);
+  for (const f of WALLS) markIn(wallGrid, f, 1, 0);
+}
+function markIn(grid, [x, y, w, h], v, pad) {
+    for (let r = Math.max(0, Math.floor((y - pad) / NAV)); r < Math.min(NAV_ROWS, Math.ceil((y + h + pad) / NAV)); r++)
+      for (let c = Math.max(0, Math.floor((x - pad) / NAV)); c < Math.min(NAV_COLS, Math.ceil((x + w + pad) / NAV)); c++) {
+        const cx = c * NAV + NAV / 2, cy = r * NAV + NAV / 2;
+        if (cx >= x - pad && cx <= x + w + pad && cy >= y - pad && cy <= y + h + pad) grid[r * NAV_COLS + c] = v;
+      }
+}
+function navFree(c, r) { return c >= 0 && r >= 0 && c < NAV_COLS && r < NAV_ROWS && navGrid[r * NAV_COLS + c] === 0; }
+function navFreeAt(x, y) { return navFree(Math.floor(x / NAV), Math.floor(y / NAV)); }
+// a straight step that crosses no wall (it may cross furniture: sitting down on a couch or cot)
+function noWallBetween(x0, y0, x1, y1) {
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 3);
+  for (let i = 0; i <= n; i++) {
+    const c = Math.floor(lerp(x0, x1, i / n) / NAV), r = Math.floor(lerp(y0, y1, i / n) / NAV);
+    if (c < 0 || r < 0 || c >= NAV_COLS || r >= NAV_ROWS || wallGrid[r * NAV_COLS + c]) return false;
+  }
+  return true;
+}
+// the free cell closest to a point that can be reached from it without crossing a wall, as [col, row]
+function nearestFree(x, y) {
+  const c0 = Math.floor(x / NAV), r0 = Math.floor(y / NAV);
+  if (navFree(c0, r0)) return [c0, r0];
+  for (let rad = 1; rad < 30; rad++) {
+    let best = null, bd = Infinity;
+    for (let r = r0 - rad; r <= r0 + rad; r++) for (let c = c0 - rad; c <= c0 + rad; c++) {
+      if (Math.max(Math.abs(r - r0), Math.abs(c - c0)) !== rad || !navFree(c, r)) continue;
+      if (!noWallBetween(x, y, c * NAV + NAV / 2, r * NAV + NAV / 2)) continue;
+      const d = Math.hypot(c * NAV + NAV / 2 - x, r * NAV + NAV / 2 - y);
+      if (d < bd) { bd = d; best = [c, r]; }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+function lineClear(a, b) {
+  const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 3);
+  for (let i = 1; i < n; i++) if (!navFreeAt(lerp(a.x, b.x, i / n), lerp(a.y, b.y, i / n))) return false;
+  return true;
+}
+// Points to walk through from (x0, y0) to (x1, y1), not including the start; null if unreachable.
+function findPath(x0, y0, x1, y1) {
+  if (!navGrid) buildNav();
+  const s = nearestFree(x0, y0), e = nearestFree(x1, y1);
+  if (!s || !e) return null;
+  const N = NAV_COLS * NAV_ROWS, start = s[1] * NAV_COLS + s[0], goal = e[1] * NAV_COLS + e[0];
+  const cost = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const heap = [];                              // binary min-heap of [f, cell]
+  const push = it => { heap.push(it); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p][0] <= it[0]) break; heap[i] = heap[p]; i = p; } heap[i] = it; };
+  const pop = () => {
+    const top = heap[0], end = heap.pop();
+    if (heap.length) { let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i, v = end[0];
+      if (l < heap.length && heap[l][0] < v) { m = l; v = heap[l][0]; } if (r < heap.length && heap[r][0] < v) m = r;
+      if (m === i) break; heap[i] = heap[m]; i = m; } heap[i] = end; }
+    return top;
+  };
+  const hcost = (c, r) => { const dx = Math.abs(c - e[0]), dy = Math.abs(r - e[1]); return dx + dy - 0.586 * Math.min(dx, dy); };
+  cost[start] = 0; push([hcost(s[0], s[1]), start]);
+  while (heap.length) {
+    const cur = pop()[1];
+    if (cur === goal) break;
+    if (done[cur]) continue;
+    done[cur] = 1;
+    const c = cur % NAV_COLS, r = (cur - c) / NAV_COLS;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!(dr || dc) || !navFree(c + dc, r + dr)) continue;
+      if (dr && dc && (!navFree(c + dc, r) || !navFree(c, r + dr))) continue;   // no cutting corners
+      const n = cur + dr * NAV_COLS + dc, k = cost[cur] + (dr && dc ? 1.414 : 1);
+      if (k < cost[n]) { cost[n] = k; from[n] = cur; push([k + hcost(c + dc, r + dr), n]); }
+    }
+  }
+  if (start !== goal && from[goal] < 0) return null;
+  const cells = [];
+  for (let k = goal; k !== -1; k = from[k]) { cells.push({ x: (k % NAV_COLS) * NAV + NAV / 2, y: Math.floor(k / NAV_COLS) * NAV + NAV / 2 }); if (k === start) break; }
+  cells.reverse();
+  // walk from the real start when it is on free floor, else step out to the first free cell
+  const pts = navFreeAt(x0, y0) ? [{ x: x0, y: y0 }, ...cells.slice(1)] : [{ x: x0, y: y0 }, ...cells];
+  const endFree = navFreeAt(x1, y1);
+  if (endFree) pts[pts.length - 1] = { x: x1, y: y1 }; else pts.push({ x: x1, y: y1 });
+  // straighten: from each point, jump to the furthest one in a clear line
+  const out = [];
+  const last = endFree ? pts.length - 1 : pts.length - 2;   // a goal on furniture is a short step in at the end
+  let i = navFreeAt(x0, y0) ? 0 : 1;
+  if (i === 1) out.push(pts[1]);
+  while (i < last) {
+    let j = last;
+    while (j > i + 1 && !lineClear(pts[i], pts[j])) j--;
+    out.push(pts[j]); i = j;
+  }
+  if (!endFree) out.push(pts[pts.length - 1]);
+  return out;
+}
 
 // Idle spots in the break room and on the patio. couch: no wheelchair. smoke: smokers only.
 const IDLE_SPOTS = [
@@ -339,15 +466,16 @@ const IDLE_SPOTS = [
   { id: 'eat3', x: 105, y: 262, face: 'down', pose: 'sit', act: 'eat' },
   { id: 'eat4', x: 165, y: 262, face: 'down', pose: 'sit', act: 'eat' },
   { id: 'eat5', x: 135, y: 340, face: 'up', pose: 'sit', act: 'eat' },
-  { id: 'pool1', x: 382, y: 345, face: 'right', act: 'pool', partner: 'pool2' },
-  { id: 'pool2', x: 590, y: 335, face: 'left', act: 'pool', partner: 'pool1' },
-  { id: 'pool3', x: 485, y: 406, face: 'up', act: 'poolwatch' },
+  { id: 'pool1', x: 34, y: 525, face: 'right', act: 'pool', partner: 'pool2' },
+  { id: 'pool2', x: 242, y: 515, face: 'left', act: 'pool', partner: 'pool1' },
+  { id: 'pool3', x: 137, y: 586, face: 'up', act: 'poolwatch' },
   { id: 'pp1', x: 356, y: 512, face: 'right', act: 'pingpong', partner: 'pp2' },
   { id: 'pp2', x: 584, y: 512, face: 'left', act: 'pingpong', partner: 'pp1' },
   { id: 'cool1', x: 246, y: 470, face: 'right', act: 'cooler', partner: 'cool2' },
   { id: 'cool2', x: 298, y: 470, face: 'left', act: 'chat', partner: 'cool1' },
-  { id: 'nap', x: 92, y: 566, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },
-  { id: 'bean', x: 172, y: 584, face: 'down', pose: 'sit', act: 'phone', couch: true },
+  { id: 'nap', x: 548, y: 398, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },     // nap room cots
+  { id: 'nap2', x: 548, y: 432, face: 'down', pose: 'lie', act: 'nap', couch: true, noAid: true },
+  { id: 'bean', x: 482, y: 428, face: 'down', pose: 'sit', act: 'phone', couch: true },
   { id: 'smoke1', x: 206, y: 770, face: 'down', act: 'smoke', area: 'patio', smoke: true },
   { id: 'smoke2', x: 262, y: 798, face: 'down', act: 'smoke', area: 'patio', smoke: true },
   { id: 'smoke3', x: 292, y: 758, face: 'down', act: 'smoke', area: 'patio', smoke: true },
@@ -372,7 +500,6 @@ const ACT_NAMES = { tv: 'watching TV', fridge: 'raiding the fridge', coffee: 'ge
   poolwatch: 'watching pool', pingpong: 'playing ping pong', cooler: 'at the water cooler', chat: 'gossiping',
   nap: 'napping', phone: 'scrolling their phone', smoke: 'on a smoke break', bench: 'getting fresh air', stretch: 'stretching' };
 const CHAT = {
-  tv: ['GOOOAL!', 'Ref! Come on!', 'Who has the remote?', 'Best episode ever.'],
   fridge: ['Who ate my yogurt?!', 'Is this... mine?', 'Smells... interesting.'],
   coffee: ['Coffee number four.', 'Ahh, fresh pot.', 'Who left it empty?!'],
   micro: ['Fish in the microwave? Bold.', 'Ding ding ding!', '30 more seconds...'],
@@ -389,6 +516,72 @@ const CHAT = {
   bench: ['Fresh air!', 'Hi kitty.', 'Ahh, sunshine.'],
   stretch: ['Gotta stretch.', 'Oof, my back.'],
 };
+// Break room banter: now and then two people on break near each other trade a short exchange.
+// Lines alternate between them, first speaker first; {a} and {b} become their names.
+const BANTER = [
+  ['Who microwaved fish?!', "It's salmon. It's GOURMET.", "It's a crime, {b}.", 'The whole floor smells like a dock now.'],
+  ['Did you see the game last night?', 'The ref was blind. BLIND.', 'We still covered the spread.', 'You bet on it, {a}?!', 'Fantasy points, {b}. Totally different.'],
+  ['Market dipped 3% today.', 'Buy the dip, {a}!', "That's what you said last month.", 'Long term, baby. Long term.'],
+  ['I put my whole bonus in a dog coin.', 'How is it doing?', "It's... a learning experience.", 'So it went to zero.', 'Zero is still a number, {b}.'],
+  ['Do you max out your 401k?', 'I max out my snack budget.', 'So your retirement plan is...', 'Lottery tickets, {a}. Diversified.'],
+  ['Who hit reply-all on the company-wide email?', 'Kevin. Again.', 'Then 40 people replied "please remove me".', 'Then I replied-all to complain. Oops.'],
+  ['That meeting could have been an email.', 'That email could have been a sticky note.', 'That sticky note could have been nothing.', 'Beautiful, {a}. Just beautiful.'],
+  ['Who set the thermostat to 64?', 'I run hot, okay?', "I'm wearing a coat INDOORS, {b}.", 'Layers, {a}. Layers.'],
+  ['I named my sourdough starter Gerald.', 'Is Gerald okay?', 'Gerald escaped the jar last night.', 'Gerald lives his own life, {a}.'],
+  ['Got Wordle in two today.', 'Liar. Screenshot or it never happened.', 'I... deleted it.', 'Sure you did, {a}.'],
+  ['Is it weird that our boss is an AI?', 'At least it never microwaves fish.', 'It paged me at 3 a.m. though.', 'That was a cron job, {a}.'],
+  ['Tabs or spaces, {b}?', 'Spaces. Four of them.', "We can't be friends anymore.", 'Fine. Two spaces.', 'MONSTER.'],
+  ["The bug's in prod.", 'Works on my machine.', 'Then we ship your machine, {b}.', 'Deal.'],
+  ['New year, new me. Gym every day.', "It's been two weeks, {a}.", "And I've been ONCE. That's progress!"],
+  ['Who brought raisin cookies to the potluck?', 'They looked like chocolate chip.', 'Betrayal, {b}. Pure betrayal.'],
+  ['Want to see 200 photos of my dog?', 'Obviously.', 'This one is him sleeping. This one... also sleeping.', 'Ten out of ten, {a}.'],
+  ['Someone parked across three spots.', 'Was it a tiny car?', 'It was a golf cart, {b}.', 'Respect, honestly.'],
+  ["Whose birthday cake is that?", "Doesn't matter. It's cake.", 'Happy birthday, mystery person!'],
+  ['Is the Wi-Fi down?', 'Nope, just slow.', 'Slow like a turtle?', 'Slow like a turtle on lunch break, {a}.'],
+  ['Got a standing desk.', 'Do you stand at it?', 'I sit at it. Very high up.', 'Peak efficiency, {a}.'],
+  ['This coffee is like tar.', "That's the decaf.", 'Then what is the regular?', 'Jet fuel, {a}. Pure jet fuel.'],
+  ['Taking PTO next week.', 'Going anywhere fun?', 'My couch. Very exclusive.', 'Living the dream, {a}.'],
+  ['Trust falls at the offsite?', 'Last year nobody caught Dave.', 'Is Dave okay?', 'Dave works remote now, {a}.'],
+  ['Want some kombucha?', 'Why is something floating in it?', "That's the mother, {b}.", "I'm good, thanks."],
+  ['Someone ate my labeled yogurt.', 'The label said "Do not eat".', 'And?!', 'It read like a dare, {a}.'],
+  ['Did you finish the quarterly report?', 'Define "finish".', 'Is it started?', 'Define "started", {a}.'],
+  ['My mechanical keyboard just came in.', 'We know. We can all hear it.', 'Clicky, right?', 'Like popcorn in a blender, {a}.'],
+  // ---- a few nods to Office Space
+  ['Did you get the memo about the TPS reports?', 'The new cover sheets? Yeah. I got the memo.', "I'll make sure you get another copy, {b}.", 'Please. No more memos.'],
+  ["Yeahhh, I'm gonna need you to come in on Saturday.", 'Saturday?!', "Mmkay. Oh, and I'm gonna need you to come in on Sunday too.", '...Great.'],
+  ['Heading out early, {b}?', "It's 5:30! I'm just getting my coat.", "It's not a half day or anything.", '...I will hang my coat back up.'],
+  ['They better start treating us programmers better.', 'Or what, {a}?', "Or I'm taking my stapler and going home.", 'Not the red stapler!'],
+  ['Have you seen my stapler?', 'The red one?', 'They moved my desk to the basement again.', 'Rough, {a}.'],
+  ['The printer says PC LOAD LETTER.', 'What does that even MEAN?!', 'Field trip? Bring a bat.', 'I did not hear that, {a}.'],
+  ['Looks like someone has a case of the Mondays!', 'Please never say that again.', 'Ooh, somebody has a case of the—', 'I will end you, {a}.'],
+  ['How many bosses do you have, {b}?', 'Eight. Eight different bosses.', 'So eight people tell you about the cover sheet?', 'Every. Single. Time.'],
+  ['Are you wearing your minimum flair?', 'Fifteen pieces. The minimum.', 'Bob over there wears thirty-seven.', 'Some people just love flair, {a}.'],
+  ['What would you do with a million dollars?', 'Nothing. Absolutely nothing.', "That's the dream, {b}.", 'Sit on a porch. Watch the clouds.'],
+];
+const XMAS_BANTER = [
+  ['Who drew me for Secret Santa?', 'Not telling.', 'Is it a mug? Please not another mug.', "...It's a very nice mug, {a}."],
+  ['Ugly sweater contest is today!', "This isn't for the contest.", '...Oh.', 'My grandma made it, {a}.'],
+  ['Who spiked the eggnog?', 'Define "spiked".', "{b}, it's 10 a.m.", "It's Christmas somewhere."],
+  ['Anyone want fruitcake?', 'Has anyone EVER wanted fruitcake?', "This one's been regifted since 1987.", 'Vintage, {a}.'],
+  ['Did the elves unionize yet?', 'They want dental and shorter hats.', 'The hats ARE very tall.', 'Solidarity, {a}.'],
+];
+// The break room TV flips channels every 40 seconds; TV_CHAT is what the couch says about each.
+const TV_SHOWS = ['sports', 'talk', 'game', 'soap'];
+const TV_NAMES = { sports: 'the match', talk: 'a trashy talk show', game: 'a game show', soap: 'a soap opera' };
+const TV_CHAT = {
+  sports: ['GOOOAL!', 'Ref! Come on!', 'Who has the remote?', 'Best match all season.'],
+  talk: ['He is SO not the father.', 'Look at him dance!', 'Who even ARE these people?', 'Third DNA test this season...', 'Security! SECURITY!'],
+  game: ['Survey says...!', 'Name something in a break room... COFFEE!', 'Good answer! Good answer!', 'How was THAT not on the board?', "They're gonna steal it!"],
+  soap: ['She has an evil twin?!', "He's back from the dead. Again.", 'Not the amnesia plot...', "Don't open that letter!", "I can't watch. Okay, I can."],
+};
+const TV_REACT = { sports: ['GOOOAL!', 'YES!!', 'What a strike!'], talk: ['OHHHH!', 'I KNEW IT!', 'Called it!'],
+  game: ['Ouch!', 'Nooo!', 'Big red X!'], soap: ['*gasp*', 'NO WAY!', 'I knew it!'] };
+function tvShow() { return TV_SHOWS[Math.floor(T / 40) % TV_SHOWS.length]; }
+// the dramatic moment on the current show (the couch throws its hands up)
+function tvBig() {
+  const p = T % 40, show = tvShow();
+  return show === 'sports' ? (T % 25) < 1.6 : show === 'talk' ? p > 30 : show === 'game' ? (p % 10) > 8.6 : (p % 13) > 11.2;
+}
 const GO_LINES = ['On it!', 'Coming, boss!', 'Ooh, a task!', 'Duty calls!', 'My turn!', 'Back to work!'];
 const BRIEF_LINES = ["Here's your slip!", 'Make it shine.', "You've got this!", 'Fresh one, hot off the press.', "Go get 'em!"];
 const DONE_LINES = ['Done! ✓', 'Nailed it!', 'Clocking out!', 'Break time!', 'Easy.'];
@@ -659,7 +852,6 @@ const STATION_ORDER = ['workbench', 'forge', 'dairy', 'valet', 'bakery', 'garden
 STATION_ORDER.forEach((id, i) => {
   const s = STA[id], x0 = 640 + 240 * (i % 4), y0 = 345 + 198 * Math.floor(i / 4), area = 'st:' + id;
   s.id = id; s.x0 = x0; s.y0 = y0;
-  ROUTES[area] = [wp(x0 + 16, HY, 'hall'), wp(x0 + 16, y0 + 150, area)];
   s.spot = { x: x0 + (s.dx || 78), y: y0 + 150, face: 'right', area, pose: s.sit ? 'sit' : 'stand', by: null };
 });
 
@@ -1713,7 +1905,213 @@ const CYBER = {
     },
     tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['Target locked', 'Shipment in transit', 'ETA 2 min', 'Package scanned'], '#22d3ee'); } },
 };
-for (const set of [DEV, SCIFI, HORROR, CYBER]) STATION_ORDER.forEach(id => {
+// North Pole (Christmas) theme: the same 12 slots as Santa's workshop.
+function present(x, y, w, h, c, rib) {       // a wrapped gift with its top-left at x, y
+  R(x, y, w, h, c); R(x + w / 2 - 1.5, y, 3, h, rib); R(x, y + h / 2 - 1.5, w, 3, rib);
+  E(x + w / 2 - 3, y - 1.5, 3, 2, rib); E(x + w / 2 + 3, y - 1.5, 3, 2, rib);
+}
+function xmasTree(x, y, s, t) {              // a decorated tree with its trunk base at x, y
+  R(x - 3 * s, y - 8 * s, 6 * s, 8 * s, '#6b4423');
+  for (const [w, top, bot, c] of [[26, -44, -8, '#1f6b3a'], [21, -58, -30, '#23784a'], [15, -70, -48, '#2a8a55']])
+    poly([x - w * s, y + bot * s, x + w * s, y + bot * s, x, y + top * s], c);
+  const cols = ['#ef4444', '#facc15', '#3b82f6', '#f472b6', '#fff'];
+  [[-14, -14], [10, -18], [-4, -26], [-10, -38], [8, -36], [0, -48], [-5, -58], [5, -62], [16, -12], [-18, -20]].forEach(([dx, dy], i) => {
+    const on = Math.floor(t * 2 + i * 0.7) % 3 !== 0;
+    if (on) { g.globalAlpha = 0.3; C(x + dx * s, y + dy * s, 3.4 * s, cols[i % 5]); g.globalAlpha = 1; }
+    C(x + dx * s, y + dy * s, 1.6 * s, on ? cols[i % 5] : shade(cols[i % 5], -0.4));
+  });
+  const sx = x, sy = y - 72 * s;
+  poly([sx, sy - 6 * s, sx + 1.8 * s, sy - 1.8 * s, sx + 6 * s, sy - 1.5 * s, sx + 2.6 * s, sy + 1.2 * s, sx + 3.8 * s, sy + 5.5 * s,
+    sx, sy + 3 * s, sx - 3.8 * s, sy + 5.5 * s, sx - 2.6 * s, sy + 1.2 * s, sx - 6 * s, sy - 1.5 * s, sx - 1.8 * s, sy - 1.8 * s], '#fde047');
+}
+const XMAS = {
+  workbench: { label: 'THE NICE LIST', name: 'the Nice List', tint: '#f3e3d3', anim: 'point',
+    lines: ['Checking it twice.', 'AB#1234: nice. Done.', 'Who filed this one naughty?', 'Moved to Done. Ho ho!'],
+    draw(x, y, t, on) {
+      RR(x + 104, y + 30, 118, 12, 6, '#c9a46a'); RR(x + 104, y + 156, 118, 12, 6, '#c9a46a');
+      R(x + 110, y + 36, 106, 126, '#fbf3df'); L(x + 110, y + 36, x + 110, y + 162, '#e8dcc0', 1);
+      TXT('NICE', x + 140, y + 50, 'bold 9px Georgia', '#15803d'); TXT('NAUGHTY', x + 190, y + 50, 'bold 7px Georgia', '#b91c1c');
+      L(x + 163, y + 44, x + 163, y + 154, '#e0d2b4', 1);
+      const k = on ? Math.floor(t * 0.8) % 9 : 9;
+      for (let i = 0; i < 9; i++) {
+        R(x + 118, y + 62 + i * 10, 30, 1.6, '#8a7a5a'); R(x + 170, y + 62 + i * 10, 22 + (i * 7) % 14, 1.6, '#8a7a5a');
+        if (i < k) L(x + 152, y + 62 + i * 10, x + 155, y + 64 + i * 10, '#16a34a', 1.3), L(x + 155, y + 64 + i * 10, x + 160, y + 58 + i * 10, '#16a34a', 1.3);
+      }
+      const qy = y + 62 + Math.min(k, 8) * 10;
+      L(x + 214, qy - 16, x + 200, qy, '#f5f5f5', 2.5); L(x + 200, qy, x + 198, qy + 3, '#333', 1.2);
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 164, y + 26, ['✓ nice', '✓ checked twice', 'AB#' + (1000 + Math.floor(Math.random() * 9000)) + ' nice', '🎁 done'], '#15803d'); } },
+  forge: { label: 'SLEIGH HANGAR', name: 'the Sleigh Hangar', tint: '#d8e2ee', anim: 'dial',
+    lines: ['Prepping for takeoff!', 'Scaling the reindeer up.', 'Who has Owner on the sleigh?', 'Rudolph, lights on.'],
+    draw(x, y, t, on) {
+      const lift = on ? Math.abs(Math.sin(t * 1.2)) * 10 : 0, sx = x + 150, sy = y + 120 - lift;
+      E(sx + 10, y + 150, 46, 5, 'rgba(0,0,0,.12)');
+      L(sx - 20, sy + 18, sx + 44, sy + 18, '#d4af37', 3); L(sx + 44, sy + 18, sx + 50, sy + 10, '#d4af37', 3);
+      poly([sx - 18, sy + 14, sx - 22, sy - 10, sx - 10, sy - 6, sx + 30, sy - 6, sx + 40, sy - 14, sx + 42, sy + 14], '#b91c1c');
+      R(sx - 18, sy - 2, 60, 3, '#d4af37');
+      present(sx - 10, sy - 22, 14, 14, '#16a34a', '#facc15'); present(sx + 6, sy - 18, 12, 11, '#2563eb', '#fff');
+      for (let i = 0; i < 2; i++) {
+        const rx = x + 108 + i * 22, ry = sy + 4 + Math.sin(t * 6 + i) * (on ? 2 : 0);
+        E(rx, ry, 9, 5, '#8a5a3a'); C(rx - 8, ry - 6, 3.6, '#8a5a3a'); L(rx - 8, ry - 9, rx - 12, ry - 15, '#6b4423', 1.2); L(rx - 7, ry - 9, rx - 4, ry - 15, '#6b4423', 1.2);
+        L(rx - 4, ry + 4, rx - 5, ry + 11, '#6b4423', 1.4); L(rx + 5, ry + 4, rx + 6, ry + 11, '#6b4423', 1.4);
+        C(rx - 11, ry - 6, 1.4, i === 0 ? '#ef4444' : '#222'); L(rx + 8, ry - 1, sx - 18, sy + 2, '#7a4b28', 0.8);
+      }
+      if (on) { g.globalAlpha = 0.3; C(x + 97, sy - 2, 5, '#ef4444'); g.globalAlpha = 1; }
+      RR(x + 196, y + 34, 36, 40, 3, '#2f3542'); TXT('LIFT', x + 214, y + 42, 'bold 6px system-ui', '#fde68a');
+      for (let i = 0; i < 4; i++) R(x + 201 + i * 7, y + 68 - (on ? (hh(i + Math.floor(t * 3)) % 18) : 4 + i * 3), 5, on ? (hh(i + Math.floor(t * 3)) % 18) : 4 + i * 3, '#22c55e');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 170, y + 70, ['scaled up 🦌', 'deploy: sleigh', '200 OK 🛷', 'ho ho ho!'], '#1d4ed8');
+      if (Math.random() < dt * 1.2) puff(x + rand(110, 200), y + 130, { kind: 'spark', vx: rand(-30, 30), vy: rand(-40, -10), life: 0.5, color: pick(['#fde047', '#fff']) }); } },
+  dairy: { label: 'TREE FARM', name: 'the Tree Farm', tint: '#dfe8dc', anim: 'point',
+    lines: ['Branching out!', 'Merged into the main tree.', 'Rebasing the tinsel...', 'LGTM. Looks Good To Merry.'],
+    draw(x, y, t, on) {
+      E(x + 166, y + 170, 64, 10, '#f4f7fb');
+      xmasTree(x + 128, y + 168, 0.9, on ? t : 0); xmasTree(x + 196, y + 170, 1.3, on ? t + 2 : 0);
+      TXT('main', x + 196, y + 178, 'bold 6px system-ui', '#166534'); TXT('feat/tinsel', x + 128, y + 178, '5.5px monospace', '#166534');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 168, y + 34, ['merged 🎄', 'PR #' + (100 + Math.floor(Math.random() * 900)), 'git push', 'branch lit ✨'], '#166534'); } },
+  valet: { label: 'TOY REPAIR', name: 'Toy Repair', tint: '#eadfd0', anim: 'fix',
+    lines: ['Squeaky wheel, again.', 'Have you tried new batteries?', 'Teddy lost an eye. Ticket #12.', 'Good as new!'],
+    draw(x, y, t, on) {
+      R(x + 98, y + 120, 134, 8, '#8a5a36'); R(x + 104, y + 128, 5, 36, '#6b4423'); R(x + 220, y + 128, 5, 36, '#6b4423');
+      const sh = on ? Math.sin(t * 30) * 1 : 0;
+      C(x + 126, y + 96, 13, '#a0703d'); C(x + 117, y + 84, 5, '#a0703d'); C(x + 135, y + 84, 5, '#a0703d'); C(x + 126, y + 116, 0, '#000');
+      E(x + 126, y + 112, 11, 8, '#a0703d'); C(x + 122, y + 94, 1.6, '#111'); R(x + 128, y + 92, 4, 1.5, '#111'); E(x + 126, y + 100, 4, 3, '#d9b48a');
+      RR(x + 150 + sh, y + 84, 26, 30, 3, '#9aa3ad'); RR(x + 154 + sh, y + 70, 18, 14, 3, '#b8c0cc'); C(x + 159 + sh, y + 77, 2, '#ef4444'); C(x + 167 + sh, y + 77, 2, on ? '#22c55e' : '#555');
+      L(x + 163 + sh, y + 70, x + 163 + sh, y + 63, '#555', 1.2); C(x + 163 + sh, y + 62, 1.6, '#facc15');
+      for (const wx of [154, 172]) C(x + wx + sh, y + 116, 4, '#333');
+      const sp = on ? t * 4 : 0;
+      RR(x + 190, y + 98, 30, 20, 3, '#ef4444'); C(x + 196, y + 120, 4, '#222'); C(x + 214, y + 120, 4, '#222'); R(x + 198, y + 90, 14, 8, '#fde68a');
+      g.save(); g.translate(x + 205, y + 84); g.rotate(sp); R(-1, -6, 2, 12, '#f59e0b'); g.restore();
+    },
+    tick(x, y, w, dt, t) {
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 5; i++) puff(x + 163, y + 100, { kind: 'spark', vx: rand(-60, 60), vy: rand(-100, -20), ay: 300, life: 0.4, color: pick(['#fde047', '#fff']) });
+      if (Math.random() < dt * 0.3) popText(x + 160, y + 58, ['squeak!', 'fixed 🧸', 'beep boop', 'new batteries ✓'], '#b45309');
+    } },
+  bakery: { label: 'COOKIE KITCHEN', name: 'the Cookie Kitchen', tint: '#f2dccb', anim: 'knead',
+    lines: ['SELECT * FROM cookies;', 'JOIN milk ON dunk = 1.', 'Missing index on sprinkles.', 'Query baked ✓'],
+    draw(x, y, t, on) {
+      RR(x + 160, y + 52, 66, 100, 4, '#9ca3af'); RR(x + 166, y + 92, 54, 40, 3, '#1f2937');
+      g.globalAlpha = on ? 0.5 + Math.sin(t * 6) * 0.15 : 0.15; R(x + 168, y + 94, 50, 36, '#fb923c'); g.globalAlpha = 1;
+      for (let i = 0; i < 3; i++) C(x + 178 + i * 14, y + 118, 4, '#c08040');
+      R(x + 166, y + 82, 54, 4, '#6b7280'); for (let i = 0; i < 3; i++) C(x + 176 + i * 16, y + 66, 4, on && i === Math.floor(t) % 3 ? '#ef4444' : '#4b5563');
+      R(x + 98, y + 132, 58, 6, '#c9a46a'); R(x + 102, y + 138, 4, 26, '#8a5a36'); R(x + 148, y + 138, 4, 26, '#8a5a36');
+      RR(x + 104, y + 116, 46, 16, 2, '#9ca3af');
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) { C(x + 112 + i * 15, y + 121 + j * 7, 3.6, '#d29a5a'); C(x + 111 + i * 15, y + 120 + j * 7, 0.8, '#4a2a14'); }
+      RR(x + 100, y + 56, 54, 42, 2, '#fffaf0', '#c9a46a', 1.2);
+      TXT('RECIPE', x + 127, y + 64, 'bold 6px system-ui', '#b91c1c');
+      ['SELECT *', 'FROM cookies', 'WHERE choc', '= TRUE;'].forEach((s, i) => TXT(s, x + 104, y + 73 + i * 6.5, '5px monospace', '#3b2a1a', 'left'));
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 1.2) puff(x + rand(176, 212), y + 54, { vy: -18, vx: rand(-4, 4), grow: 2.5, life: 1.4, size: 2.5, color: 'rgba(255,255,255,.5)' });
+      if (Math.random() < dt * 0.3) popText(x + 190, y + 44, ['(12 cookies affected)', 'ding! 🍪', 'Query baked ✓', 'mmm'], '#92400e'); } },
+  garden: { label: 'CHIMNEY DROP', name: 'the Chimney Drop', tint: '#d9dfe8', anim: 'chop',
+    lines: ['Dropping the dacpac down the chimney.', 'Deploy. Ho. Repeat.', 'Rollback? Up the chimney.', 'Schema compare: jolly.'],
+    draw(x, y, t, on) {
+      poly([x + 98, y + 120, x + 166, y + 72, x + 234, y + 120], '#7f1d1d'); poly([x + 98, y + 120, x + 166, y + 74, x + 234, y + 120, x + 234, y + 124, x + 98, y + 124], '#991b1b');
+      poly([x + 102, y + 118, x + 166, y + 72, x + 230, y + 118, x + 220, y + 116, x + 166, y + 80, x + 112, y + 116], '#f8fafc');
+      R(x + 104, y + 124, 124, 56, '#c08457'); for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) RR(x + 106 + c * 20 + (r % 2) * 10, y + 128 + r * 13, 17, 10, 1, null, '#9a6440', 1);
+      RR(x + 186, y + 60, 26, 40, 1, '#b45309'); R(x + 182, y + 56, 34, 8, '#78350f'); E(x + 199, y + 56, 17, 3, '#f8fafc');
+      const k = on ? (t * 0.5) % 1 : 0.3, py = y + 6 + k * 52;
+      if (k < 0.92) present(x + 192, py, 14, 12, '#16a34a', '#ef4444');
+      TXT('dacpac', x + 199, py + 18, 'bold 5px system-ui', '#1f2937');
+      R(x + 130, y + 140, 26, 26, '#fde68a'); L(x + 143, y + 140, x + 143, y + 166, '#78350f', 2); L(x + 130, y + 153, x + 156, y + 153, '#78350f', 2);
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.6) puff(x + 199, y + 56, { vy: -14, vx: rand(-4, 4), grow: 2, life: 1.2, size: 2, color: 'rgba(200,200,200,.5)' });
+      if (Math.random() < dt * 0.3) popText(x + 166, y + 40, ['Deployed ✓', 'down the chimney!', 'Publish OK', '🎁 schema ✓'], '#1e3a8a'); } },
+  pizza: { label: 'SNOW MACHINE', name: 'the Snow Machine', tint: '#dbe7f3', anim: 'dial',
+    lines: ['Turning up the flurries!', 'Which client wanted a blizzard?', 'Config updated. Let it snow.', 'More POWDER!'],
+    draw(x, y, t, on) {
+      RR(x + 100, y + 80, 86, 80, 6, '#60a5fa', '#1e3a8a', 1.5); R(x + 104, y + 86, 78, 4, '#93c5fd');
+      for (let i = 0; i < 3; i++) { const cx = x + 118 + i * 25, a = on ? t * (1 + i * 0.5) : i;
+        C(cx, y + 108, 8, '#1e3a8a'); C(cx, y + 108, 6.5, '#eff6ff'); L(cx, y + 108, cx + Math.cos(a) * 5, y + 108 + Math.sin(a) * 5, '#dc2626', 1.5); }
+      for (let i = 0; i < 6; i++) C(x + 110 + i * 13, y + 134, 2.5, on && (Math.floor(t * 4) + i) % 3 === 0 ? '#facc15' : '#1e40af');
+      RR(x + 168, y + 54, 20, 30, 3, '#3b82f6'); poly([x + 188, y + 56, x + 222, y + 40, x + 222, y + 78, x + 188, y + 80], '#2563eb');
+      E(x + 160, y + 172, 54, 9, '#f8fafc'); E(x + 200, y + 164, 26, 10, '#f1f5f9');
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 14) puff(x + 222, y + rand(44, 76), { vx: rand(30, 70), vy: rand(-20, 20), ay: 20, life: 0.8, size: 1.6, color: '#fff' });
+      if (Math.random() < dt * 0.3) popText(x + 160, y + 30, ['❄ config pushed', 'snow level: 11', 'flurries ✓', 'appsettings.SNOW'], '#1d4ed8');
+    } },
+  easel: { label: 'LETTERS TO SANTA', name: 'Letters to Santa', tint: '#f1e6d6', anim: 'review',
+    lines: ['Hmm, a bare except.', 'Dear Santa: one list comprehension.', 'PEP 8 on the nice list.', 'Could use a test, kiddo.'],
+    draw(x, y, t, on) {
+      RR(x + 106, y + 30, 104, 64, 3, '#fffaf0', '#c9a46a', 1.4);
+      TXT('Dear Santa,', x + 112, y + 39, 'italic 6.5px Georgia', '#b91c1c', 'left');
+      const code = ['def wish(self):', '  try: pony()', '  except: pass', '  return "LGTM"'], hl = on ? Math.floor(t * 0.7) % 4 : -1;
+      code.forEach((s, i) => { if (i === hl) R(x + 111, y + 45 + i * 10, 94, 9, 'rgba(250,204,21,.5)'); TXT(s, x + 113, y + 50 + i * 10, '5.5px monospace', i === 2 ? '#991b1b' : '#3b2f1a', 'left'); });
+      RR(x + 108, y + 118, 120, 52, 4, '#8a5a36'); RR(x + 112, y + 114, 112, 10, 3, '#a0703d');
+      for (let i = 0; i < 9; i++) RR(x + 116 + (i % 5) * 21, y + 126 + Math.floor(i / 5) * 16, 18, 12, 1, ['#fff', '#fef3c7', '#e0f2fe'][i % 3], '#cbd5e1', 0.6);
+      TXT('MAIL', x + 168, y + 166, 'bold 7px system-ui', '#fde68a');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 158, y + 24, ['LGTM ✓', '# nit: spacing', 'PEP 8!', 'needs a test'], '#166534');
+      if (Math.random() < dt * 0.15) puff(x + 168, y + 110, { kind: 'text', text: '✉', vy: -16, life: 1.4, color: '#b91c1c', font: '10px system-ui' }); } },
+  lumber: { label: 'YETI CAVE', name: 'the Yeti Cave', tint: '#1e2a3a', anim: 'scared',
+    lines: ['Who wrote this?!', "Don't wake the yeti...", 'Why is this 4,000 lines?', 'It is SO cold in here.'],
+    draw(x, y, t, on) {
+      RR(x + 96, y + 26, 138, 158, 8, '#0f1a28');
+      for (let i = 0; i < 9; i++) poly([x + 100 + i * 15, y + 28, x + 108 + i * 15, y + 28, x + 104 + i * 15, y + 40 + (i * 7) % 14], '#cfe8ff');
+      R(x + 96, y + 160, 138, 24, '#dbeafe'); E(x + 140, y + 160, 30, 6, '#eff6ff');
+      const ey = y + 96 + Math.sin(t * 0.8) * 2, blink = (t % 4.5) > 0.14;
+      g.globalAlpha = 0.5; E(x + 170, y + 112, 34, 40, '#e2e8f0'); g.globalAlpha = 1;
+      if (blink) { E(x + 160, ey, 3.2, on ? 2.6 : 1.8, '#38bdf8'); E(x + 178, ey, 3.2, on ? 2.6 : 1.8, '#38bdf8'); }
+      for (let i = 0; i < 4; i++) E(x + 120 + i * 30, y + 172, 5, 3, '#93c5fd');
+      const dy = y + 44 + ((t * 30) % 110); E(x + 210, dy, 1.4, 2.4, '#bae6fd');
+      if (on && (t % 11) < 0.12) { g.globalAlpha = 0.3; R(x + 96, y + 26, 138, 158, '#e0f2fe'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.25) popText(x + 170, y + 70, ['ROAR', '*stomp*', 'grrr', '👣'], '#e0f2fe');
+      if (Math.random() < dt * 0.12) popText(w.x + 8, w.y - 66, ['eek!', '😱', 'brrr', 'nope'], '#fff');
+    } },
+  lab: { label: 'TOY TESTING', name: 'Toy Testing', tint: '#e6dff0', anim: 'toss',
+    lines: ['Jack-in-the-box: PASS.', 'Flaky yo-yo again.', 'All green! Probably.', 'That one just exploded.'],
+    draw(x, y, t, on) {
+      const fail = on && Math.floor(t * 0.5) % 4 === 3;
+      RR(x + 160, y + 28, 72, 24, 3, '#111'); TXT(fail ? '✗ FAILED' : '✓ PASSED', x + 196, y + 40, 'bold 8px monospace', fail ? '#ef4444' : '#22c55e');
+      R(x + 98, y + 132, 134, 6, '#8a5a36'); R(x + 104, y + 138, 5, 26, '#6b4423'); R(x + 221, y + 138, 5, 26, '#6b4423');
+      const pop = on ? Math.max(0, Math.sin(t * 2.5)) : 0;
+      RR(x + 108, y + 110, 26, 22, 2, '#ef4444'); R(x + 108, y + 118, 26, 3, '#facc15');
+      if (pop > 0.2) { L(x + 121, y + 110, x + 121, y + 110 - pop * 26, '#9ca3af', 2); C(x + 121, y + 106 - pop * 26, 7, '#fde68a'); C(x + 118, y + 105 - pop * 26, 1, '#111'); C(x + 124, y + 105 - pop * 26, 1, '#111'); poly([x + 114, y + 100 - pop * 26, x + 128, y + 100 - pop * 26, x + 121, y + 88 - pop * 26], '#22c55e'); }
+      else R(x + 106, y + 106, 30, 5, '#b91c1c');
+      const yy = y + 80 + (on ? Math.abs(Math.sin(t * 3)) * 40 : 30); L(x + 160, y + 70, x + 160, yy, '#888', 0.8); C(x + 160, yy, 6, '#3b82f6'); C(x + 160, yy, 2, '#1e3a8a');
+      g.save(); g.translate(x + 200, y + 116); g.rotate(on ? Math.sin(t * 5) * 0.3 : 0); poly([0, -16, 10, 16, -10, 16], '#a855f7'); C(0, -16, 3, '#facc15'); g.restore();
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 150, y + 74, ['✓ PASS', '✓ PASS', '✗ FAIL', 'boing!'], '#15803d'); } },
+  servers: { label: 'LIGHTS & WIRING', name: 'Lights & Wiring', tint: '#d7d2c6', anim: 'fix',
+    lines: ['One bulb out, whole string dark.', 'Have you tried a new fuse?', "It's always the extension cord.", 'Untangling... still.'],
+    draw(x, y, t, on) {
+      const cols = ['#ef4444', '#facc15', '#22c55e', '#3b82f6', '#f472b6'];
+      for (let row = 0; row < 3; row++) {
+        g.beginPath(); g.moveTo(x + 104, y + 44 + row * 30);
+        for (let i = 1; i <= 6; i++) g.quadraticCurveTo(x + 104 + i * 21 - 10, y + 54 + row * 30, x + 104 + i * 21, y + 44 + row * 30);
+        g.strokeStyle = '#14532d'; g.lineWidth = 1.2; g.stroke();
+        for (let i = 0; i < 7; i++) { const lit = on ? (Math.floor(t * 3) + i + row) % 4 !== 0 : row !== 1; const c = cols[(i + row) % 5];
+          if (lit) { g.globalAlpha = 0.3; C(x + 108 + i * 18, y + 51 + row * 30, 4, c); g.globalAlpha = 1; }
+          RR(x + 106 + i * 18, y + 47 + row * 30, 4, 7, 2, lit ? c : shade(c, -0.5)); }
+      }
+      E(x + 160, y + 160, 40, 14, '#14532d'); for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(x + 150 + i * 4, y + 158, 8 + i * 2, i, i + 4); g.strokeStyle = '#166534'; g.lineWidth = 1.2; g.stroke(); }
+      RR(x + 206, y + 146, 22, 16, 2, '#f8fafc', '#9ca3af', 1); R(x + 212, y + 150, 2, 5, '#111'); R(x + 220, y + 150, 2, 5, '#111');
+    },
+    tick(x, y, w, dt, t) {
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 200, y + 150, { kind: 'spark', vx: rand(-80, 80), vy: rand(-110, -20), ay: 300, life: 0.4, color: pick(['#ffd23f', '#a5f3fc']) });
+      if (Math.random() < dt * 0.25) popText(x + 160, y + 26, ['bzzt', 'lights on ✨', 'fuse ✓', '🔧 driver ✓'], '#713f12');
+    } },
+  packing: { label: 'GIFT WRAPPING', name: 'Gift Wrapping', tint: '#efdcd8', anim: 'pack',
+    lines: ['Wrapped and tracked.', 'Status: on the sleigh.', 'Signature required: cookies.', 'Tracking number: 1225.'],
+    draw(x, y, t, on) {
+      RR(x + 172, y + 30, 60, 52, 3, '#0f2a4a', '#93c5fd', 1.5); TXT('SLEIGH GPS', x + 202, y + 37, 'bold 5.5px system-ui', '#bfdbfe');
+      g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x + 180, y + 74); g.bezierCurveTo(x + 192, y + 44, x + 208, y + 74, x + 224, y + 48); g.strokeStyle = '#60a5fa'; g.lineWidth = 1.4; g.stroke(); g.setLineDash([]);
+      const kk = on ? (t * 0.1) % 1 : 0.5, q = 1 - kk;
+      TXT('🛷', x + q * q * q * 180 + 3 * q * q * kk * 192 + 3 * q * kk * kk * 208 + kk * kk * kk * 224, y + q * q * q * 74 + 3 * q * q * kk * 44 + 3 * q * kk * kk * 74 + kk * kk * kk * 48, '8px system-ui', '#fff');
+      RR(x + 98, y + 30, 66, 30, 2, '#fffaf0', '#c9a46a', 1.2); TXT('SHIP TO:', x + 131, y + 39, 'bold 6px system-ui', '#b91c1c'); TXT('EVERYWHERE', x + 131, y + 50, 'bold 6.5px system-ui', '#1f1a14');
+      R(x + 98, y + 142, 92, 8, '#374151'); for (let i = 0; i < 8; i++) { const rx = x + 102 + ((i * 12 + (on ? t * 20 : 0)) % 88); L(rx, y + 143, rx, y + 149, '#4b5563', 1); }
+      for (const lx of [104, 182]) L(x + lx, y + 152, x + lx, y + 170, '#374151', 3);
+      present(x + 102 + (on ? (t * 14) % 60 : 30), y + 128, 16, 13, '#16a34a', '#facc15');
+      present(x + 196, y + 156, 20, 16, '#ef4444', '#fff'); present(x + 200, y + 138, 16, 14, '#3b82f6', '#facc15'); present(x + 218, y + 162, 12, 10, '#a855f7', '#fff');
+      g.beginPath(); g.arc(x + 112, y + 100, 12, 0, TAU); g.strokeStyle = '#ef4444'; g.lineWidth = 6; g.stroke(); C(x + 112, y + 100, 6, '#9ca3af');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 150, y + 112, ['🎁 wrapped', 'Tracking #1225', 'On the sleigh', 'Delivered: Dec 25'], '#9f1239'); } },
+};
+for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS]) STATION_ORDER.forEach(id => {
   const c = STA[id], d = set[id];
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
@@ -1732,6 +2130,11 @@ const THEMES = {
   cyber: { name: 'Neon City', stations: CYBER, routed: true,
     costumes: ['netrunner', 'samurai', 'ledmask', 'idol', 'corpo', 'ripperdoc', 'courier', 'android'],
     wash: ['#2a0a4a', 0.22], decor: () => decorCyber() },
+  xmas: { name: 'North Pole', stations: XMAS, routed: true,
+    swaps: { 2: 'snowman', 4: 'rudolph', 9: 'santa', 12: 'mrsclaus', 15: 'snowman' },
+    costumes: ['elf', 'sweater', 'reindeer', 'gingerbread', 'elf', 'sweater', 'elf', 'sweater'],
+    wash: ['#1e3a8a', 0.08], decor: () => decorXmas(),
+    blocks: [[658, 230, 62, 36], [114, 706, 28, 22]] },     // the tree in the boss's office, the patio snowman
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -1869,6 +2272,7 @@ function drawPerson(Lk, x, y, st) {
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
   if (Lk.slime) { drawSlime(Lk, st, pose, view, side); g.restore(); return; }
+  if (Lk.snowman) { drawSnowman(Lk, st, pose, view, side); g.restore(); return; }
   if (Lk.holo && (T + (Lk.id || 0) * 0.7) % 4 < 0.3) { g.globalAlpha = 0.5; g.translate(Math.sin(T * 90) * 1.6, 0); }   // holo glitch
   if (Lk.zombie && st.moving && side) st = { ...st, ra: 1.45 + Math.sin(st.walk) * 0.08, la: 1.4 };   // shambling, arms out
   const walking = st.moving && pose === 'stand';
@@ -1995,6 +2399,18 @@ function drawPerson(Lk, x, y, st) {
     for (let i = 0; i < 3; i++) poly([x0 + 1 + i * wd / 3, ty + 22, x0 + 3 + i * wd / 3, ty + 17, x0 + 5 + i * wd / 3, ty + 22], Lk.skin);
     C(side ? 2 : 4, ty + 8, 1.7, 'rgba(90,20,20,.6)');
   }
+  if (Lk.knit) {                          // ugly Christmas sweater: a zigzag band, dots and a snowflake
+    g.save(); g.beginPath(); g.roundRect(side ? -6 : -8, ty, side ? 12 : 16, 22, 4); g.clip();
+    g.beginPath(); for (let i = -8; i <= 8; i += 2) g.lineTo(i, ty + 6 + (i % 4 ? 2 : 0)); g.strokeStyle = '#f8fafc'; g.lineWidth = 1.2; g.stroke();
+    for (let i = -6; i <= 6; i += 4) C(i, ty + 17, 0.9, '#facc15');
+    if (!back) { const fx = side ? 1 : 0; for (let a = 0; a < 3; a++) L(fx - Math.cos(a * 1.05) * 3, ty + 12 - Math.sin(a * 1.05) * 3, fx + Math.cos(a * 1.05) * 3, ty + 12 + Math.sin(a * 1.05) * 3, '#f8fafc', 0.8); }
+    R(-8, ty + 20, 16, 2, shade(Lk.shirt, -0.25)); g.restore();
+  }
+  if (Lk.fur) { R(side ? -6 : -8, ty + 18, side ? 12 : 16, 4, '#f8fafc'); if (!back) R(side ? 0.5 : -1.5, ty + 1, 3, 17, '#f8fafc'); }
+  if (Lk.belt) { R(side ? -6 : -8, ty + 13, side ? 12 : 16, 3, '#1f1f1f'); if (!back) RR(side ? 0 : -2.5, ty + 12.5, 5, 4, 0.8, null, '#facc15', 1); }
+  if (Lk.elfCollar) for (let i = -6; i <= 4; i += 3.3) poly([i, ty, i + 3.3, ty, i + 1.6, ty + 4], Lk.elfCollar);
+  if (Lk.gumdrops && !back) ['#ef4444', '#22c55e', '#f8fafc'].forEach((c, i) => C(side ? 2 : 0, ty + 5 + i * 5, 1.7, c));
+  if (Lk.icing) { g.beginPath(); for (let i = 0; i <= 8; i++) g.lineTo((side ? -6 : -8) + i * (side ? 1.5 : 2), ty + 20 + (i % 2) * 1.5); g.strokeStyle = '#fff'; g.lineWidth = 0.9; g.stroke(); }
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
   if (Lk.tie && !back) { if (side) L(3, ty + 2, 4, ty + 12, Lk.tie, 1.6); else poly([-1.6, ty + 3, 1.6, ty + 3, 2.2, ty + 14, 0, ty + 17, -2.2, ty + 14], Lk.tie); }
   if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.metalArm || Lk.shirt);
@@ -2181,6 +2597,34 @@ function costumeTop(Lk, view, hy, side) {
     E(0, hy - 6.5, 13, 3, '#1c1328'); poly([-7, hy - 7, 7, hy - 7, 3, hy - 21, 8, hy - 26, 0, hy - 22], '#1c1328');
     R(-6.5, hy - 10.5, 13, 2.4, Lk.hatBand);
   }
+  if (Lk.elfEars) for (const d of side ? [-1] : [-1, 1]) poly([d * 7.5, hy - 1, d * 13, hy - 7, d * 8, hy + 3], Lk.skin);
+  if (Lk.antlers) {
+    for (const d of side ? [-1, 1] : [-1, 1]) {
+      const b = side ? d * 1.5 - 2 : d * 4;
+      L(b, hy - 7, b + d * 5, hy - 17, '#6b4423', 1.6); L(b + d * 3, hy - 12, b + d * 8, hy - 13, '#6b4423', 1.3); L(b + d * 4.5, hy - 15, b + d * 2.5, hy - 20, '#6b4423', 1.3);
+      E(side ? -3 : d * 8.5, hy - 5, 2, 3.5, shade(Lk.skin, -0.15));
+    }
+  }
+  if (Lk.deerNose && view !== 'back') {
+    const nx = view === 'side' ? 8.6 : 0, ny = view === 'side' ? hy + 1.5 : hy + 2.5;
+    if (Lk.deerNose === '#ef4444') { g.globalAlpha = 0.35 + Math.sin(T * 4) * 0.15; C(nx, ny, 5, '#ff6b6b'); g.globalAlpha = 1; }
+    C(nx, ny, 2.2, Lk.deerNose);
+  }
+  if (Lk.icing && view !== 'back') { g.beginPath(); for (let i = 0; i <= 6; i++) g.lineTo(-6 + i * 2, hy - 5 + (i % 2) * 1.6); g.strokeStyle = '#fff'; g.lineWidth = 0.9; g.stroke(); }
+  if (Lk.santaHat) {                       // floppy red hat with a white band and pompom
+    const fl = view === 'side' ? -1 : 1;
+    poly([-9, hy - 6, 9, hy - 6, 3 * fl, hy - 17, 12 * fl, hy - 13], Lk.santaHat);
+    RR(-10, hy - 9, 20, 4.5, 2, '#f8fafc'); C(12 * fl, hy - 13, 2.8, '#f8fafc');
+  }
+  if (Lk.elfHat) {                         // tall pointy elf hat with a jingle bell
+    const tip = Math.sin(T * 2 + (Lk.id || 0)) * 1.5;
+    poly([-8.5, hy - 6, 8.5, hy - 6, 6 + tip, hy - 19, 10 + tip, hy - 23], Lk.elfHat);
+    R(-9, hy - 8.5, 18, 3, Lk.elfHat === '#c0392b' ? '#2f8f46' : '#c0392b'); C(10.5 + tip, hy - 23.5, 1.9, '#facc15');
+  }
+  if (Lk.beanie) {                         // knit beanie with a pompom
+    g.beginPath(); g.arc(0, hy - 2, 9.6, Math.PI, 0); g.closePath(); g.fillStyle = Lk.beanie; g.fill();
+    R(-10, hy - 4, 20, 3.5, shade(Lk.beanie, -0.2)); C(0, hy - 12.5, 3, '#f8fafc');
+  }
   if (Lk.helmet) {
     g.globalAlpha = 0.22; C(0, hy, 12.5, '#cfe8ff'); g.globalAlpha = 1;
     g.beginPath(); g.arc(0, hy, 12.5, 0, TAU); g.strokeStyle = '#e6eef7'; g.lineWidth = 1.6; g.stroke();
@@ -2234,6 +2678,30 @@ function drawGhost(Lk, st, pose, view, side) {
   L(7, shY, hx, hy, '#f4f4ff', 4);
   if (st.item) drawItem(st.item, hx, hy, ra, st);
 }
+// A snowman: three snowballs, coal buttons, a carrot nose, a top hat, a scarf and stick arms.
+function drawSnowman(Lk, st, pose, view, side) {
+  if (pose === 'chair') {                  // a snowman who uses a wheelchair still rides it
+    if (side) { C(-2, -9.5, 10, '#1d2027'); C(-2, -9.5, 7.5, '#3a3f4a'); C(10, -2.5, 2.5, '#1d2027'); L(-9, -14, 8, -14, '#30343c', 2.5); }
+    else { E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); R(-7, -2, 14, 2, '#30343c'); }
+    g.translate(0, -10);
+  }
+  const hop = st.moving ? -Math.abs(Math.sin(st.walk)) * 3 : 0, dy = (pose === 'sit' ? 5 : 0) + hop;
+  const snow = (x, y, r) => { C(x, y, r, '#f8fafc'); g.beginPath(); g.arc(x, y, r, 0, TAU); g.strokeStyle = 'rgba(100,120,150,.45)'; g.lineWidth = 0.8; g.stroke(); };
+  snow(0, -10 + dy, 11); snow(0, -27 + dy, 8.5); snow(0, -42 + dy, 7);
+  const hy = -42 + dy;
+  if (view !== 'back') for (let i = 0; i < 3; i++) C(side ? 3 : 0, -31 + i * 5 + dy, 1.1, '#1f2937');
+  R(-7, -35 + dy, 14, 3, Lk.scarf); if (view !== 'back') R(side ? -7 : 3, -33 + dy, 3, 8, Lk.scarf);
+  if (view !== 'back') {
+    for (const e of side ? [3.5] : [-2.5, 2.5]) C(e, hy - 1.5, st.blink ? 0.4 : 1.1, '#1f2937');
+    if (side) poly([5, hy + 0.5, 13, hy + 1.5, 5, hy + 2.5], '#f97316'); else poly([-1.2, hy + 1, 1.2, hy + 1, 0, hy + 6], '#f97316');
+    for (let i = -2; i <= 2; i++) C((side ? 4 : 0) + i * 1.3, hy + 4 + Math.abs(i) * -0.4, 0.5, '#1f2937');
+  }
+  R(-8.5, hy - 7, 17, 2.2, '#111'); R(-5.5, hy - 17, 11, 10, '#111'); R(-5.5, hy - 10, 11, 2, '#b91c1c');
+  const ra = st.ra ?? 0.12, shY = -29 + dy, hx = 7 + Math.sin(ra) * 13, hyy = shY + Math.cos(ra) * 13;
+  L(7, shY, hx, hyy, '#6b4423', 1.6); L(hx, hyy, hx + 2, hyy - 3, '#6b4423', 1);
+  if (!side) { const la = st.la ?? 0.12; L(-7, shY, -7 - Math.sin(la) * 13, shY + Math.cos(la) * 13, '#6b4423', 1.6); }
+  if (st.item) drawItem(st.item, hx, hyy, ra, st);
+}
 const _looks = {};
 // What a worker looks like in the current theme (cached per theme and worker).
 function lookOf(w) {
@@ -2250,6 +2718,7 @@ const XENO_IDS = [4, 7, 10];   // Maria, Raj, Mei: xenomorph-style aliens in the
 function dress(L0, kind, id) {
   const o = { ...L0, costume: kind };
   const plain = { beard: false, mustache: false, glasses: false, plaid: false, skirt: false };
+  const covered = L0.hairStyle === 'turban' || L0.hairStyle === 'hijab';
   switch (kind) {
     case 'astronaut': Object.assign(o, { shirt: '#eef1f5', pants: '#dfe3ea', plaid: false, skirt: false, helmet: true, patch: L0.shirt }); break;
     case 'alien':
@@ -2301,6 +2770,21 @@ function dress(L0, kind, id) {
       shirt: ['#a0522d', '#5b7a3a'][(id >> 2) % 2], plaid: true, pants: '#4a5a7a', pumpkinHead: true, straw: true }); break;
     case 'demon': Object.assign(o, { skin: ['#c0392b', '#a3213a'][id % 2], shirt: '#1c1c1c', pants: '#121212', plaid: false, skirt: false,
       glasses: false, horns: true, glowEyes: '#ffd23f', fangs: true, wings: '#5a1414', tail: true }); break;
+    // ---- North Pole (Christmas). No hat or antlers over a turban or hijab.
+    case 'elf': Object.assign(o, { shirt: '#2f8f46', pants: ['#c0392b', '#e8e8e8'][id % 2], plaid: false, belt: true, elfEars: true,
+      elfCollar: '#c0392b', elfHat: covered ? null : ['#2f8f46', '#c0392b'][(id >> 1) % 2] }); break;
+    case 'santa': Object.assign(o, { shirt: '#c0392b', pants: '#c0392b', plaid: false, skirt: false, belt: true, fur: true,
+      beard: true, mustache: true, hair: '#f4f4f4', santaHat: covered ? null : '#c0392b' }); break;
+    case 'mrsclaus': Object.assign(o, { shirt: '#b91c1c', pants: '#b91c1c', plaid: false, skirt: true, fur: true, hair: '#eeeeee' }); break;
+    case 'sweater': Object.assign(o, { shirt: ['#b91c1c', '#166534', '#1e3a8a'][id % 3], plaid: false, knit: true,
+      beanie: covered ? null : ['#ef4444', '#22c55e', '#f8fafc'][(id >> 1) % 3] }); break;
+    case 'reindeer': case 'rudolph':
+      Object.assign(o, { shirt: '#7a4b28', pants: '#5a3820', plaid: false, skirt: false,
+        deerNose: kind === 'rudolph' ? '#ef4444' : '#2a1a10', antlers: !covered });
+      if (!covered) Object.assign(o, { skin: '#9a6a44', hair: '#6b4423', hairStyle: 'none', beard: false, mustache: false });
+      break;
+    case 'gingerbread': Object.assign(o, plain, { skin: '#b5713d', hairStyle: 'none', shirt: '#b5713d', pants: '#a8642f', gumdrops: true, icing: true }); break;
+    case 'snowman': Object.assign(o, { snowman: true, scarf: ['#ef4444', '#16a34a', '#3b82f6'][id % 3] }); break;
   }
   return o;
 }
@@ -2319,7 +2803,7 @@ function decorScifi() {
   g.globalAlpha = 0.12; poly([ux - 6, uy + 4, ux + 6, uy + 4, ux + 16, uy + 70, ux - 16, uy + 70], '#b6f3ff'); g.globalAlpha = 1;
   E(ux, uy, 16, 5, '#9aa3ad'); E(ux, uy - 4, 7, 5, 'rgba(160,220,255,.9)');
   for (let i = -1; i <= 1; i++) C(ux + i * 9, uy + 1, 1.4, Math.floor(T * 4 + i) % 2 ? '#ffde59' : '#ff5c8a');
-  const rx = 330 + Math.sin(T * 0.23) * 200, ry = 446 + Math.sin(T * 0.37) * 18;   // robot vacuum
+  const rx = 355 + Math.sin(T * 0.23) * 95, ry = 455 + Math.sin(T * 0.37) * 6;   // robot vacuum
   E(rx, ry, 9, 4, '#3b3f4a'); E(rx, ry - 2, 8, 3, '#5b6170'); C(rx + 3, ry - 2, 1.2, Math.floor(T * 2) % 2 ? '#22c55e' : '#14532d');
 }
 function pumpkin(x, y) {
@@ -2359,6 +2843,44 @@ function decorCyber() {
   }
   g.stroke(); g.restore();
 }
+function decorXmas() {
+  windowScene('#0d1b3a', '#e2e8f0', () => {
+    C(770, 42, 7, '#f8fafc');
+    const sx = 650 + (T * 22) % 170, sy = 66 - Math.sin(T * 0.9) * 6;     // Santa's sleigh across the moon
+    for (let k = 0; k < 3; k++) { E(sx + 16 + k * 9, sy - 3, 3.2, 1.6, '#020617'); L(sx + 18 + k * 9, sy - 5, sx + 19 + k * 9, sy - 8, '#020617', 0.8); }
+    poly([sx - 6, sy - 4, sx + 8, sy - 4, sx + 10, sy + 1, sx - 4, sy + 1], '#020617'); L(sx - 6, sy + 2, sx + 12, sy + 2, '#020617', 1);
+    for (let i = 0; i < 18; i++) C(670 + (hh(i) % 116), 30 + (hh(i + 40) % 54 + T * 8 * (1 + i % 3)) % 54, 0.9, '#fff');
+  });
+  const cols = ['#ef4444', '#facc15', '#22c55e', '#3b82f6', '#f472b6'];
+  for (const [a, b] of [[26, 610], [646, 970], [986, 1286], [1306, 1590]]) {   // string lights along the top walls
+    g.beginPath(); g.moveTo(a, 24);
+    for (let x = a; x < b; x += 24) g.quadraticCurveTo(x + 12, 34, Math.min(x + 24, b), 24);
+    g.strokeStyle = '#14532d'; g.lineWidth = 1.2; g.stroke();
+    for (let x = a + 12, i = 0; x < b; x += 24, i++) { const c = cols[i % 5], on = (Math.floor(T * 2) + i) % 3 !== 0;
+      if (on) { g.globalAlpha = 0.3; C(x, 30, 4.5, c); g.globalAlpha = 1; } RR(x - 2, 27, 4, 6, 2, on ? c : shade(c, -0.5)); }
+  }
+  // the office tree, with presents under it
+  xmasTree(690, 258, 1.15, T);
+  present(668, 250, 14, 12, '#ef4444', '#facc15'); present(700, 252, 16, 11, '#3b82f6', '#fff'); present(684, 256, 11, 9, '#a855f7', '#facc15');
+  // a wreath on the break room door frame and stockings by the TV
+  g.beginPath(); g.arc(598, 280, 9, 0, TAU); g.strokeStyle = '#166534'; g.lineWidth = 5; g.stroke();
+  for (let i = 0; i < 6; i++) C(598 + Math.cos(i) * 9, 280 + Math.sin(i) * 9, 1.4, '#ef4444'); poly([594, 289, 602, 289, 598, 284], '#b91c1c');
+  for (let i = 0; i < 3; i++) { const sx = 300 + i * 50; RR(sx, 104, 10, 14, 2, i % 2 ? '#166534' : '#b91c1c'); RR(sx, 118, 15, 6, 3, i % 2 ? '#166534' : '#b91c1c'); R(sx - 1, 102, 12, 4, '#f8fafc'); }
+  // patio: snow drifts, a snowcap on the bench, a snowman
+  g.globalAlpha = 0.8;
+  for (const [x, y, rx, ry] of [[60, 900, 50, 8], [170, 902, 60, 7], [280, 900, 34, 8], [40, 650, 26, 6], [260, 640, 40, 6], [110, 830, 40, 7]]) E(x, y, rx, ry, '#f8fafc');
+  g.globalAlpha = 1;
+  RR(36, 757, 130, 4, 2, '#f8fafc'); E(72, 668, 26, 6, 'rgba(248,250,252,.85)');
+  C(128, 716, 10, '#f8fafc'); C(128, 700, 7.5, '#f8fafc'); C(128, 688, 6, '#f8fafc');
+  R(122, 677, 12, 2, '#111'); R(124, 670, 8, 7, '#111'); C(126, 687, 0.9, '#111'); C(130, 687, 0.9, '#111');
+  poly([128, 689, 128, 691, 134, 690], '#f97316'); L(121, 699, 112, 692, '#6b4423', 1.4); L(135, 699, 144, 693, '#6b4423', 1.4);
+  g.save(); g.globalAlpha = 0.85; g.fillStyle = '#fff';                     // snow falling over everything
+  for (let i = 0; i < 120; i++) {
+    const x = (hh(i) % 1600 + Math.sin(T * 0.8 + i) * 14 + 1600) % 1600, y = (hh(i + 99) % 960 + T * (24 + (i % 3) * 14)) % 960;
+    g.beginPath(); g.arc(x, y, 0.9 + (i % 3) * 0.5, 0, TAU); g.fill();
+  }
+  g.restore();
+}
 function decorHorror() {
   windowScene('#1b1033', '#8a7f99', () => {
     C(760, 48, 10, '#f5f0c8'); C(765, 45, 9, '#1b1033');
@@ -2366,7 +2888,7 @@ function decorHorror() {
       poly([bx - 6, by - f, bx, by, bx + 6, by - f, bx, by + 2], '#000'); }
   });
   for (const [cx, cy, a0] of [[24, 24, 0], [611, 24, Math.PI / 2], [644, 24, 0], [971, 24, Math.PI / 2], [984, 24, 0], [1286, 24, Math.PI / 2], [1304, 24, 0], [1591, 24, Math.PI / 2]]) web(cx, cy, a0);
-  for (const [px, py] of [[44, 300], [596, 466], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
+  for (const [px, py] of [[44, 300], [300, 600], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip(); g.globalAlpha = 0.2;
   for (let i = 0; i < 4; i++) E(((T * 8 + i * 90) % 400) - 40, 860 + i * 18, 80, 12, '#e9e3ff');
   g.restore(); g.globalAlpha = 1;
@@ -2381,7 +2903,7 @@ const workers = [];
 function initWorkers(roster) {
   for (const Lk of roster) {
     const speed = Lk.mobility === 'crutches' ? 62 : Lk.mobility === 'cane' ? 55 : Lk.mobility === 'wheelchair' ? 92 : 96;
-    const w = { id: Lk.id, L: Lk, x: 300, y: 400, area: 'break', facing: 'down', path: [], walk: 0, speed,
+    const w = { id: Lk.id, L: Lk, x: 300, y: 400, facing: 'down', path: [], walk: 0, speed,
       mode: 'idle', spot: null, arrived: false, actUntil: 0, job: null, jobPhase: null, locKind: null,
       dwellUntil: 0, slip: false, bubble: null, bubbleUntil: 0, nextChat: rand(4, 30), seed: rand(0, 100),
       food: 'pizza', lastAct: null, lastActBubble: 0 };
@@ -2391,10 +2913,8 @@ function initWorkers(roster) {
 }
 function say(w, text, secs = 3.5) { w.bubble = text; w.bubbleUntil = T + secs; }
 function buildPath(w, spot) {
-  const a = ROUTES[w.area] || [], b = ROUTES[spot.area] || [];
-  let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
-  const path = a.slice(i).reverse().concat(b.slice(i));
-  path.push({ x: spot.x, y: spot.y, area: spot.area, final: true });
+  const path = findPath(w.x, w.y, spot.x, spot.y) || [{ x: spot.x, y: spot.y }];
+  path[path.length - 1] = { x: spot.x, y: spot.y, final: true };
   return path;
 }
 function release(w) { if (w.spot && w.spot.by === w.id) w.spot.by = null; }
@@ -2405,7 +2925,7 @@ function goTo(w, spot) {
 }
 function teleport(w, spot) {
   release(w); if (!spot.temp) spot.by = w.id;
-  w.spot = spot; w.x = spot.x; w.y = spot.y; w.area = spot.area; w.path = []; arrive(w);
+  w.spot = spot; w.x = spot.x; w.y = spot.y; w.path = []; arrive(w);
 }
 function allowed(s, w) {
   const m = w.L.mobility;
@@ -2456,7 +2976,7 @@ function setTheme(name) {
   try { localStorage.setItem('office-theme', name); } catch (e) {}
   const sel = document.getElementById('optTheme'); if (sel) sel.value = name;
   if (name === THEME) return;
-  THEME = name;
+  THEME = name; navGrid = null;
   for (const w of workers) if (w.mode === 'job' && w.locKind === 'st') { w.locKind = null; w.stDwell = 0; }
   resize(); renderPanel();
 }
@@ -2533,7 +3053,7 @@ function stepMove(w, dt) {
     const tgt = w.path[0], dx = tgt.x - w.x, dy = tgt.y - w.y, d = Math.hypot(dx, dy);
     if (d > 0.5) w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
     if (d <= budget) {
-      w.x = tgt.x; w.y = tgt.y; budget -= d; w.path.shift(); w.area = tgt.area;
+      w.x = tgt.x; w.y = tgt.y; budget -= d; w.path.shift();
       if (tgt.final) { arrive(w); break; }
     } else { w.x += dx / d * budget; w.y += dy / d * budget; budget = 0; }
   }
@@ -2547,8 +3067,9 @@ function updateWorker(w, dt) {
   const t = T + w.seed;
   if (w.mode === 'idle') {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
-    else if (w.arrived && T > w.nextChat) {
-      if (Math.random() < 0.55 && w.spot && CHAT[w.spot.act]) say(w, pick(CHAT[w.spot.act]));
+    else if (w.arrived && T > w.nextChat && !w.talk) {
+      const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : CHAT[w.spot.act]);
+      if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
     }
     if (w.arrived && w.spot) idleTick(w, dt, t);
@@ -2596,6 +3117,49 @@ function updateWorker(w, dt) {
   }
 }
 
+// Banter: pairs on break within earshot (and not asleep) talk through one BANTER script.
+const TALKS = [], recentTalks = [];
+let nextTalk = 10, tvWasBig = false;
+function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && w.spot && w.spot.act !== 'nap'; }
+function startTalk() {
+  const free = workers.filter(canTalk), pairs = [];
+  for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++)
+    if (Math.hypot(free[i].x - free[j].x, free[i].y - free[j].y) < 170) pairs.push(Math.random() < 0.5 ? [free[i], free[j]] : [free[j], free[i]]);
+  if (!pairs.length) return;
+  const [a, b] = pick(pairs);
+  const list = THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : BANTER;
+  let lines = pick(list);
+  for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(list);
+  recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
+  const talk = { a, b, lines, i: 0, next: T + 0.3 };
+  TALKS.push(talk);
+  for (const w of [a, b]) {
+    w.talk = talk; w.actUntil = Math.max(w.actUntil, T + lines.length * 4 + 3);
+    if (!w.spot.pose && !['pool', 'pingpong', 'arcade'].includes(w.spot.act)) {      // standing: turn to the other one
+      const o = w === a ? b : a, dx = o.x - w.x, dy = o.y - w.y;
+      w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    }
+  }
+}
+function endTalk(k) {
+  for (const w of [k.a, k.b]) { w.talk = null; if (w.arrived && w.spot && w.mode === 'idle') w.facing = w.spot.face || 'down'; w.nextChat = T + rand(10, 25); }
+  TALKS.splice(TALKS.indexOf(k), 1);
+}
+function updTalks() {
+  if (T > nextTalk) { if (TALKS.length < 3) startTalk(); nextTalk = T + rand(6, 16); }
+  for (const k of [...TALKS]) {
+    if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length) { endTalk(k); continue; }
+    if (T < k.next) continue;
+    if (k.i >= k.lines.length) { endTalk(k); continue; }
+    const text = k.lines[k.i].replace('{a}', k.a.L.name).replace('{b}', k.b.L.name);
+    say(k.i % 2 ? k.b : k.a, text, 3.6); k.i++; k.next = T + 2.8 + text.length * 0.035;
+  }
+  // the couch reacts when something big happens on TV
+  const big = tvBig();
+  if (big && !tvWasBig) for (const w of workers)
+    if (w.mode === 'idle' && w.arrived && !w.talk && w.spot && w.spot.act === 'tv' && Math.random() < 0.6) say(w, pick(TV_REACT[tvShow()]), 2.5);
+  tvWasBig = big;
+}
 // idle side effects (smoke, steam, Zzz, pool strikes)
 function idleTick(w, dt, t) {
   const a = w.spot.act;
@@ -2632,7 +3196,7 @@ const WORK_ANIM = {
   scared: t => ({ ra: 1.5 + Math.sin(t * 31) * 0.05, la: 1.25 + Math.sin(t * 27) * 0.05, item: 'flashlight', shake: true, open: true }),
 };
 const IDLE_ANIM = {
-  tv: t => Math.sin(t * 0.7) > 0.93 ? { ra: 2.9, la: 2.9, open: true } : { ra: 0.25, la: 0.25 },
+  tv: () => tvBig() ? { ra: 2.9, la: 2.9, open: true } : { ra: 0.25, la: 0.25 },
   coffee: () => ({ ra: 0.9, item: 'mug' }),
   fridge: t => ({ ra: 1.6 + Math.sin(t * 2) * 0.2 }),
   micro: () => ({ ra: 0.2, la: 0.2 }),
@@ -2733,6 +3297,9 @@ function drawBoss() {
   } else if (THEME === 'cyber') {    // an AR visor in Neon City
     RR(x - 9, hy - 4, 18, 5, 2, '#0b1020'); g.globalAlpha = 0.4; RR(x - 9.5, hy - 4.5, 19, 6, 2, '#ff2bd6'); g.globalAlpha = 1;
     L(x - 6, hy - 2.5, x + 6, hy - 2.5, '#22d3ee', 0.9);
+  } else if (THEME === 'xmas') {     // a Santa hat at the North Pole
+    poly([x - 13, hy - 9, x + 13, hy - 9, x + 6, hy - 30, x + 18, hy - 24], '#c0392b');
+    RR(x - 14, hy - 13, 28, 6, 3, '#f8fafc'); C(x + 18, hy - 23, 3.6, '#f8fafc');
   } else if (THEME === 'horror') {   // and a witch's hat for Halloween
     E(x, hy - 12, 18, 4, '#1c1328'); poly([x - 10, hy - 13, x + 10, hy - 13, x + 4, hy - 33, x + 11, hy - 39, x, hy - 34], '#1c1328');
     R(x - 9, hy - 17, 18, 3, '#f28c28');
@@ -2793,11 +3360,12 @@ function updPool(dt) {
     if (b.y < 4 || b.y > 64) { b.vy *= -1; b.y = clamp(b.y, 4, 64); }
   }
 }
+const PX = 48, PY = 476;                 // pool table top-left: left of the ping pong table
 function drawPoolTable() {
-  RR(396, 296, 178, 88, 10, '#6b3e1f'); R(406, 306, 158, 68, '#2e7d4f');
-  for (const [px, py] of [[408, 308], [485, 305], [562, 308], [408, 372], [485, 375], [562, 372]]) C(px, py, 4, '#16261c');
-  for (const b of POOL.balls) C(406 + b.x, 306 + b.y, 3.2, b.c);
-  R(404, 384, 8, 10, '#4a2a14'); R(558, 384, 8, 10, '#4a2a14');
+  RR(PX, PY, 178, 88, 10, '#6b3e1f'); R(PX + 10, PY + 10, 158, 68, '#2e7d4f');
+  for (const [px, py] of [[12, 12], [89, 9], [166, 12], [12, 76], [89, 79], [166, 76]]) C(PX + px, PY + py, 4, '#16261c');
+  for (const b of POOL.balls) C(PX + 10 + b.x, PY + 10 + b.y, 3.2, b.c);
+  R(PX + 8, PY + 88, 8, 10, '#4a2a14'); R(PX + 162, PY + 88, 8, 10, '#4a2a14');
 }
 function drawPingPong() {
   RR(380, 480, 180, 58, 3, '#1f6f9e'); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.strokeRect(383, 483, 174, 52); L(383, 509, 557, 509, 'rgba(255,255,255,.6)', 1);
@@ -2876,8 +3444,14 @@ function drawStatic() {
   R(259, 400, 22, 40, '#f0f0f0'); R(263, 416, 6, 4, '#4aa3ff'); R(271, 416, 6, 4, '#e74c3c'); E(270, 388, 11, 14, 'rgba(120,190,255,.75)');
   // dining chairs (people sit on them)
   for (const s of ['eat1', 'eat2', 'eat3', 'eat4', 'eat5']) { const sp = SPOT_BY_ID[s]; RR(sp.x - 9, sp.y - 13, 18, 6, 2, '#7a4f2e'); R(sp.x - 8, sp.y - 7, 3, 8, '#5e3b22'); R(sp.x + 5, sp.y - 7, 3, 8, '#5e3b22'); }
-  // beanbags + rug
-  E(92, 566, 30, 15, '#e76f51'); E(172, 582, 20, 16, '#2a9d8f'); E(166, 576, 12, 8, '#34b3a4');
+  // nap room (top right of the break room): dim carpet, two cots, a beanbag, a door in the top wall
+  R(455, 355, 160, 90, '#2f3a56');
+  for (let i = 0; i < 14; i++) C(462 + hh(i) % 146, 362 + hh(i + 7) % 78, 0.9, 'rgba(255,255,255,.22)');
+  for (const y of [380, 414]) { RR(510, y, 74, 24, 4, '#6b7280'); RR(512, y + 2, 70, 20, 3, '#c7d2fe'); RR(514, y + 4, 16, 16, 4, '#fff'); RR(544, y + 2, 38, 20, 3, '#818cf8'); }
+  E(482, 428, 22, 14, '#2a9d8f'); E(476, 422, 13, 8, '#34b3a4');
+  C(601, 368, 5, 'rgba(253,230,138,.35)'); C(601, 368, 2.4, '#fde68a');
+  wall(455, 355, 466, 355); wall(510, 355, 615, 355); wall(455, 355, 455, 445); wall(455, 445, 615, 445);
+  RR(530, 349, 66, 12, 3, '#1e293b'); TXT('NAP ROOM · shhh', 563, 355.5, 'bold 6.5px system-ui', '#c7d2fe');
   plant(595, 140, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
   // walls
   wall(20, 20, 615, 20); wall(20, 20, 20, 615); wall(615, 20, 615, 300); wall(615, 345, 615, 615);
@@ -2956,17 +3530,59 @@ function drawStatic() {
   if (wash) { g.globalAlpha = wash[1]; R(0, 0, W, H, wash[0]); g.globalAlpha = 1; }
 }
 
+// The TV screen (288..412 x 35..93): the match, a paternity-test talk show, a survey game show, a soap.
+function drawTV() {
+  const show = tvShow(), p = T % 40, big = tvBig();
+  const guy = (x, y, c, up) => { RR(x - 4, y - 12, 8, 12, 2, c); C(x, y - 15, 3.4, '#e0ac69');
+    if (up) { L(x - 3, y - 11, x - 6, y - 19, c, 1.6); L(x + 3, y - 11, x + 6, y - 19, c, 1.6); } };
+  g.save(); g.beginPath(); g.rect(288, 35, 124, 58); g.clip();
+  if (show === 'sports') {
+    R(288, 35, 124, 58, big ? (Math.floor(T * 8) % 2 ? '#ffd23f' : '#2f8f46') : '#2f8f46');
+    L(350, 35, 350, 93, 'rgba(255,255,255,.4)', 1); g.beginPath(); g.arc(350, 64, 10, 0, TAU); g.strokeStyle = 'rgba(255,255,255,.4)'; g.stroke();
+    const bx = 350 + Math.sin(T * 1.3) * 48, by = 64 + Math.sin(T * 2.1) * 20;
+    C(bx - 10 + Math.sin(T * 3) * 4, by + 6, 2.6, '#e74c3c'); C(bx + 9, by - 5 + Math.cos(T * 2.6) * 4, 2.6, '#3498db'); C(bx, by, 1.8, '#fff');
+    TXT('2 - 1', 302, 41, 'bold 7px system-ui', '#fff', 'left');
+    if (big) TXT('GOAL!', 350, 64, 'bold 18px system-ui', '#c0392b');
+  } else if (show === 'talk') {
+    const notDad = Math.floor(T / 160) % 2 === 0;          // the verdict alternates between episodes
+    R(288, 35, 124, 58, '#3b1d5e'); for (let i = 0; i < 6; i++) R(290 + i * 21, 35, 3, 40, 'rgba(255,255,255,.06)'); R(288, 74, 124, 19, '#24123d');
+    const jump = big && Math.floor(T * 4) % 2 ? -4 : 0;
+    guy(306, 78 + (notDad ? jump : 0), '#2563eb', big && notDad); guy(326, 78 + (!notDad ? jump : 0), '#db2777', big && !notDad);
+    R(300, 78, 32, 3, '#1f1030'); guy(392, 78, '#111827', false); L(388, 64, 384, 58, '#9ca3af', 1); C(384, 57, 1.6, '#333');
+    RR(352, 52, 22, 14, 2, '#fff', '#999', 0.6); TXT('DNA', 363, 59, 'bold 6px system-ui', '#b91c1c');
+    const banner = p < 15 ? 'WHO IS THE FATHER?' : p < 30 ? 'THE RESULTS ARE IN...' : notDad ? 'YOU ARE NOT THE FATHER!' : 'YOU ARE THE FATHER!';
+    R(288, 82, 124, 11, big ? (Math.floor(T * 6) % 2 ? '#facc15' : '#ef4444') : '#facc15');
+    TXT(banner, 350, 87.5, 'bold 6.5px system-ui', '#111');
+  } else if (show === 'game') {
+    R(288, 35, 124, 58, '#1e3a8a'); for (let i = 0; i < 9; i++) C(292 + i * 15, 38, 1.4, Math.floor(T * 4 + i) % 2 ? '#facc15' : '#fde68a');
+    RR(316, 41, 68, 40, 3, '#0f172a', '#facc15', 1.2);
+    const ans = ['COFFEE', 'EMAIL', 'NAPS', 'MEETINGS', 'PIZZA', 'WI-FI', 'DONUTS', 'GOSSIP'], pts = [38, 22, 14, 9, 7, 5, 3, 2];
+    const shown = Math.floor(p / 5);
+    for (let i = 0; i < 8; i++) { const cx = 319 + (i >> 2) * 32, cy = 44 + (i % 4) * 9;
+      if (i < shown) { R(cx, cy, 30, 7.5, '#d4af37'); TXT(ans[i], cx + 1.5, cy + 4, 'bold 4.5px system-ui', '#111', 'left'); TXT(String(pts[i]), cx + 28.5, cy + 4, 'bold 4.5px system-ui', '#111', 'right'); }
+      else { R(cx, cy, 30, 7.5, '#2563eb'); TXT(String(i + 1), cx + 15, cy + 4, 'bold 5px system-ui', '#fff'); } }
+    RR(292, 80, 20, 13, 2, '#b91c1c'); RR(388, 80, 20, 13, 2, '#b91c1c'); guy(302, 80, '#f59e0b', false); guy(398, 80, '#10b981', false);
+    TXT('SURVEY SAYS!', 350, 88, 'bold 6px system-ui', '#fde68a');
+    if (big) { L(336, 50, 364, 76, '#ef4444', 6); L(364, 50, 336, 76, '#ef4444', 6); }
+  } else {
+    R(288, 35, 124, 58, '#5b2a3a'); R(288, 35, 14, 58, '#7f1d1d'); R(398, 35, 14, 58, '#7f1d1d');
+    for (const cx of [312, 388]) { R(cx - 1, 60, 2, 8, '#fef3c7'); C(cx, 58, 1.6, Math.sin(T * 9 + cx) > 0 ? '#fbbf24' : '#f97316'); }
+    if (big) {                                              // dramatic close-up
+      R(288, 35, 124, 58, '#3b0d1a'); C(350, 66, 20, '#e0ac69'); E(350, 50, 22, 9, '#4a2511');
+      for (const ex of [342, 358]) { C(ex, 62, 4, '#fff'); C(ex, 62, 2, '#111'); }
+      E(350, 76, 3.5, 4.5, '#5a1f1f'); TXT('*GASP*', 384, 44, 'bold 8px system-ui', '#fde68a');
+    } else {
+      guy(334, 80, '#7c3aed', false); guy(366, 80, '#0f766e', Math.sin(T * 1.5) > 0.6);
+      TXT('As the Office Turns', 350, 88, 'italic 6.5px Georgia', '#fde68a');
+    }
+  }
+  g.restore();
+}
 // animated bits of the scenery (drawn every frame, under the people)
 function drawDynamicBg() {
   // TV
   RR(282, 30, 136, 70, 4, '#111');
-  const goal = (T % 25) < 1.6;
-  R(288, 35, 124, 58, goal ? (Math.floor(T * 8) % 2 ? '#ffd23f' : '#2f8f46') : '#2f8f46');
-  L(350, 35, 350, 93, 'rgba(255,255,255,.4)', 1); g.beginPath(); g.arc(350, 64, 10, 0, TAU); g.strokeStyle = 'rgba(255,255,255,.4)'; g.stroke();
-  const bx = 350 + Math.sin(T * 1.3) * 48, by = 64 + Math.sin(T * 2.1) * 20;
-  C(bx - 10 + Math.sin(T * 3) * 4, by + 6, 2.6, '#e74c3c'); C(bx + 9, by - 5 + Math.cos(T * 2.6) * 4, 2.6, '#3498db'); C(bx, by, 1.8, '#fff');
-  TXT('2 - 1', 302, 41, 'bold 7px system-ui', '#fff', 'left');
-  if (goal) TXT('GOAL!', 350, 64, 'bold 18px system-ui', '#c0392b');
+  drawTV();
   g.globalAlpha = 0.07 + Math.sin(T * 3) * 0.02; E(350, 150, 70, 30, '#9fd3ff'); g.globalAlpha = 1;
   // real wall clock in the break room
   const now = new Date(), ox = 434, oy = 50;
@@ -3061,7 +3677,8 @@ function drawTooltip(w) {
     if (w.job.message && w.job.status !== 'working') lines.push(w.job.message);
     if (w.locKind === 'meet') lines.push('Leading a team of ' + helpersOf(w.job.id).length);
     const lead = leaderOf(w.job); if (lead) lines.push('Reports to ' + lead.L.name);
-  } else lines.push(w.mode === 'returning' ? 'Heading back to the break room' : 'On break — ' + (ACT_NAMES[w.spot && w.spot.act] || 'wandering'));
+  } else lines.push(w.mode === 'returning' ? 'Heading back to the break room' : 'On break — ' + (w.talk ? 'chatting with ' + (w.talk.a === w ? w.talk.b : w.talk.a).L.name
+    : w.spot && w.spot.act === 'tv' ? 'watching ' + TV_NAMES[tvShow()] : ACT_NAMES[w.spot && w.spot.act] || 'wandering'));
   g.font = '12px system-ui';
   const ls = lines.map((l, i) => i === 0 ? l : fitText(l, 240));
   const tw = Math.max(...ls.map(l => g.measureText(l).width)) + 16, th = ls.length * 15 + 8;
@@ -3077,14 +3694,14 @@ let hovered = null, selected = null, selectUntil = 0, online = false;
 function update(dt) {
   T += dt;
   for (const w of workers) updateWorker(w, dt);
-  updParticles(dt); updPool(dt);
+  updParticles(dt); updPool(dt); updTalks();
   if (T > BOSS.nextQuip) { if (!BOSS.visitor) bossSay(pick(activeCount() ? BOSS_BUSY : BOSS_IDLE), 3); BOSS.nextQuip = T + rand(35, 70); }
   const atDesk = workers.some(w => w.mode === 'job' && w.locKind === 'trouble' && w.arrived);
   if (atDesk && T > DUCK.next) { DUCK.bubble = pick(DUCK_LINES); DUCK.bubbleUntil = T + 3.5; DUCK.next = T + rand(7, 11); }
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
-  { y: 258, draw: drawCouch }, { y: 299, draw: drawDiningTable }, { y: 384, draw: drawPoolTable },
+  { y: 258, draw: drawCouch }, { y: 299, draw: drawDiningTable }, { y: PY + 88, draw: drawPoolTable },
   { y: 540, draw: drawPingPong }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
   { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
 ];
