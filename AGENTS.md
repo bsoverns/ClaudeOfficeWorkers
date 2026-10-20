@@ -14,7 +14,9 @@ hooks that run `claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.md`.
 - Check: `py -m py_compile app.py server.py office.py install_hooks.py claude_hook.py make_icon.py`
 - Run: `py server.py 8790` (a spare port; see Testing), page at `http://127.0.0.1:8790/`
 - Demo: `set CLAUDE_OFFICE_PORT=8790` then `py office.py demo`
-- Build the exe: `build.bat` (output in `dist/`, git-ignored)
+- Build the exe: `build.bat` (output in `dist/`, git-ignored). CI (`.github/workflows/build.yml`)
+  builds and smoke-tests it on every PR and publishes a GitHub Release on every merge to `main`;
+  keep its build steps in step with `build.bat`.
 
 ## Testing
 
