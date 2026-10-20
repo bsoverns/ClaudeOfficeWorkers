@@ -136,7 +136,8 @@ scripts\start.bat
 ```
 
 `git config core.hooksPath .githooks` turns on a guard that refuses pushes to `main`
-(changes go through pull requests); skip it if you won't change the code.
+(changes go through pull requests) and one that strips Claude Code session links from commit
+messages (CI also fails a PR that has one); skip it if you won't change the code.
 
 `src\install_hooks.py` connects Claude Code once for every project. Restart open Claude Code
 sessions afterwards. For a PC without Python, build the standalone app (below) and copy the zip.
@@ -273,7 +274,7 @@ tools/
 docs/
   CONNECT_A_PROJECT.md   setup for a new PC, global or per-project, with a paste-in prompt
 .github/                 CI build + release, PR auto-assign, CODEOWNERS
-.githooks/               pre-push guard that refuses pushes to main
+.githooks/               pre-push guard that refuses pushes to main; commit-msg strips session links
 ```
 
 ## How Claude events map

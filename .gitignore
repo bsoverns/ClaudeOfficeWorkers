@@ -12,8 +12,9 @@ office.icns
 # Backups install_hooks.py writes next to a settings file
 *.bak-office-*
 
-# Personal Claude Code settings
-.claude/settings.local.json
+# Personal Claude Code files (settings, launch configs); session links are kept out of commit
+# messages by .githooks/commit-msg and the CI check
+.claude/
 
 # Editors and OS clutter
 .vscode/

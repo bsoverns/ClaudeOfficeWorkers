@@ -24,6 +24,21 @@ jobs:
       version: ${{ steps.version.outputs.version }}
 
     steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages for Claude session links
+        if: github.event_name == 'pull_request'
+        run: |
+          # The repo is public: a session link points at someone's private conversation.
+          # .githooks/commit-msg strips them locally; this catches clones without the hook.
+          if git log --format=%B "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | grep -n 'claude\.ai/code/session_'; then
+            echo "::error::A commit message links a Claude Code session. Remove the Claude-Session line (git commit --amend or rebase) and push again."
+            exit 1
+          fi
+
       - name: Compute version
         id: version
         run: |

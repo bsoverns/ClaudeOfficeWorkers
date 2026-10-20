@@ -1,0 +1,6 @@
+#!/bin/sh
+# Strip Claude Code session links (Claude-Session: https://claude.ai/code/session_...) from commit
+# messages: the repo is public and a session link points at someone's private conversation.
+# CI refuses pull requests whose commits still have one.
+sed -i.bak -e '/^Claude-Session:/d' -e '/claude\.ai\/code\/session_/d' "$1" && rm -f "$1.bak"
+exit 0
