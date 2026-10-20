@@ -649,9 +649,13 @@ def default_port() -> int:
 
 
 def state_file(port: int) -> str:
-    """Where the office remembers its jobs: %LOCALAPPDATA%/ClaudeOffice/state.json, one per port
-    (state-8790.json on port 8790), so a test office never touches the real one."""
-    base = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice")
+    """Where the office remembers its jobs: %LOCALAPPDATA%/ClaudeOffice/state.json (on a Mac,
+    ~/Library/Application Support/ClaudeOffice/state.json), one per port (state-8790.json on
+    port 8790), so a test office never touches the real one."""
+    if sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support/ClaudeOffice")
+    else:
+        base = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice")
     os.makedirs(base, exist_ok=True)
     return os.path.join(base, "state.json" if port == DEFAULT_PORT else f"state-{port}.json")
 

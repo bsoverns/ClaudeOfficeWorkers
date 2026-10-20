@@ -1,0 +1,15 @@
+#!/bin/bash
+# Claude Office launcher for macOS. Runs the office with the Mac's own Python 3.
+# No args: open the office window. Also: --install [--uninstall], --server [port], --hook, cmd <args>.
+HERE="${0%/*}/../Resources/ClaudeOffice"
+PY=""
+for c in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+  if [ -x "$c" ] && "$c" -c 'import sys; sys.exit(sys.version_info < (3, 7))' >/dev/null 2>&1; then PY="$c"; break; fi
+done
+if [ -z "$PY" ]; then
+  [ "$1" = "--hook" ] && exit 0      # never get in Claude's way
+  osascript -e 'display dialog "Claude Office needs Python 3.\n\nOpen Terminal and run:  xcode-select --install\n(or install Python from python.org), then open Claude Office again." with title "Claude Office" buttons {"OK"} default button 1 with icon caution' >/dev/null 2>&1
+  exit 1
+fi
+export CLAUDE_OFFICE_PYTHON="$PY"
+exec "$PY" "$HERE/app.py" "$@"

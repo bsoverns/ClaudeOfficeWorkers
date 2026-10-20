@@ -1,7 +1,9 @@
-"""Draws office.ico (Claude's orange starburst) at the repo root, standard library only. Run by scripts/build.bat."""
+"""Draws office.ico (Claude's orange starburst) at the repo root, standard library only. Run by scripts/build.bat.
+With --icns it draws office.icns for the Mac app instead (run by scripts/build_mac.sh)."""
 import math
 import os
 import struct
+import sys
 import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # tools/.. = the repo root
@@ -40,7 +42,21 @@ def png(size: int) -> bytes:
             + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
 
 
+def icns() -> None:
+    """The Mac icon: PNGs at 128, 256 and 512 px in an .icns container."""
+    body = b""
+    for kind, size in ((b"ic07", 128), (b"ic08", 256), (b"ic09", 512)):
+        img = png(size)
+        body += kind + struct.pack(">I", len(img) + 8) + img
+    with open(os.path.join(ROOT, "office.icns"), "wb") as f:
+        f.write(b"icns" + struct.pack(">I", len(body) + 8) + body)
+    print("wrote office.icns")
+
+
 def main() -> None:
+    if "--icns" in sys.argv[1:]:
+        icns()
+        return
     sizes = [16, 32, 48, 256]
     images = [png(s) for s in sizes]
     out = struct.pack("<HHH", 0, 1, len(sizes))

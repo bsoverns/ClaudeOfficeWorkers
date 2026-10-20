@@ -9,3 +9,10 @@
 *.png binary
 *.zip binary
 .githooks/* text eol=lf
+
+# Mac launcher and double-click scripts must be LF or bash chokes on the \r.
+*.sh text eol=lf
+*.command text eol=lf
+*.plist text eol=lf
+package/mac/ClaudeOffice text eol=lf
+*.icns binary

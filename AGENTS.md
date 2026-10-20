@@ -17,6 +17,9 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
 - Build the exe: `scripts/build.bat` (output in `dist/`, git-ignored). CI (`.github/workflows/build.yml`)
   builds and smoke-tests it on every PR and publishes a GitHub Release on every merge to `main`;
   keep its build steps in step with `scripts/build.bat`.
+- Build the Mac app: `scripts/build_mac.sh` (output in `dist/`; no PyInstaller, runs anywhere with
+  `python3` and `zip`). CI builds and smoke-tests it on `macos-latest` and attaches the zip to the release;
+  keep the CI step in step with `scripts/build_mac.sh`. Mac-only code paths check `sys.platform == "darwin"`.
 
 ## Testing
 
