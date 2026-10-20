@@ -1,6 +1,22 @@
 # Claude Office Workers
 
+[![Build](https://github.com/bsoverns/ClaudeOfficeWorkers/actions/workflows/build.yml/badge.svg)](https://github.com/bsoverns/ClaudeOfficeWorkers/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/bsoverns/ClaudeOfficeWorkers?label=download)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest)
+
 An animated office that shows what Claude Code is doing, so you notice when it's done.
+
+## Download
+
+**[⬇ Download ClaudeOffice.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/ClaudeOffice.zip)**
+
+For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, double-click
+**Connect Claude Code.bat** once (then restart open Claude Code sessions), and open
+**ClaudeOffice.exe**. Every change merged to `main` builds a new release automatically; see
+[all releases and their notes](https://github.com/bsoverns/ClaudeOfficeWorkers/releases).
+`VERSION.txt` in the folder says which build you have.
+
+> The exe isn't code-signed, so Windows SmartScreen may warn the first time. Click
+> **More info → Run anyway**, or right-click the zip → **Properties** → tick **Unblock** before unzipping.
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
 machine, arcade, nap beanbag, smoking patio with a cat). When you give Claude a task, the
@@ -58,7 +74,7 @@ their station 20 seconds, so they don't ping-pong. Until there's a clue, the wor
 their usual station. Rules live in `AREA_RULES` in `server.py`.
 Test a station: `py office.py start "Fix the sproc" --area sql`.
 
-## Get it
+## Run from source
 
 Requirements: Windows 10/11, Python 3.9+ (`py`), and Edge or Chrome. No packages to install.
 
@@ -88,7 +104,23 @@ Tip: open it as its own window on a second screen, e.g. `msedge --app=http://127
 
 `build.bat` builds `dist\ClaudeOffice\ClaudeOffice.exe` and `dist\ClaudeOffice.zip`
 (it installs PyInstaller, needed only on the PC that builds). `build/` and `dist/` are
-git-ignored; rebuild rather than committing them. The exe is everything in one:
+git-ignored; rebuild rather than committing them.
+
+### CI and releases
+
+`.github/workflows/build.yml` runs on every pull request: it compiles the Python, builds the
+exe with the same steps as `build.bat`, and smoke-tests it (starts the built server, sends one
+Claude hook event through `ClaudeOffice.exe --hook`, and checks the job arrives with the right
+work area). The zip is attached to the run as an artifact. When a change is merged to `main`
+it also:
+
+1. Stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
+2. Creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip` attached; the release
+   notes are generated from the pull requests merged since the last release, so give PRs clear titles.
+
+`.github/workflows/auto-assign.yml` assigns every new PR to the repository owner.
+
+The exe is everything in one:
 
 ```
 ClaudeOffice.exe                      open the office in its own window (Edge/Chrome app mode);
