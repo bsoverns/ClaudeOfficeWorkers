@@ -158,6 +158,7 @@ py src\office.py demo</pre>
 // ============================================================================================
 const W = 1600, H = 960;                     // world size
 const $ = s => document.querySelector(s);
+const ON_MAC = /Mac/.test(navigator.platform || navigator.userAgent);
 const cv = $('#c'), stage = $('#stage');
 const mainCtx = cv.getContext('2d');
 const bgCanvas = document.createElement('canvas');
@@ -4826,7 +4827,7 @@ function render() {
   if (!online) {
     RR(W / 2 - 230, 120, 460, 54, 10, 'rgba(20,22,28,.92)', '#ef4444', 2);
     TXT('The office server is closed', W / 2, 138, 'bold 16px system-ui', '#fff');
-    TXT('Start it with ClaudeOffice.app (or ClaudeOffice.exe on Windows). This page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
+    TXT(ON_MAC ? 'Start it with ClaudeOffice.app or python3 src/server.py. This page reconnects by itself.' : 'Start it with ClaudeOffice.exe or scripts\\start.bat. This page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
   }
 }
 let last = performance.now();

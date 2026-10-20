@@ -82,15 +82,8 @@ def find_browser() -> str | None:
     return next((c for c in candidates if c and os.path.isfile(c)), None)
 
 
-def data_dir() -> str:
-    """Where the office keeps its own files: %LOCALAPPDATA%\\ClaudeOffice on Windows,
-    ~/Library/Application Support/ClaudeOffice on a Mac."""
-    if sys.platform == "darwin":
-        return os.path.expanduser("~/Library/Application Support/ClaudeOffice")
-    return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice")
-
-
 def open_window(url: str) -> None:
+    from server import data_dir
     browser = find_browser()
     if not browser:
         webbrowser.open(url)

@@ -47,7 +47,13 @@ def hook_command() -> str:
         return f'"{sys.executable.replace(chr(92), "/")}" --hook'
     # The Mac launcher passes the stable python3 path (e.g. /opt/homebrew/bin/python3) so a
     # Python upgrade doesn't break the hook.
-    py = (os.environ.get("CLAUDE_OFFICE_PYTHON") or sys.executable).replace("\\", "/")
+    py = os.environ.get("CLAUDE_OFFICE_PYTHON") or sys.executable
+    if not os.environ.get("CLAUDE_OFFICE_PYTHON") and sys.platform == "darwin":
+        # Running from source: write the stable python3 path, not a versioned Homebrew Cellar one.
+        stable = shutil.which("python3")
+        if stable and os.path.realpath(stable) == os.path.realpath(sys.executable):
+            py = stable
+    py = py.replace("\\", "/")
     hook = os.path.join(HERE, "claude_hook.py").replace("\\", "/")
     return f'"{py}" "{hook}"'
 

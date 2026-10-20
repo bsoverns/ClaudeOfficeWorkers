@@ -20,7 +20,7 @@ For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, doubl
 
 **[⬇ Download ClaudeOffice-mac.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/ClaudeOffice-mac.zip)**
 
-For macOS 11 or newer. It runs on the Mac's own Python 3 (if `python3` is missing, run
+For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3` is missing, run
 `xcode-select --install` once). Unzip it somewhere it can stay, e.g. `/Applications/ClaudeOffice-mac`, then:
 
 1. The app isn't signed, so clear the download flag once in Terminal:
@@ -174,7 +174,8 @@ ClaudeOffice.app/Contents/MacOS/ClaudeOffice [--server [port] | --install [--pro
 
 The hooks run `python3 .../ClaudeOffice.app/Contents/Resources/ClaudeOffice/claude_hook.py`, using
 the stable `python3` path the launcher found (passed in `CLAUDE_OFFICE_PYTHON`), so a Homebrew
-Python upgrade doesn't break them. Saved jobs and the window profile live in
+Python upgrade doesn't break them. Installing from source on a Mac (`python3 src/install_hooks.py`)
+writes the same stable `python3` path when it is the Python you ran it with. Saved jobs and the window profile live in
 `~/Library/Application Support/ClaudeOffice`. The app is unsigned, so Gatekeeper blocks it until
 the quarantine flag is cleared (see Download).
 
@@ -184,12 +185,13 @@ the quarantine flag is cleared (see Download).
 exe with the same steps as `scripts\build.bat`, and smoke-tests it (starts the built server, sends one
 Claude hook event through `ClaudeOffice.exe --hook`, and checks the job arrives with the right
 work area). A macOS job runs `scripts/build_mac.sh` and the same smoke test through the app's
-launcher. Both zips are attached to the run as artifacts. When a change is merged to `main`
-it also:
+launcher. The two builds run in parallel and neither waits for the other; both zips are
+attached to the run as artifacts. When a change is merged to `main`:
 
-1. Stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
-2. Creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip` and `ClaudeOffice-mac.zip` attached; the release
-   notes are generated from the pull requests merged since the last release, so give PRs clear titles.
+1. A first job stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
+2. Once both builds pass, a release job creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip` and
+   `ClaudeOffice-mac.zip` attached; the release notes are generated from the pull requests merged
+   since the last release, so give PRs clear titles.
 
 `.github/workflows/auto-assign.yml` assigns every new PR to the repository owner.
 
