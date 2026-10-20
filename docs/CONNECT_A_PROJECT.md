@@ -33,6 +33,22 @@ If you move the folder, run `Connect Claude Code.bat` again. Windows SmartScreen
 work antivirus may warn about an unsigned exe the first time; if IT blocks it, use the
 Python version below instead.
 
+### On a Mac
+
+Download `ClaudeOffice-mac.zip` from the same release, or build it with `scripts/build_mac.sh`.
+It needs Python 3 as `python3` (Homebrew's, or the system one: `xcode-select --install`).
+
+1. Unzip it somewhere it can stay, e.g. `/Applications/ClaudeOffice-mac/`.
+2. The app isn't signed, so clear the download flag once in Terminal:
+   `xattr -dr com.apple.quarantine /Applications/ClaudeOffice-mac`
+3. Double-click **`Connect Claude Code.command`** (the global install, 2a), then restart any
+   open Claude Code sessions.
+4. Open **`ClaudeOffice.app`** whenever you want the office (drag it to the Dock for one click).
+
+Per project: `/Applications/ClaudeOffice-mac/ClaudeOffice.app/Contents/MacOS/ClaudeOffice --install --project .`
+Test without Claude: the same path with `cmd demo`. Undo: **`Disconnect Claude Code.command`**.
+If you move the folder, run `Connect Claude Code.command` again.
+
 ---
 
 ## 1. Python version: get the files onto the machine
@@ -157,3 +173,4 @@ DevOps, GitHub, SQL Server, Python…); see README.
 | Disconnect one project | `py src\install_hooks.py --project C:\path\to\project --uninstall` |
 | See the hook JSON only | `py src\install_hooks.py --print` |
 | Test without Claude | `py src\office.py demo` |
+| Mac | the same commands with `python3` and `/` paths, e.g. `python3 src/install_hooks.py` |

@@ -9,6 +9,9 @@ r"""ClaudeOffice.exe: the whole Claude Office in one program (built by scripts/b
   ClaudeOffice.exe cmd <args>          same as src/office.py, e.g. cmd start "Test" / cmd demo
 
 Also runs unbuilt: `py src/app.py ...`.
+
+On a Mac, ClaudeOffice.app (built by scripts/build_mac.sh) runs this file with the Mac's own
+python3 and takes the same arguments: ClaudeOffice.app/Contents/MacOS/ClaudeOffice --install, etc.
 """
 from __future__ import annotations
 
@@ -60,7 +63,14 @@ _has_console = False
 
 
 def find_browser() -> str | None:
-    """Edge (on every Windows 11 PC) or Chrome: both can open a page as its own app window."""
+    """Edge (on every Windows 11 PC) or Chrome: both can open a page as its own app window.
+    On a Mac: Chrome, Edge, Brave, Chromium or Vivaldi from /Applications or ~/Applications."""
+    if sys.platform == "darwin":
+        names = [("Google Chrome", "Google Chrome"), ("Microsoft Edge", "Microsoft Edge"),
+                 ("Brave Browser", "Brave Browser"), ("Chromium", "Chromium"), ("Vivaldi", "Vivaldi")]
+        roots = ["/Applications", os.path.expanduser("~/Applications")]
+        mac = [os.path.join(r, f"{app}.app", "Contents", "MacOS", exe) for r in roots for app, exe in names]
+        return next((c for c in mac if os.path.isfile(c)), None)
     env = os.environ
     candidates = [
         os.path.join(env.get("ProgramFiles(x86)", ""), r"Microsoft\Edge\Application\msedge.exe"),
@@ -73,17 +83,20 @@ def find_browser() -> str | None:
 
 
 def open_window(url: str) -> None:
+    from server import data_dir
     browser = find_browser()
     if not browser:
         webbrowser.open(url)
         return
     # Its own profile keeps the window separate from your normal browser and remembers
     # the office's settings (sound, notification permission).
-    profile = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice", "window")
+    profile = os.path.join(data_dir(), "window")
     os.makedirs(profile, exist_ok=True)
     subprocess.Popen([browser, f"--app={url}", f"--user-data-dir={profile}", "--window-size=1500,900",
                       "--no-first-run", "--no-default-browser-check"],
-                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                     start_new_session=(os.name != "nt"),
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def run_app() -> None:

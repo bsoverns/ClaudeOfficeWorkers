@@ -18,6 +18,17 @@ For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, doubl
 > The exe isn't code-signed, so Windows SmartScreen may warn the first time. Click
 > **More info → Run anyway**, or right-click the zip → **Properties** → tick **Unblock** before unzipping.
 
+**[⬇ Download ClaudeOffice-mac.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/ClaudeOffice-mac.zip)**
+
+For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3` is missing, run
+`xcode-select --install` once). Unzip it somewhere it can stay, e.g. `/Applications/ClaudeOffice-mac`, then:
+
+1. The app isn't signed, so clear the download flag once in Terminal:
+   `xattr -dr com.apple.quarantine /Applications/ClaudeOffice-mac` (use your folder's path).
+2. Double-click **Connect Claude Code.command** (then restart open Claude Code sessions).
+3. Open **ClaudeOffice.app**. It uses Chrome, Edge, Brave, Chromium or Vivaldi for its own
+   window, or your default browser if none of those is installed.
+
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
 machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
 boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss for a work
@@ -125,10 +136,14 @@ scripts\start.bat
 ```
 
 `git config core.hooksPath .githooks` turns on a guard that refuses pushes to `main`
-(changes go through pull requests); skip it if you won't change the code.
+(changes go through pull requests) and one that strips Claude Code session links from commit
+messages (CI also fails a PR that has one); skip it if you won't change the code.
 
 `src\install_hooks.py` connects Claude Code once for every project. Restart open Claude Code
 sessions afterwards. For a PC without Python, build the standalone app (below) and copy the zip.
+
+On a Mac (Python 3.9+ as `python3`): `python3 src/install_hooks.py`, then `python3 src/server.py`
+and open http://127.0.0.1:8777/.
 
 ## Run it
 
@@ -145,17 +160,39 @@ Tip: open it as its own window on a second screen, e.g. `msedge --app=http://127
 (it installs PyInstaller, needed only on the PC that builds). `build/` and `dist/` are
 git-ignored; rebuild rather than committing them.
 
+### Mac app
+
+`scripts/build_mac.sh` builds `dist/ClaudeOffice-mac/ClaudeOffice.app` and
+`dist/ClaudeOffice-mac.zip`. There's no PyInstaller: the app is a small bash launcher
+(`package/mac/ClaudeOffice`) that finds `python3` (Homebrew first, then the system one) and runs
+`src/app.py`, which ships inside the app with `index.html`. It runs on any machine with `python3`
+and `zip`. `VERSION=2026.10.20.1 scripts/build_mac.sh` stamps a version. The app takes the same
+arguments as the exe:
+
+```
+ClaudeOffice.app/Contents/MacOS/ClaudeOffice [--server [port] | --install [--project DIR] [--uninstall] | --hook | cmd <args>]
+```
+
+The hooks run `python3 .../ClaudeOffice.app/Contents/Resources/ClaudeOffice/claude_hook.py`, using
+the stable `python3` path the launcher found (passed in `CLAUDE_OFFICE_PYTHON`), so a Homebrew
+Python upgrade doesn't break them. Installing from source on a Mac (`python3 src/install_hooks.py`)
+writes the same stable `python3` path when it is the Python you ran it with. Saved jobs and the window profile live in
+`~/Library/Application Support/ClaudeOffice`. The app is unsigned, so Gatekeeper blocks it until
+the quarantine flag is cleared (see Download).
+
 ### CI and releases
 
 `.github/workflows/build.yml` runs on every pull request: it compiles the Python, builds the
 exe with the same steps as `scripts\build.bat`, and smoke-tests it (starts the built server, sends one
 Claude hook event through `ClaudeOffice.exe --hook`, and checks the job arrives with the right
-work area). The zip is attached to the run as an artifact. When a change is merged to `main`
-it also:
+work area). A macOS job runs `scripts/build_mac.sh` and the same smoke test through the app's
+launcher. The two builds run in parallel and neither waits for the other; both zips are
+attached to the run as artifacts. When a change is merged to `main`:
 
-1. Stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
-2. Creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip` attached; the release
-   notes are generated from the pull requests merged since the last release, so give PRs clear titles.
+1. A first job stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
+2. Once both builds pass, a release job creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip` and
+   `ClaudeOffice-mac.zip` attached; the release notes are generated from the pull requests merged
+   since the last release, so give PRs clear titles.
 
 `.github/workflows/auto-assign.yml` assigns every new PR to the repository owner.
 
@@ -224,18 +261,20 @@ src/                     the program
   claude_hook.py         Claude Code hook: forwards trimmed events to the server; silent, always exits 0
   install_hooks.py       adds/removes the hooks in ~/.claude/settings.json or a project's settings.local.json
   office.py              command-line control for testing
-  app.py                 entry point of the standalone exe (window, --hook, --install, cmd)
-scripts/                 batch files you run
+  app.py                 entry point of the standalone exe and the Mac app (window, --hook, --install, cmd)
+scripts/                 scripts you run
   start.bat              starts the server and opens the page
   build.bat              builds dist/ClaudeOffice/ClaudeOffice.exe and dist/ClaudeOffice.zip
+  build_mac.sh           builds dist/ClaudeOffice-mac/ClaudeOffice.app and dist/ClaudeOffice-mac.zip
 package/                 shipped inside the zip next to the exe
   Connect Claude Code.bat, Disconnect Claude Code.bat
+  mac/                   the Mac app's launcher, Info.plist and Connect/Disconnect .command files
 tools/
-  make_icon.py           draws office.ico for the build
+  make_icon.py           draws office.ico for the build (office.icns with --icns)
 docs/
   CONNECT_A_PROJECT.md   setup for a new PC, global or per-project, with a paste-in prompt
 .github/                 CI build + release, PR auto-assign, CODEOWNERS
-.githooks/               pre-push guard that refuses pushes to main
+.githooks/               pre-push guard that refuses pushes to main; commit-msg strips session links
 ```
 
 ## How Claude events map

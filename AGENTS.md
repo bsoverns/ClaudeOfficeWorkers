@@ -17,6 +17,9 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
 - Build the exe: `scripts/build.bat` (output in `dist/`, git-ignored). CI (`.github/workflows/build.yml`)
   builds and smoke-tests it on every PR and publishes a GitHub Release on every merge to `main`;
   keep its build steps in step with `scripts/build.bat`.
+- Build the Mac app: `scripts/build_mac.sh` (output in `dist/`; no PyInstaller, runs anywhere with
+  `python3` and `zip`). CI builds and smoke-tests it on `macos-latest` and attaches the zip to the release;
+  keep the CI step in step with `scripts/build_mac.sh`. Mac-only code paths check `sys.platform == "darwin"`.
 
 ## Testing
 
@@ -46,12 +49,13 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
   between `FLOORS` rects is a wall, and an inner wall goes in `WALLS`; stepping onto a couch or cot never crosses one.
 - `install_hooks.py` must stay idempotent and keep other people's hooks and settings.
 - Every `<input>` needs a distinct `name=` and `autocomplete="off"`.
-- The repo is public: no personal paths, tokens or prompts in commits. Never commit `dist/`,
-  `build/` or settings backups.
+- The repo is public: no personal paths, tokens or prompts in commits, and no Claude Code session
+  links (`Claude-Session:` lines) in commit messages: `.githooks/commit-msg` strips them and CI fails
+  a PR that has one. Never commit `dist/`, `build/`, `.claude/` or settings backups.
 - Base branch `main` (read "master" as `main`). **Never push to `main`**, not even a one-line
   fix: work on a feature branch named `YYYY-MM-DD_Short_Description` and open a PR; the owner
   merges and is the only approver (`.github/CODEOWNERS` + the "Protect main" ruleset).
-  `.githooks/pre-push` refuses pushes to `main`; enable it in each clone with
+  `.githooks/pre-push` refuses pushes to `main` (and `commit-msg` strips session links); enable them in each clone with
   `git config core.hooksPath .githooks`. Never bypass it (`--no-verify`).
 
 ## Documentation

@@ -648,10 +648,18 @@ def default_port() -> int:
     return int(os.environ.get("CLAUDE_OFFICE_PORT") or DEFAULT_PORT)
 
 
+def data_dir() -> str:
+    """Where the office keeps its own files: %LOCALAPPDATA%\\ClaudeOffice on Windows,
+    ~/Library/Application Support/ClaudeOffice on a Mac."""
+    if sys.platform == "darwin":
+        return os.path.expanduser("~/Library/Application Support/ClaudeOffice")
+    return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice")
+
+
 def state_file(port: int) -> str:
-    """Where the office remembers its jobs: %LOCALAPPDATA%/ClaudeOffice/state.json, one per port
+    """Where the office remembers its jobs: state.json in data_dir(), one per port
     (state-8790.json on port 8790), so a test office never touches the real one."""
-    base = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClaudeOffice")
+    base = data_dir()
     os.makedirs(base, exist_ok=True)
     return os.path.join(base, "state.json" if port == DEFAULT_PORT else f"state-{port}.json")
 
