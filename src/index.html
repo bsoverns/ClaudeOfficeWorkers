@@ -334,7 +334,6 @@ const FURNITURE = [
   [266, 222, 168, 36], [70, 276, 132, 48],      // couch, dining table
   [48, 476, 178, 98], [380, 470, 180, 89],      // pool table, ping pong table
   [259, 376, 22, 64],                           // water cooler
-  [455, 351, 11, 8], [510, 351, 105, 8], [451, 351, 8, 98], [451, 441, 164, 8],   // nap room walls (door in the top)
   [510, 380, 74, 24], [510, 414, 74, 24], [460, 414, 44, 28],                     // nap room cots and beanbag
   [32, 596, 16, 16], [592, 596, 16, 16],        // break room plants
   [34, 756, 134, 30], [240, 734, 12, 36], [296, 690, 8, 62],   // patio bench, ashtray, sign post
@@ -345,30 +344,47 @@ const FURNITURE = [
   [996, 100, 268, 126], [1250, 204, 26, 44],    // help desk counter, extinguisher
   [1318, 100, 264, 84], [1538, 242, 48, 44],    // mail counter and pigeonholes, mail bin
 ];
+// Walls inside a FLOORS rect (the nap room, with its door in the top wall). Off-floor cells are walls too.
+const WALLS = [[455, 351, 11, 8], [510, 351, 105, 8], [451, 351, 8, 98], [451, 441, 164, 8]];
 const NAV = 8, NAV_COLS = W / NAV, NAV_ROWS = H / NAV, NAV_PAD = 7;
-let navGrid = null;                             // 1 = blocked; rebuilt when the theme changes
+let navGrid = null, wallGrid = null;            // 1 = blocked / 1 = wall; rebuilt when the theme changes
 function stationBlocks() { return STATION_ORDER.map(id => [STA[id].x0 + 92, STA[id].y0 + 26, 142, 160]); }
 function buildNav() {
   navGrid = new Uint8Array(NAV_COLS * NAV_ROWS).fill(1);
-  const mark = ([x, y, w, h], v, pad) => {
+  const mark = (rect, v, pad) => { markIn(navGrid, rect, v, pad); };
+  for (const f of FLOORS) mark(f, 0, 0);
+  for (const f of [...WALLS, ...FURNITURE, ...stationBlocks(), ...(THEMES[THEME].blocks || [])]) mark(f, 1, NAV_PAD);
+  wallGrid = new Uint8Array(NAV_COLS * NAV_ROWS).fill(1);
+  for (const f of FLOORS) markIn(wallGrid, f, 0, 0);
+  for (const f of WALLS) markIn(wallGrid, f, 1, 0);
+}
+function markIn(grid, [x, y, w, h], v, pad) {
     for (let r = Math.max(0, Math.floor((y - pad) / NAV)); r < Math.min(NAV_ROWS, Math.ceil((y + h + pad) / NAV)); r++)
       for (let c = Math.max(0, Math.floor((x - pad) / NAV)); c < Math.min(NAV_COLS, Math.ceil((x + w + pad) / NAV)); c++) {
         const cx = c * NAV + NAV / 2, cy = r * NAV + NAV / 2;
-        if (cx >= x - pad && cx <= x + w + pad && cy >= y - pad && cy <= y + h + pad) navGrid[r * NAV_COLS + c] = v;
+        if (cx >= x - pad && cx <= x + w + pad && cy >= y - pad && cy <= y + h + pad) grid[r * NAV_COLS + c] = v;
       }
-  };
-  for (const f of FLOORS) mark(f, 0, 0);
-  for (const f of [...FURNITURE, ...stationBlocks(), ...(THEMES[THEME].blocks || [])]) mark(f, 1, NAV_PAD);
 }
 function navFree(c, r) { return c >= 0 && r >= 0 && c < NAV_COLS && r < NAV_ROWS && navGrid[r * NAV_COLS + c] === 0; }
 function navFreeAt(x, y) { return navFree(Math.floor(x / NAV), Math.floor(y / NAV)); }
-function nearestFree(x, y) {                    // the free cell closest to a point, as [col, row]
+// a straight step that crosses no wall (it may cross furniture: sitting down on a couch or cot)
+function noWallBetween(x0, y0, x1, y1) {
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 3);
+  for (let i = 0; i <= n; i++) {
+    const c = Math.floor(lerp(x0, x1, i / n) / NAV), r = Math.floor(lerp(y0, y1, i / n) / NAV);
+    if (c < 0 || r < 0 || c >= NAV_COLS || r >= NAV_ROWS || wallGrid[r * NAV_COLS + c]) return false;
+  }
+  return true;
+}
+// the free cell closest to a point that can be reached from it without crossing a wall, as [col, row]
+function nearestFree(x, y) {
   const c0 = Math.floor(x / NAV), r0 = Math.floor(y / NAV);
   if (navFree(c0, r0)) return [c0, r0];
   for (let rad = 1; rad < 30; rad++) {
     let best = null, bd = Infinity;
     for (let r = r0 - rad; r <= r0 + rad; r++) for (let c = c0 - rad; c <= c0 + rad; c++) {
       if (Math.max(Math.abs(r - r0), Math.abs(c - c0)) !== rad || !navFree(c, r)) continue;
+      if (!noWallBetween(x, y, c * NAV + NAV / 2, r * NAV + NAV / 2)) continue;
       const d = Math.hypot(c * NAV + NAV / 2 - x, r * NAV + NAV / 2 - y);
       if (d < bd) { bd = d; best = [c, r]; }
     }
