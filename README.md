@@ -69,9 +69,25 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   Lights & Wiring and Gift Wrapping. Falling snow, string lights, stockings, a wreath, a tree in
   the boss's office, a snowman on the patio and Santa's sleigh across the moon; the boss wears
   a Santa hat, and the break room talk turns to Secret Santa and eggnog.
+- **Pirate Cove**: pirates with bandanas, eyepatches and gold earrings, deckhands in striped
+  shirts, buccaneers in tricorns, pirates with a parrot on the shoulder, a bearded captain and a
+  few cursed skeleton pirates (nobody's turban or hijab gets a hat or bandana). Stations are the
+  Treasure Map, Hoist the Sails, Bottle Post, Hull Patching, the Galley, the Cannon Deck, the
+  Ship's Wheel, Parrot Review ("PEP 8! PEP 8!"), the Kraken, Walk the Plank, the Bilge Pump and
+  the Cargo Hold. Jolly Roger bunting, a ship sailing past the window, and the patio becomes a
+  beach with a palm tree and a treasure chest; the boss wears a captain's tricorn, and the break
+  room talk turns to grog and buried treasure.
+- **Stone Age**: cave people in spotted fur tunics with bones in their hair, hunters with fang
+  necklaces and face paint, shamans in feathered headdresses, and coworkers in dinosaur and woolly
+  mammoth onesies (nobody's turban or hijab gets a hood or headdress). Real dinosaurs do the heavy
+  lifting. Stations are the Stone Tablets, Pterodactyl Airlift, the Fossil Dig, Fire Support, the
+  Stone Table, the Catapult, the Wheel (reinvented again), Cave Paintings, the T-Rex Den, Volcano
+  Testing, Dino Power and Dino Express. A smoking volcano out the window, and the patio becomes a
+  jungle with a dino egg nest; the boss wears a bone crown, and the break room talk turns to
+  mammoth for lunch and who invented the wheel this time.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
-Dev Shop, Sci-Fi, Haunted House, Neon City and North Pole all send workers to the station that matches what Claude
+Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove and Stone Age all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |
