@@ -132,7 +132,7 @@ the URL in it too).
 ## What you'll see
 
 Pick a theme on the clock-in screen: **Classic Office**, **Dev Shop**, **Sci-Fi Station** or
-**Haunted House**. In all but Classic, workers go to the station for the kind of work (Azure
+**Haunted House** or **Neon City**. In all but Classic, workers go to the station for the kind of work (Azure
 DevOps, GitHub, SQL Server, Python…); see README.
 
 

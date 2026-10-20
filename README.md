@@ -31,9 +31,16 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   zombies, slime monsters, demons and pumpkin-head scarecrows; stations are the Ticket Crypt, Storm Tower, Branching Woods, Cursed Junk, Witch's
   Cauldron, Gravedigging, Mad Lab, Snake Pit, the Dungeon, Potion Testing, Igor's Workshop and
   Coffin Shipping. Jack-o'-lanterns, cobwebs, fog and bats; the boss wears a witch's hat.
+- **Neon City** (cyberpunk): netrunners with VR visors and data cables, street samurai with
+  neon katanas, LED-mask punks whose masks cycle pixel faces, glitching holo-idols, corpo suits
+  with AR monocles and briefcases, ripperdocs with chrome hands, drone couriers (a drone follows
+  them) and androids with glowing seams. Stations are the Gig Board, Data Tower, Fork Alley,
+  Ripperdoc Clinic, Data Vault, Drop Zone, Mod Garage, Snake Arcade, the Blackwall, Sim Dojo,
+  Chop Shop and Surveillance. Rain, neon signs, a skyline window, a hover car; the boss wears
+  an AR visor.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
-Dev Shop, Sci-Fi and Haunted House all send workers to the station that matches what Claude
+Dev Shop, Sci-Fi, Haunted House and Neon City all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |
