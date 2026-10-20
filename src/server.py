@@ -1,7 +1,7 @@
 """Claude Office Workers: a tiny local server that turns Claude Code activity into an
 animated office.
 
-Run:   py server.py [port]          (default 8777, or env CLAUDE_OFFICE_PORT)
+Run:   py src/server.py [port]   (or scripts/start.bat)          (default 8777, or env CLAUDE_OFFICE_PORT)
 Open:  http://127.0.0.1:8777/
 
 Claude Code reports in through claude_hook.py (wired up by install_hooks.py), which

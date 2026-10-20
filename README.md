@@ -79,7 +79,7 @@ tool call (file paths, commands, URLs, MCP tool names). A new prompt can move th
 straight away; tool calls only move them once another area clearly leads and they've been at
 their station 20 seconds, so they don't ping-pong. Until there's a clue, the worker uses
 their usual station. Rules live in `AREA_RULES` in `server.py`.
-Test a station: `py office.py start "Fix the sproc" --area sql`.
+Test a station: `py src\office.py start "Fix the sproc" --area sql`.
 
 ## Run from source
 
@@ -88,35 +88,36 @@ Requirements: Windows 10/11, Python 3.9+ (`py`), and Edge or Chrome. No packages
 ```
 git clone https://github.com/bsoverns/ClaudeOfficeWorkers.git
 cd ClaudeOfficeWorkers
-py install_hooks.py
-start.bat
+git config core.hooksPath .githooks
+py src\install_hooks.py
+scripts\start.bat
 ```
 
-If you'll change the code, also run `git config core.hooksPath .githooks` once: it turns on a
-guard that refuses pushes to `main` (changes go through pull requests).
+`git config core.hooksPath .githooks` turns on a guard that refuses pushes to `main`
+(changes go through pull requests); skip it if you won't change the code.
 
-`install_hooks.py` connects Claude Code once for every project. Restart open Claude Code
+`src\install_hooks.py` connects Claude Code once for every project. Restart open Claude Code
 sessions afterwards. For a PC without Python, build the standalone app (below) and copy the zip.
 
 ## Run it
 
-Double-click `start.bat` (or `py server.py`), then open http://127.0.0.1:8777/ and click
+Double-click `scripts\start.bat` (or `py src\server.py`), then open http://127.0.0.1:8777/ and click
 **Clock in** once so the browser allows sound. Standard-library Python only; it listens on
-127.0.0.1 only. Port: `py server.py 9000` or env `CLAUDE_OFFICE_PORT` (set the same
+127.0.0.1 only. Port: `py src\server.py 9000` or env `CLAUDE_OFFICE_PORT` (set the same
 variable for Claude Code so the hook follows).
 
 Tip: open it as its own window on a second screen, e.g. `msedge --app=http://127.0.0.1:8777/`.
 
 ## Standalone app (no Python on the target PC)
 
-`build.bat` builds `dist\ClaudeOffice\ClaudeOffice.exe` and `dist\ClaudeOffice.zip`
+`scripts\build.bat` builds `dist\ClaudeOffice\ClaudeOffice.exe` and `dist\ClaudeOffice.zip`
 (it installs PyInstaller, needed only on the PC that builds). `build/` and `dist/` are
 git-ignored; rebuild rather than committing them.
 
 ### CI and releases
 
 `.github/workflows/build.yml` runs on every pull request: it compiles the Python, builds the
-exe with the same steps as `build.bat`, and smoke-tests it (starts the built server, sends one
+exe with the same steps as `scripts\build.bat`, and smoke-tests it (starts the built server, sends one
 Claude hook event through `ClaudeOffice.exe --hook`, and checks the job arrives with the right
 work area). The zip is attached to the run as an artifact. When a change is merged to `main`
 it also:
@@ -135,27 +136,27 @@ ClaudeOffice.exe                      open the office in its own window (Edge/Ch
 ClaudeOffice.exe --server [port]      server only, no window
 ClaudeOffice.exe --install [--project C:\repo] [--uninstall]
 ClaudeOffice.exe --hook               what Claude Code runs for each event
-ClaudeOffice.exe cmd <office.py args> e.g. cmd demo, cmd list
+ClaudeOffice.exe cmd <src\office.py args> e.g. cmd demo, cmd list
 ```
 
 The zip includes `Connect Claude Code.bat` / `Disconnect Claude Code.bat`. Installing exe
-hooks replaces Python hooks and vice versa. Rebuild after changing any `.py` or `index.html`.
+hooks replaces Python hooks and vice versa. Rebuild after changing anything in `src/`.
 
 ## Connect Claude Code
 
-See [CONNECT_A_PROJECT.md](CONNECT_A_PROJECT.md): install the hooks once for every project
-(`py install_hooks.py`) or per project with a paste-in prompt (`--project`).
+See [docs/CONNECT_A_PROJECT.md](docs/CONNECT_A_PROJECT.md): install the hooks once for every project
+(`py src\install_hooks.py`) or per project with a paste-in prompt (`--project`).
 
 ## Test from a command prompt
 
 ```
-py office.py start "Build the login page"
-py office.py trouble -m "Tests failed"
-py office.py working -a "Editing app.js"
-py office.py wait -m "Your turn!"
-py office.py done            (newest job; or give an id, or "all")
-py office.py list
-py office.py demo            (a 90-second show with three workers)
+py src\office.py start "Build the login page"
+py src\office.py trouble -m "Tests failed"
+py src\office.py working -a "Editing app.js"
+py src\office.py wait -m "Your turn!"
+py src\office.py done            (newest job; or give an id, or "all")
+py src\office.py list
+py src\office.py demo            (a 90-second show with three workers)
 ```
 
 ## Settings (right-hand panel)
@@ -183,19 +184,28 @@ approved it. Nobody pushes to `main` directly.
 
 ## Files
 
-| File | What it does |
-|------|--------------|
-| `server.py` | Office state, worker rotation, HTTP API (`/api/state` long-poll, `/api/hook`, `/api/cmd`) |
-| `index.html` | The animated office and side panel (canvas, no libraries) |
-| `claude_hook.py` | Claude Code hook: forwards trimmed events to the server; silent, always exits 0 |
-| `install_hooks.py` | Adds/removes the hooks in `~/.claude/settings.json` or a project's `settings.local.json` |
-| `office.py` | Command-line control for testing |
-| `start.bat` | Starts the server and opens the page |
-| `app.py` | Entry point of the standalone exe (window, `--hook`, `--install`, `cmd`) |
-| `build.bat`, `make_icon.py` | Build the exe + zip; draw `office.ico` |
-| `Connect Claude Code.bat`, `Disconnect Claude Code.bat` | Shipped in the zip: run the exe's installer |
-| `CONNECT_A_PROJECT.md` | Setup for a new PC, global or per-project, with a paste-in prompt |
-| `AGENTS.md` | Rules for agents (and people) changing this repo |
+```
+README.md, LICENSE       this page and the MIT license
+AGENTS.md, CLAUDE.md     rules for agents working in the repo (CLAUDE.md just imports AGENTS.md)
+src/                     the program
+  server.py              office state, worker rotation, HTTP API (/api/state long-poll, /api/hook, /api/cmd)
+  index.html             the animated office, themes and side panel (canvas, no libraries)
+  claude_hook.py         Claude Code hook: forwards trimmed events to the server; silent, always exits 0
+  install_hooks.py       adds/removes the hooks in ~/.claude/settings.json or a project's settings.local.json
+  office.py              command-line control for testing
+  app.py                 entry point of the standalone exe (window, --hook, --install, cmd)
+scripts/                 batch files you run
+  start.bat              starts the server and opens the page
+  build.bat              builds dist/ClaudeOffice/ClaudeOffice.exe and dist/ClaudeOffice.zip
+package/                 shipped inside the zip next to the exe
+  Connect Claude Code.bat, Disconnect Claude Code.bat
+tools/
+  make_icon.py           draws office.ico for the build
+docs/
+  CONNECT_A_PROJECT.md   setup for a new PC, global or per-project, with a paste-in prompt
+.github/                 CI build + release, PR auto-assign, CODEOWNERS
+.githooks/               pre-push guard that refuses pushes to main
+```
 
 ## How Claude events map
 

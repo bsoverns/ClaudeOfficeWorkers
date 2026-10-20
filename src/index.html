@@ -126,11 +126,11 @@
       <p>In the <b>Dev Shop</b> theme the office reads your prompt, the project folder and Claude's tool calls to send the
       worker to the matching station (Azure DevOps, GitHub, SQL Server, Python…).</p>
       <p>Test from a command prompt:</p>
-      <pre>py office.py start "Build the login page"
-py office.py trouble
-py office.py wait
-py office.py done
-py office.py demo</pre>
+      <pre>py src\office.py start "Build the login page"
+py src\office.py trouble
+py src\office.py wait
+py src\office.py done
+py src\office.py demo</pre>
     </details>
   </aside>
 </div>
@@ -3114,7 +3114,7 @@ function render() {
   if (!online) {
     RR(W / 2 - 230, 120, 460, 54, 10, 'rgba(20,22,28,.92)', '#ef4444', 2);
     TXT('The office server is closed', W / 2, 138, 'bold 16px system-ui', '#fff');
-    TXT('Start it with start.bat (or: py server.py) — this page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
+    TXT('Start it with ClaudeOffice.exe or scripts\\start.bat — this page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
   }
 }
 let last = performance.now();

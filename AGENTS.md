@@ -5,26 +5,26 @@ Rules for agents (and people) working in this repo.
 ## What this is
 
 Claude Office Workers: an animated office that shows what Claude Code sessions are doing.
-`server.py` (Python standard library, `http.server`) holds the jobs and worker rotation and
-serves `index.html`, a single canvas page with no libraries. Claude Code reaches it through
-hooks that run `claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.md`.
+`src/server.py` (Python standard library, `http.server`) holds the jobs and worker rotation and
+serves `src/index.html`, a single canvas page with no libraries. Claude Code reaches it through
+hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.md` (its Files section maps the folders).
 
 ## Commands
 
-- Check: `py -m py_compile app.py server.py office.py install_hooks.py claude_hook.py make_icon.py`
-- Run: `py server.py 8790` (a spare port; see Testing), page at `http://127.0.0.1:8790/`
-- Demo: `set CLAUDE_OFFICE_PORT=8790` then `py office.py demo`
-- Build the exe: `build.bat` (output in `dist/`, git-ignored). CI (`.github/workflows/build.yml`)
+- Check: `py -m py_compile src/app.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py tools/make_icon.py`
+- Run: `py src/server.py 8790` (a spare port; see Testing), page at `http://127.0.0.1:8790/`
+- Demo: `set CLAUDE_OFFICE_PORT=8790` then `py src/office.py demo`
+- Build the exe: `scripts/build.bat` (output in `dist/`, git-ignored). CI (`.github/workflows/build.yml`)
   builds and smoke-tests it on every PR and publishes a GitHub Release on every merge to `main`;
-  keep its build steps in step with `build.bat`.
+  keep its build steps in step with `scripts/build.bat`.
 
 ## Testing
 
 - The owner's real office runs on port 8777, and every Claude Code session on this PC posts
   to it, including yours. Test on another port so you don't mix test jobs into the real office.
-- Simulate Claude by piping hook JSON into `claude_hook.py` with `CLAUDE_OFFICE_PORT` set.
+- Simulate Claude by piping hook JSON into `src/claude_hook.py` with `CLAUDE_OFFICE_PORT` set.
   Write JSON with Python or a file, not shell echo: shells eat the backslashes in Windows paths.
-- Don't run `install_hooks.py` without `--project <scratch folder>` or `--print` unless asked:
+- Don't run `src/install_hooks.py` without `--project <scratch folder>` or `--print` unless asked:
   it changes `~/.claude/settings.json` for every session.
 
 ## Rules
@@ -51,5 +51,5 @@ hooks that run `claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.md`.
 
 ## Documentation
 
-Update `README.md` (and `CONNECT_A_PROJECT.md` for setup changes) in the same change as the
+Update `README.md` (and `docs/CONNECT_A_PROJECT.md` for setup changes) in the same change as the
 code. Write for the owner reading it later.
