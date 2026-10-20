@@ -43,7 +43,8 @@ hooks that run `claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.md`.
   `build/` or settings backups.
 - Base branch `main` (read "master" as `main`). **Never push to `main`**, not even a one-line
   fix: work on a feature branch named `YYYY-MM-DD_Short_Description` and open a PR; the owner
-  merges. `.githooks/pre-push` refuses pushes to `main`; enable it in each clone with
+  merges and is the only approver (`.github/CODEOWNERS` + the "Protect main" ruleset).
+  `.githooks/pre-push` refuses pushes to `main`; enable it in each clone with
   `git config core.hooksPath .githooks`. Never bypass it (`--no-verify`).
 
 ## Documentation

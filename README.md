@@ -138,6 +138,13 @@ went home (you said done, Done button, `/clear`, helper finished, 12 hours).
 The office remembers its jobs in `%LOCALAPPDATA%\ClaudeOffice\state.json`, so restarting it
 (or the exe quitting after its window closes) puts everyone back where they were.
 
+## Contributing
+
+Anyone can propose a change: fork the repo, push a branch, and open a pull request against
+`main`. `.github/CODEOWNERS` makes @bsoverns the owner of every file, so every PR requests
+their review, and the "Protect main" ruleset only lets a PR merge once the code owner has
+approved it. Nobody pushes to `main` directly.
+
 ## Files
 
 | File | What it does |
