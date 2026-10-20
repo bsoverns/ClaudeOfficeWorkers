@@ -103,7 +103,8 @@
     <div class="controls">
       <label>Theme <select id="optTheme" name="office-theme" autocomplete="off">
         <option value="classic">Classic Office</option><option value="dev">Dev Shop</option>
-        <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option></select></label>
+        <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option>
+        <option value="cyber">Neon City (cyberpunk)</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
@@ -125,11 +126,11 @@
       <p>In the <b>Dev Shop</b> theme the office reads your prompt, the project folder and Claude's tool calls to send the
       worker to the matching station (Azure DevOps, GitHub, SQL Server, Python…).</p>
       <p>Test from a command prompt:</p>
-      <pre>py office.py start "Build the login page"
-py office.py trouble
-py office.py wait
-py office.py done
-py office.py demo</pre>
+      <pre>py src\office.py start "Build the login page"
+py src\office.py trouble
+py src\office.py wait
+py src\office.py done
+py src\office.py demo</pre>
     </details>
   </aside>
 </div>
@@ -141,6 +142,7 @@ py office.py demo</pre>
     <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python… Workers go to the station that matches what Claude is doing.</span></button>
     <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad… (also follows the work)</span></button>
     <button class="theme" data-theme="horror"><b>🎃 Haunted House</b><span>Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and ghosts. The Crypt, the Cauldron, the Dungeon… (also follows the work)</span></button>
+    <button class="theme" data-theme="cyber"><b>🌃 Neon City</b><span>Cyberpunk: netrunners, street samurai with neon katanas, LED-mask punks, holo-idols, corpos, ripperdocs, drone couriers and androids. The Gig Board, Fork Alley, the Blackwall… (also follows the work)</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
 </div></div>
@@ -1415,7 +1417,303 @@ const HORROR = {
     tick(x, y, w, dt) { if (Math.random() < dt * 0.4) puff(x + rand(110, 160), y + 140, { vx: rand(-8, 8), vy: -12, grow: 2, life: 1, size: 2, color: 'rgba(120,110,100,.4)' });
       if (Math.random() < dt * 0.3) popText(x + 150, y + 112, ['📦 in transit', 'Tracking #666', 'Shipped ⚰', 'Delivered: dusk'], '#7c2d12'); } },
 };
-for (const set of [DEV, SCIFI, HORROR]) STATION_ORDER.forEach(id => {
+// Neon City (cyberpunk) theme: the same 12 slots as dark neon-lit back-alley workshops.
+const CYBER = {
+  workbench: { label: 'GIG BOARD', name: 'the Gig Board', tint: '#1b1f3a', anim: 'type', sit: true, dx: 80,
+    lines: ['Gig accepted. Eddies incoming.', 'Another ¥5k bounty.', 'Who posted this with no brief?', 'Taking the gig, choom.'],
+    draw(x, y, t, on) {
+      RR(x + 146, y + 28, 88, 84, 3, '#0d1030', '#ff2bd6', 1.2);
+      g.globalAlpha = 0.25; RR(x + 144, y + 26, 92, 88, 4, null, '#ff2bd6', 3); g.globalAlpha = 1;
+      TXT('GIG BOARD', x + 190, y + 35, 'bold 6px system-ui', '#ff2bd6');
+      const cols = ['#22d3ee', '#a3e635', '#fbbf24', '#a78bfa', '#ff2bd6', '#22d3ee'];
+      const fi = on ? Math.floor(t * 0.5) % 6 : -1, fk = on ? (t * 0.5) % 1 : 0;
+      for (let i = 0; i < 6; i++) {
+        const cx = x + 162 + (i % 3) * 28, cy = y + 42 + Math.floor(i / 3) * 32;
+        const num = 1200 + hh(i * 7 + 3) % 800;
+        const p = i === fi ? Math.min(fk * 4, 1) : 0, acc = i === fi && fk > 0.125;
+        g.save(); g.translate(cx, cy); g.scale(Math.max(0.06, Math.abs(Math.cos(p * Math.PI))), 1);
+        const col = acc ? '#a3e635' : cols[i];
+        RR(-12, 0, 24, 26, 2, acc ? '#10301a' : '#141838', col, 1.2);
+        R(-12, 0, 24, 4, col);
+        if (acc) { TXT('ACCEPT', 0, 12, 'bold 5px system-ui', '#a3e635'); TXT('OK', 0, 20, 'bold 6px system-ui', '#fff'); }
+        else { TXT('GIG', 0, 9, 'bold 5px system-ui', col); TXT('#' + num, 0, 15, '5px monospace', '#cbd5e1'); TXT('¥' + (3 + i) + 'k', 0, 22, 'bold 5px system-ui', '#fbbf24'); }
+        g.restore();
+      }
+      deskSit(x, y); monitor(x, y, '#0a0f1e');
+      R(x + 104, y + 86, 34, 4, '#ff2bd6'); TXT('NEW GIG', x + 107, y + 95, 'bold 5px system-ui', '#22d3ee', 'left');
+      for (let i = 0; i < 2; i++) R(x + 106, y + 99 + i * 3, 12 + (i * 9 + (on ? Math.floor(t * 2) * 4 : 0)) % 16, 1.3, '#a3e635');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['GIG ACCEPTED', '+¥5k', 'Bounty claimed', 'ICE-free!'], '#22d3ee'); } },
+
+  forge: { label: 'DATA TOWER', name: 'the Data Tower', tint: '#14202b', anim: 'point',
+    lines: ['Uploading to the cloud nodes...', "Don't touch the mainframe.", 'Scaling the megatower!', 'Who has root on this?'],
+    draw(x, y, t, on) {
+      const gl = (a, b, c, d, col, w) => { g.globalAlpha = 0.3; L(a, b, c, d, col, w + 3); g.globalAlpha = 1; L(a, b, c, d, col, w); };
+      const nodes = [[150, 40], [178, 32], [206, 42], [164, 58], [194, 60]];
+      [[0, 1], [1, 2], [0, 3], [1, 3], [1, 4], [2, 4], [3, 4]].forEach(([a, b]) => L(x + nodes[a][0], y + nodes[a][1], x + nodes[b][0], y + nodes[b][1], 'rgba(34,211,238,.35)', 1));
+      nodes.forEach(([nx, ny], i) => {
+        const f = on ? 0.6 + Math.sin(t * 4 + i * 2) * 0.4 : 0.5;
+        g.globalAlpha = 0.15 + f * 0.25; C(x + nx, y + ny, 9, '#a78bfa'); g.globalAlpha = 1; C(x + nx, y + ny, 3.5, i % 2 ? '#ff2bd6' : '#22d3ee');
+      });
+      poly([x + 198, y + 176, x + 200, y + 118, x + 224, y + 118, x + 226, y + 176], '#0e1626');
+      poly([x + 150, y + 178, x + 154, y + 78, x + 188, y + 78, x + 192, y + 178], '#101a33');
+      gl(x + 154, y + 78, x + 150, y + 178, '#22d3ee', 1); gl(x + 188, y + 78, x + 192, y + 178, '#22d3ee', 1); gl(x + 154, y + 78, x + 188, y + 78, '#ff2bd6', 1.4);
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) {
+        const lit = hh(r * 9 + c * 3 + Math.floor(t * (on ? 1.5 : 0.4))) % 5 > 0;
+        R(x + 159 + c * 7, y + 86 + r * 11, 4, 6, lit ? ['#fbbf24', '#22d3ee', '#ff2bd6', '#a3e635'][(r + c) % 4] : '#1b2540');
+      }
+      for (let r = 0; r < 5; r++) R(x + 205 + (r % 2) * 8, y + 126 + r * 10, 4, 5, hh(r + Math.floor(t * 0.5)) % 3 ? '#22d3ee' : '#1b2540');
+      L(x + 170, y + 78, x + 170, y + 66, '#9fb3ff', 1.5); C(x + 170, y + 65, 2, Math.floor(t * 3) % 2 ? '#ff2bd6' : '#7a1058');
+      [0, 1, 3, 4].forEach((n, i) => {
+        const k = on ? (t * 0.8 + i * 0.27) % 1 : 0.5, bx = x + 170 + (nodes[n][0] - 170) * k, by = y + 66 + (nodes[n][1] - 66) * k;
+        g.setLineDash([2, 3]); L(x + 170, y + 66, x + nodes[n][0], y + nodes[n][1], 'rgba(163,230,53,.5)', 0.8); g.setLineDash([]);
+        C(bx, by, 1.8, '#a3e635');
+      });
+      TXT('0110', x + 212, y + 110, 'bold 5px monospace', '#22d3ee');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.25) popText(x + 178, y + 26, ['Uploading...', '200 OK', 'Node online', 'Scaling up'], '#22d3ee'); } },
+
+  dairy: { label: 'FORK ALLEY', name: 'Fork Alley', tint: '#231a35', anim: 'dial',
+    lines: ['Forking off into the alley.', 'Merging back at the stall.', 'Conflict in the pipes!', 'LGTM! Ship it, choom.'],
+    draw(x, y, t, on) {
+      const trunk = [100, 115, 108, 115, 114, 115, 122, 115];
+      const up = [[122, 115, 140, 115, 138, 82, 158, 82], [158, 82, 170, 82, 184, 82, 196, 82], [196, 82, 214, 82, 212, 115, 230, 115]];
+      const lo = [[122, 115, 140, 115, 138, 148, 158, 148], [158, 148, 170, 148, 184, 148, 196, 148], [196, 148, 214, 148, 212, 115, 230, 115]];
+      const bz = (s, k) => { const u = 1 - k; return [0, 1].map(j => u * u * u * s[j] + 3 * u * u * k * s[2 + j] + 3 * u * k * k * s[4 + j] + k * k * k * s[6 + j]); };
+      const pipe = (s, col, w) => { g.beginPath(); g.moveTo(x + s[0], y + s[1]); g.bezierCurveTo(x + s[2], y + s[3], x + s[4], y + s[5], x + s[6], y + s[7]); g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.stroke(); };
+      [[trunk], up, lo].forEach((p, pi) => p.forEach(s => { pipe(s, '#120d24', 8); g.globalAlpha = 0.3; pipe(s, pi === 2 ? '#fbbf24' : '#22d3ee', 6); g.globalAlpha = 1; pipe(s, pi === 2 ? '#fbbf24' : '#22d3ee', 1.5); }));
+      for (let i = 0; i < 4; i++) {
+        const k = on ? (t * 0.35 + i * 0.25) % 1 : 0.1 + i * 0.25, br = i % 2 ? lo : up, all = [trunk].concat(br), si = Math.min(3, Math.floor(k * 4));
+        const [px, py] = bz(all[si], k * 4 - si); C(x + px, y + py, 2.2, i % 2 ? '#ff2bd6' : '#a3e635');
+      }
+      for (let i = 0; i < 7; i++) {
+        R(x + 100 + i * 19, y + 28, 19, 12, i % 2 ? '#ff2bd6' : '#22d3ee');
+        E(x + 109.5 + i * 19, y + 40, 9.5, 3, i % 2 ? '#ff2bd6' : '#22d3ee');
+      }
+      R(x + 100, y + 27, 133, 2, '#0d0a1c');
+      R(x + 100, y + 168, 132, 8, '#120d24'); R(x + 100, y + 168, 132, 1.5, '#a78bfa');
+      TXT('main', x + 111, y + 106, 'bold 5.5px monospace', '#22d3ee'); TXT('feat', x + 158, y + 74, 'bold 5.5px monospace', '#a3e635');
+      TXT('fix', x + 158, y + 160, 'bold 5.5px monospace', '#fbbf24'); TXT('PR', x + 224, y + 105, 'bold 6px system-ui', '#ff2bd6');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 170, y + 62, ['Merged!', 'PR #' + (100 + Math.floor(Math.random() * 900)), 'git push', 'Rebased!'], '#ff2bd6'); } },
+
+  valet: { label: 'RIPPERDOC', name: 'the Ripperdoc Clinic', tint: '#2a1730', anim: 'fix',
+    lines: ['Arm is fritzing again.', "Did you try rebooting the cyberware?", 'Hold still, choom!', 'Doc says: duct tape.'],
+    draw(x, y, t, on) {
+      const gl = (a, b, c, d, col, w) => { g.globalAlpha = 0.3; L(a, b, c, d, col, w + 3); g.globalAlpha = 1; L(a, b, c, d, col, w); };
+      const bl = Math.floor(t * 2.5) % 2;
+      gl(x + 120, y + 40, x + 120, y + 64, bl || !on ? '#a3e635' : '#4d7a1a', 4); gl(x + 108, y + 52, x + 132, y + 52, bl || !on ? '#a3e635' : '#4d7a1a', 4);
+      RR(x + 160, y + 34, 70, 44, 3, '#08101c', '#22d3ee', 1.2);
+      const ek = on ? (t * 0.9) % 1 : 0.3, ex = x + 164 + ek * 62;
+      g.beginPath(); g.moveTo(x + 164, y + 58);
+      for (let i = 0; i <= 62; i += 2) { const k = i / 62, d = ((k - ek + 1) % 1); const v = d < 0.5 ? (Math.abs(k * 8 % 1 - 0.5) < 0.1 ? -14 : 0) : 0; g.lineTo(x + 164 + i, y + 58 + (k < ek ? v : 0)); }
+      g.strokeStyle = '#a3e635'; g.lineWidth = 1.3; g.stroke(); C(ex, y + 58, 1.8, '#fff');
+      TXT('BPM ' + (on ? 72 + hh(Math.floor(t * 2)) % 14 : 60), x + 195, y + 71, 'bold 5.5px monospace', '#ff2bd6');
+      if (on && (t * 0.9) % 1 < 0.05) C(x + 224, y + 40, 2.5, '#ff2bd6');
+      R(x + 104, y + 130, 124, 6, '#3a3f5a'); R(x + 104, y + 130, 124, 1.5, '#ff2bd6');
+      R(x + 112, y + 136, 4, 36, '#2a2f48'); R(x + 216, y + 136, 4, 36, '#2a2f48');
+      RR(x + 108, y + 120, 30, 10, 3, '#5b6482'); RR(x + 136, y + 116, 22, 8, 2, '#7b84a6'); RR(x + 156, y + 114, 20, 8, 2, '#5b6482');
+      for (let i = 0; i < 4; i++) R(x + 144 + i * 4, y + 124, 3, 5, '#9aa3c0');
+      C(x + 178, y + 118, 4, '#22d3ee'); L(x + 178, y + 118, x + 194, y + 112, '#22d3ee', 1.5); L(x + 178, y + 118, x + 196, y + 120, '#22d3ee', 1.5);
+      if (on && Math.floor(t * 6) % 2) { g.globalAlpha = 0.5; C(x + 178, y + 118, 8, '#fbbf24'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt, t) {
+      if (Math.random() < dt * 4) puff(x + 178, y + 118, { kind: 'spark', vx: rand(-40, 40), vy: rand(-60, 0), ay: 200, life: 0.5, color: pick(['#22d3ee', '#fbbf24', '#fff']) });
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 112, y + 120, { kind: 'spark', vx: rand(-80, 80), vy: rand(-120, -20), ay: 300, life: 0.4, color: pick(['#22d3ee', '#fbbf24']) });
+      if (Math.random() < dt * 0.25) popText(x + 190, y + 30, ['BZZZT!', 'Re-wiring', 'Beep... beep', 'Firmware 2.0'], '#ff2bd6');
+    } },
+
+  bakery: { label: 'DATA VAULT', name: 'the Data Vault', tint: '#10223a', anim: 'type', sit: true, dx: 80,
+    lines: ['SELECT * FROM citizens;', 'The vault needs an index.', 'Cracking the table lock...', 'DROP TABLE? Never again.'],
+    draw(x, y, t, on) {
+      const cx = x + 188, cy = y + 104, sp = on ? t * 1.4 : 0.6, p = on ? 0.5 + Math.sin(t * 3) * 0.5 : 0.4;
+      g.save(); g.beginPath(); g.rect(x + 98, y + 30, 134, 34); g.rect(x + 152, y + 148, 80, 24); g.clip();
+      for (let i = 0; i < 5; i++) {
+        const sx = x + 232 - ((t * (on ? 22 : 6) + i * 53) % 190) + 20;
+        TXT('SELECT * FROM citizens', sx, y + (i < 3 ? 36 + i * 9 : 152 + (i - 3) * 9), '5px monospace', i % 2 ? '#22d3ee' : '#a3e635', 'left');
+      }
+      g.restore();
+      g.globalAlpha = 0.15 + p * 0.2; C(cx, cy, 44, '#22d3ee'); g.globalAlpha = 1;
+      C(cx, cy, 36, '#10162e'); g.beginPath(); g.arc(cx, cy, 36, 0, TAU); g.strokeStyle = '#22d3ee'; g.lineWidth = 2; g.stroke();
+      g.save(); g.translate(cx, cy); g.rotate(sp);
+      for (let i = 0; i < 16; i++) { g.rotate(TAU / 16); R(-1, -31, 2, i % 4 ? 4 : 7, i % 4 ? '#a78bfa' : '#ff2bd6'); }
+      g.restore();
+      C(cx, cy, 22, '#0b1026'); g.beginPath(); g.arc(cx, cy, 22, 0, TAU); g.strokeStyle = '#a78bfa'; g.lineWidth = 1.5; g.stroke();
+      g.save(); g.translate(cx, cy); g.rotate(-sp * 0.6);
+      for (let i = 0; i < 3; i++) { g.rotate(TAU / 3); L(0, 0, 0, -17, '#cbd5e1', 2.5); C(0, -17, 2.5, '#ff2bd6'); }
+      g.restore();
+      C(cx, cy, 5, '#a3e635');
+      deskSit(x, y); monitor(x, y, '#06141a');
+      for (let i = 0; i < 4; i++) R(x + 106, y + 90 + i * 4, 8 + (hh(i * 5 + Math.floor(t * (on ? 3 : 0.5))) % 22), 1.6, i % 2 ? '#22d3ee' : '#a3e635');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 188, y + 52, ['1,024 rows', 'Index rebuilt', 'Query OK', 'SELECT *'], '#22d3ee'); } },
+
+  garden: { label: 'DROP ZONE', name: 'the Drop Zone', tint: '#17212e', anim: 'pack',
+    lines: ['Dropping the dacpac!', 'Drone delivery, 3 minutes.', 'Deploying to prod. Pray.', 'Package away!'],
+    draw(x, y, t, on) {
+      const gl = (a, b, c, d, col, w) => { g.globalAlpha = 0.3; L(a, b, c, d, col, w + 3); g.globalAlpha = 1; L(a, b, c, d, col, w); };
+      E(x + 166, y + 172, 52, 10, '#0c121c'); g.beginPath(); g.ellipse(x + 166, y + 172, 52, 10, 0, 0, TAU); g.strokeStyle = '#a3e635'; g.lineWidth = 1.5; g.stroke();
+      TXT('H', x + 166, y + 172, 'bold 9px system-ui', '#fbbf24');
+      const crate = (cx, cy, s) => { R(cx - s, cy - s, s * 2, s * 2, '#1d3b4f'); g.strokeStyle = '#22d3ee'; g.lineWidth = 1; g.strokeRect(cx - s, cy - s, s * 2, s * 2); TXT('dacpac', cx, cy, 'bold 5px system-ui', '#a3e635'); };
+      crate(x + 206, y + 164, 9); crate(x + 206, y + 146, 9);
+      const k = on ? (t * 0.22) % 1 : 0.2, fly = Math.max(0, (k - 0.5) / 0.5), lift = Math.min(1, k / 0.35);
+      const dx = x + 166 + fly * 62, dy = y + 150 - lift * 84 + (k < 0.5 ? Math.sin(t * 3) * 1.5 : -fly * 10);
+      g.globalAlpha = 1 - fly * 0.6;
+      L(dx - 8, dy + 4, dx - 8, dy + 12, '#cbd5e1', 1); L(dx + 8, dy + 4, dx + 8, dy + 12, '#cbd5e1', 1);
+      crate(dx, dy + 18, 7);
+      RR(dx - 11, dy - 4, 22, 9, 3, '#2a3550', '#22d3ee', 1); C(dx + 6, dy, 1.8, Math.floor(t * 4) % 2 ? '#ff2bd6' : '#7a1058');
+      [-14, 14].forEach(o => { L(dx + o * 0.7, dy - 3, dx + o * 0.7, dy - 6, '#64748b', 1); const w2 = 7 * Math.abs(Math.cos(t * 30 + o)); gl(dx + o - w2, dy - 7, dx + o + w2, dy - 7, '#a3e635', 1); });
+      g.globalAlpha = 1;
+      if (on && lift < 1) { g.globalAlpha = 0.2; poly([dx - 8, dy + 26, dx + 8, dy + 26, x + 172, y + 170, x + 160, y + 170], '#a3e635'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 170, y + 56, ['dacpac away!', 'Deployed', 'Drone en route', 'Schema updated'], '#a3e635'); } },
+
+  pizza: { label: 'MOD GARAGE', name: 'the Mod Garage', tint: '#1a2a2e', anim: 'dial',
+    lines: ['Tweaking the settings...', 'Max turbo. No limits.', 'Flip the config toggle.', 'Who set DEBUG to true?'],
+    draw(x, y, t, on) {
+      const gl = (a, b, c, d, col, w) => { g.globalAlpha = 0.3; L(a, b, c, d, col, w + 3); g.globalAlpha = 1; L(a, b, c, d, col, w); };
+      RR(x + 160, y + 30, 72, 66, 3, 'rgba(34,211,238,.1)', '#22d3ee', 1);
+      TXT('SETTINGS', x + 196, y + 37, 'bold 5.5px system-ui', '#22d3ee');
+      for (let i = 0; i < 3; i++) {
+        const v = on ? 0.5 + Math.sin(t * (1 + i * 0.6) + i * 2) * 0.4 : 0.3 + i * 0.2, sy = y + 46 + i * 9;
+        L(x + 166, sy, x + 226, sy, '#334155', 2); L(x + 166, sy, x + 166 + v * 60, sy, ['#ff2bd6', '#a3e635', '#fbbf24'][i], 2); C(x + 166 + v * 60, sy, 3, '#fff');
+      }
+      for (let i = 0; i < 3; i++) {
+        const tg = on ? Math.floor(t * 0.8 + i * 1.3) % 2 : i % 2, tx = x + 170 + i * 20;
+        RR(tx, y + 76, 14, 7, 3.5, tg ? '#14532d' : '#3b1030', tg ? '#a3e635' : '#ff2bd6', 1); C(tx + (tg ? 10.5 : 3.5), y + 79.5, 2.3, tg ? '#a3e635' : '#ff2bd6');
+      }
+      R(x + 100, y + 164, 132, 6, '#2a3550'); R(x + 100, y + 164, 132, 1.5, '#22d3ee'); R(x + 118, y + 150, 5, 14, '#475569'); R(x + 200, y + 150, 5, 14, '#475569');
+      const by = y + 120 + (on ? Math.sin(t * 2) * 2 : 0);
+      g.globalAlpha = 0.2; E(x + 158, y + 160, 40, 4, '#22d3ee'); g.globalAlpha = 1;
+      poly([x + 114, by + 24, x + 124, by + 12, x + 152, by + 6, x + 196, by + 14, x + 200, by + 24, x + 170, by + 28], '#7c1d6f');
+      poly([x + 124, by + 12, x + 138, by + 4, x + 152, by + 6, x + 142, by + 14], '#ff2bd6');
+      RR(x + 148, by + 2, 22, 5, 2, '#111827', '#22d3ee', 1); L(x + 120, by + 9, x + 112, by + 5, '#cbd5e1', 2);
+      gl(x + 114, by + 24, x + 200, by + 24, '#22d3ee', 1.2);
+      [128, 186].forEach(wx => { C(x + wx, by + 24, 9, '#0c1022'); g.beginPath(); g.arc(x + wx, by + 24, 9, 0, TAU); g.strokeStyle = '#a3e635'; g.lineWidth = 1.5; g.stroke(); C(x + wx, by + 24, 3, '#a3e635'); });
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 196, y + 26, ['turbo = ON', 'DEBUG=false', 'config saved', 'port: 8765'], '#a3e635'); } },
+
+  easel: { label: 'SNAKE ARCADE', name: 'the Snake Arcade', tint: '#241435', anim: 'review',
+    lines: ['New high score: 42 pixels.', 'The snake ate the null.', 'Reviewing the snake code...', 'Insert coin to refactor.'],
+    draw(x, y, t, on) {
+      RR(x + 126, y + 32, 92, 148, 5, '#1c1245', '#ff2bd6', 1.5);
+      R(x + 126, y + 32, 92, 14, '#ff2bd6'); TXT('SNAKE', x + 172, y + 39, 'bold 8px system-ui', '#14082b');
+      RR(x + 138, y + 52, 68, 62, 3, '#050c12', '#22d3ee', 1.2);
+      const loop = []; for (let c = 1; c <= 11; c++) loop.push([c, 1]); for (let r = 2; r <= 9; r++) loop.push([11, r]);
+      for (let c = 10; c >= 1; c--) loop.push([c, 9]); for (let r = 8; r >= 2; r--) loop.push([1, r]);
+      const n = loop.length, h = Math.floor(t * (on ? 8 : 1.5)) % n, cs = 5;
+      R(x + 141, y + 55, 62, 56, '#04120a');
+      const dd = loop[(h + 7) % n]; if (Math.floor(t * 4) % 2 || !on) R(x + 141 + dd[0] * cs, y + 55 + dd[1] * cs, cs - 1, cs - 1, '#ff2bd6');
+      for (let j = 0; j < 6; j++) { const s = loop[(h - j + n) % n]; R(x + 141 + s[0] * cs, y + 55 + s[1] * cs, cs - 1, cs - 1, j ? '#a3e635' : '#eaffc0'); }
+      g.globalAlpha = 0.15; for (let i = 0; i < 28; i++) R(x + 140, y + 54 + i * 2, 64, 1, '#000'); g.globalAlpha = 1;
+      TXT('SCORE ' + (on ? 100 + Math.floor(t * 8) % 900 : 120), x + 172, y + 108, '5px monospace', '#22d3ee');
+      R(x + 130, y + 120, 84, 22, '#2b1b5a'); C(x + 146, y + 131, 3, '#fbbf24'); L(x + 146, y + 131, x + 146 + (on ? Math.sin(t * 5) * 3 : 0), y + 124, '#e5e7eb', 2); C(x + 146 + (on ? Math.sin(t * 5) * 3 : 0), y + 123, 2.5, '#ff2bd6');
+      C(x + 180, y + 132, 3.5, '#22d3ee'); C(x + 192, y + 128, 3.5, '#a3e635'); C(x + 204, y + 132, 3.5, '#fbbf24');
+      R(x + 150, y + 148, 44, 10, '#0a0a1a'); TXT('INSERT COIN', x + 172, y + 153, 'bold 5px system-ui', Math.floor(t * 2) % 2 ? '#fbbf24' : '#7a5a10');
+      R(x + 164, y + 162, 16, 3, '#0a0a1a'); R(x + 134, y + 176, 10, 4, '#ff2bd6'); R(x + 200, y + 176, 10, 4, '#ff2bd6');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 172, y + 28, ['HIGH SCORE!', 'Nom nom', 'GAME OVER', 'Code OK'], '#a3e635'); } },
+
+  lumber: { label: 'THE BLACKWALL', name: 'the Blackwall', tint: '#07060b', anim: 'scared',
+    lines: ["I'm not going in there...", 'The Blackwall is looking at me.', 'Legacy code. Send help.', 'Nobody has root here. Nobody.'],
+    draw(x, y, t, on) {
+      RR(x + 98, y + 28, 134, 148, 3, '#0a0810', '#3b0a14', 1.5);
+      const s = Math.floor(t * (on ? 12 : 4));
+      for (let i = 0; i < 70; i++) { const h = hh(i * 31 + s * 7); R(x + 100 + h % 128, y + 30 + (h >> 8) % 144, 3 + h % 5, 1, h % 9 ? '#1c1a26' : '#3a1020'); }
+      [[132, 76, 1], [196, 70, 1.2], [164, 118, 0.9]].forEach(([ex, ey, k], i) => {
+        const open = (t + i * 1.7) % 4.5 > 0.2 ? 1 : 0.1;
+        g.globalAlpha = 0.25; E(x + ex, y + ey, 16 * k, 7 * k * open + 1, '#ff1a2e'); g.globalAlpha = 1;
+        E(x + ex - 7 * k, y + ey, 4 * k, 2.4 * k * open + 0.3, '#ff2a3c'); E(x + ex + 7 * k, y + ey, 4 * k, 2.4 * k * open + 0.3, '#ff2a3c');
+        C(x + ex - 7 * k, y + ey, 1, '#ffd0d0'); C(x + ex + 7 * k, y + ey, 1, '#ffd0d0');
+      });
+      if (hh(s * 3) % 3 === 0) for (let i = 0; i < 3; i++) R(x + 98, y + 30 + hh(s + i * 9) % 140, 134, 2 + hh(s + i) % 4, 'rgba(255,26,46,.55)');
+      R(x + 98, y + 138, 134, 16, '#14080c');
+      for (let i = 0; i < 14; i++) poly([x + 98 + i * 10, y + 154, x + 108 + i * 10, y + 138, x + 114 + i * 10, y + 138, x + 104 + i * 10, y + 154], i % 2 ? '#ff1a2e' : '#0a0810');
+      R(x + 98, y + 138, 134, 16, 'rgba(0,0,0,0)');
+      RR(x + 130, y + 141, 70, 10, 2, '#0a0810'); TXT('DO NOT CROSS', x + 165, y + 146.5, 'bold 6px system-ui', '#ff2a3c');
+      const bk = Math.floor(t * 3) % 2;
+      C(x + 218, y + 42, 6, bk || !on ? '#ff1a2e' : '#4a0a10'); g.globalAlpha = bk ? 0.25 : 0; C(x + 218, y + 42, 16, '#ff1a2e'); g.globalAlpha = 1;
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.25) popText(x + 165, y + 40, ['ERR_0xDEAD', 'I SEE YOU', 'NULL', 'CONNECTION LOST'], '#ff2a3c');
+      if (Math.random() < dt * 1.5) puff(x + rand(104, 226), y + rand(40, 130), { kind: 'rect', vx: rand(-30, 30), vy: 0, life: 0.2, size: rand(2, 6), color: '#ff1a2e' });
+    } },
+
+  lab: { label: 'SIM DOJO', name: 'the Sim Dojo', tint: '#0f1f26', anim: 'point',
+    lines: ['Running the simulation...', 'Opponent defeated: 12 tests green.', 'FAIL! Again, from the top.', 'Wireframe goblin spotted.'],
+    draw(x, y, t, on) {
+      const gl = (a, b, c, d, col, w) => { g.globalAlpha = 0.3; L(a, b, c, d, col, w + 3); g.globalAlpha = 1; L(a, b, c, d, col, w); };
+      g.save(); g.beginPath(); g.rect(x + 98, y + 100, 136, 82); g.clip();
+      const vx = x + 166, vy = y + 100;
+      for (let i = -9; i <= 9; i++) L(vx, vy, vx + i * 30, y + 184, 'rgba(34,211,238,.55)', 1);
+      for (let i = 0; i < 7; i++) { const d = Math.pow((i + (on ? (t * 0.6) % 1 : 0)) / 7, 2); const yy = vy + d * 84; L(x + 98, yy, x + 234, yy, 'rgba(34,211,238,.55)', 1); }
+      g.restore();
+      const sw = on ? Math.sin(t * 2.5) * 6 : 0, ox = x + 190 + sw, oy = y + 168;
+      const w1 = (a, b, c, d) => gl(ox + a, oy + b, ox + c, oy + d, '#ff2bd6', 1);
+      g.beginPath(); g.arc(ox, oy - 52, 7, 0, TAU); g.strokeStyle = '#ff2bd6'; g.lineWidth = 1.2; g.stroke();
+      w1(0, -45, 0, -22); w1(-10, -42, 10, -42, 0, 0); w1(-10, -42, -14, -28, 0, 0); w1(10, -42, 15, -50 + (on ? Math.sin(t * 5) * 4 : 0), 0, 0);
+      w1(0, -22, -7, 0, 0, 0); w1(0, -22, 7, 0, 0, 0); w1(-9, -42, 9, -26, 0, 0);
+      const f = on ? Math.floor(t * 0.5) % 2 : 0;
+      RR(x + 102, y + 30, 58, 24, 3, f ? 'rgba(163,230,53,.12)' : 'rgba(255,26,60,.12)', f ? '#a3e635' : '#ff2a3c', 1.2);
+      TXT(f ? 'PASS' : 'FAIL', x + 131, y + 42, 'bold 11px system-ui', f ? '#a3e635' : '#ff2a3c');
+      RR(x + 168, y + 30, 62, 24, 3, 'rgba(34,211,238,.1)', '#22d3ee', 1);
+      TXT('TESTS ' + (on ? 8 + Math.floor(t * 2) % 5 : 9) + '/12', x + 199, y + 38, 'bold 6px monospace', '#22d3ee');
+      R(x + 174, y + 45, 50, 3, '#1b2a36'); R(x + 174, y + 45, 50 * ((on ? 8 + Math.floor(t * 2) % 5 : 9) / 12), 3, '#a3e635');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 170, y + 90, ['PASS', 'FAIL', 'Test green', 'Assert OK'], '#a3e635'); } },
+
+  servers: { label: 'CHOP SHOP', name: 'the Chop Shop', tint: '#2a1f1a', anim: 'fix',
+    lines: ['Salvaged a fresh chip!', 'Welding it back together.', 'No refunds, no warranty.', 'This RAM fell off a truck.'],
+    draw(x, y, t, on) {
+      const gl = (a, b, c, d, col, w) => { g.globalAlpha = 0.3; L(a, b, c, d, col, w + 3); g.globalAlpha = 1; L(a, b, c, d, col, w); };
+      [52, 86, 120].forEach((sy, i) => {
+        R(x + 98, y + sy + 22, 56, 3, '#4b5563'); R(x + 100, y + sy + 25, 2, 8, '#374151'); R(x + 150, y + sy + 25, 2, 8, '#374151');
+        if (i !== 1) { for (let k = 0; k < 3; k++) { R(x + 102 + k * 14, y + sy + 12, 11, 10, '#0b1a14'); R(x + 104 + k * 14, y + sy + 14, 7, 6, ['#22d3ee', '#a3e635', '#ff2bd6'][k]); L(x + 101 + k * 14, y + sy + 14, x + 101 + k * 14, y + sy + 20, '#cbd5e1', 1); } }
+        else { for (let k = 0; k < 4; k++) { g.beginPath(); g.ellipse(x + 108 + k * 11, y + sy + 16, 5, 6, 0, 0, TAU); g.strokeStyle = ['#fbbf24', '#ff2bd6', '#22d3ee', '#a3e635'][k]; g.lineWidth = 1.5; g.stroke(); } }
+      });
+      R(x + 100, y + 174, 134, 8, '#1a1210'); R(x + 100, y + 174, 134, 1.5, '#fbbf24');
+      const tx = x + 176 + (on ? Math.sin(t * 2) * 8 : 0), ty = y + 150;
+      RR(x + 198, y + 160, 30, 14, 3, '#3a3f5a'); C(x + 213, y + 160, 8, '#2a2f48');
+      L(x + 213, y + 160, x + 212, y + 112, '#7b84a6', 7); C(x + 212, y + 112, 6, '#4b5578'); L(x + 212, y + 112, tx, ty, '#7b84a6', 5); C(tx, ty - 1, 3.5, '#4b5578');
+      poly([tx - 3, ty + 1, tx + 3, ty + 1, tx, ty + 8], '#cbd5e1');
+      if (on) { g.globalAlpha = 0.5; C(tx, ty + 8, 7, '#22d3ee'); g.globalAlpha = 1; C(tx, ty + 8, 2.5, '#fff'); }
+      RR(x + 160, y + 160, 36, 8, 2, '#1d3b4f', '#22d3ee', 1);
+      TXT('SALVAGE', x + 140, y + 38, 'bold 6px system-ui', '#fbbf24');
+    },
+    tick(x, y, w, dt, t) {
+      const tx = x + 176 + Math.sin(t * 2) * 8;
+      if (Math.random() < dt * 5) puff(tx, y + 158, { kind: 'spark', vx: rand(-50, 50), vy: rand(-70, -10), ay: 220, life: 0.45, color: pick(['#fff', '#22d3ee', '#fbbf24']) });
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 112, y + 120, { kind: 'spark', vx: rand(-80, 80), vy: rand(-120, -20), ay: 300, life: 0.4, color: pick(['#fbbf24', '#22d3ee']) });
+      if (Math.random() < dt * 0.25) popText(x + 170, y + 100, ['KSSSHH!', 'Chip salvaged', 'Spot-weld', 'Fresh parts'], '#fbbf24');
+    } },
+
+  packing: { label: 'SURVEILLANCE', name: 'Surveillance', tint: '#101e30', anim: 'type', sit: true, dx: 80,
+    lines: ['Tracking package #4471.', 'Target is on the move.', 'Eyes on the shipment.', 'Big Brother says: delivered.'],
+    draw(x, y, t, on) {
+      RR(x + 146, y + 28, 88, 84, 3, '#070b14', '#22d3ee', 1.2);
+      const tgt = on ? Math.floor(t * 0.4) % 6 : 4;
+      for (let i = 0; i < 6; i++) {
+        const cx = x + 150 + (i % 3) * 28, cy = y + 32 + Math.floor(i / 3) * 38;
+        R(cx, cy, 26, 34, i === tgt ? '#0e2a2a' : '#0b1a22');
+        const fx = cx + 13 + Math.sin(t * 0.8 + i * 2) * 7, fy = cy + 22 + Math.cos(t * 0.6 + i) * 4;
+        R(fx - 2, fy - 10, 4, 4, '#3b6a7a'); R(fx - 3, fy - 5, 6, 10, '#2d5260');
+        R(cx, cy + 28, 26, 6, '#0a1218'); TXT('CAM ' + (i + 1), cx + 2, cy + 31, '5px monospace', '#7dd3fc', 'left');
+        g.globalAlpha = 0.25; for (let s = 0; s < 11; s++) R(cx, cy + s * 3, 26, 1, '#000'); g.globalAlpha = 1;
+        if (i === tgt) {
+          const rx = fx, ry = fy - 2;
+          g.strokeStyle = '#ff2a3c'; g.lineWidth = 1; g.beginPath(); g.arc(rx, ry, 6, 0, TAU); g.stroke();
+          L(rx - 9, ry, rx - 3, ry, '#ff2a3c', 1); L(rx + 3, ry, rx + 9, ry, '#ff2a3c', 1); L(rx, ry - 9, rx, ry - 3, '#ff2a3c', 1); L(rx, ry + 3, rx, ry + 9, '#ff2a3c', 1);
+          if (Math.floor(t * 3) % 2) C(cx + 22, cy + 4, 1.8, '#ff2a3c');
+        }
+        RR(cx, cy, 26, 34, 0, null, i === tgt ? '#ff2a3c' : '#164e63', 1);
+      }
+      deskSit(x, y); monitor(x, y, '#06141a');
+      R(x + 104, y + 86, 34, 4, '#ff2a3c'); TXT('TRACK', x + 106, y + 95, 'bold 5px system-ui', '#a3e635', 'left');
+      for (let i = 0; i < 2; i++) R(x + 106, y + 99 + i * 3, 8 + (i * 11 + (on ? Math.floor(t * 2) * 5 : 0)) % 20, 1.3, '#22d3ee');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['Target locked', 'Shipment in transit', 'ETA 2 min', 'Package scanned'], '#22d3ee'); } },
+};
+for (const set of [DEV, SCIFI, HORROR, CYBER]) STATION_ORDER.forEach(id => {
   const c = STA[id], d = set[id];
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
@@ -1431,6 +1729,9 @@ const THEMES = {
   scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, swaps: { 5: 'cyborg', 9: 'cyborg', 12: 'robot', 15: 'robot' }, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
   horror: { name: 'Haunted House', stations: HORROR, routed: true,
     swaps: { 2: 'demon', 7: 'zombie', 8: 'slime', 10: 'pumpkin', 11: 'demon', 12: 'slime', 14: 'pumpkin', 15: 'zombie' }, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
+  cyber: { name: 'Neon City', stations: CYBER, routed: true,
+    costumes: ['netrunner', 'samurai', 'ledmask', 'idol', 'corpo', 'ripperdoc', 'courier', 'android'],
+    wash: ['#2a0a4a', 0.22], decor: () => decorCyber() },
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -1451,6 +1752,7 @@ function hairBack(Lk, view, hy) {
   }
   if (st === 'none') return;
   if (st === 'hood') { E(0, hy, 11.5, 12, hc); return; }
+  if (st === 'pigtails') { for (const d of [-1, 1]) { C(d * 11.5, hy - 1, 4.6, hc); R(d * 8.5 - 1, hy - 2.5, 2, 3, '#fff'); } }
   if (st === 'afro') C(0, hy - 3, 12.5, hc);
   else if (st === 'long' || st === 'braid') { if (view !== 'back') RR(-9.5, hy - 3, 19, 13, 4, hc); }
   else if (st === 'bob') { if (view !== 'back') RR(-10, hy - 4, 20, 10, 4, hc); }
@@ -1515,6 +1817,8 @@ function drawItem(it, hx, hy, ang, st) {
       g.beginPath(); g.moveTo(-8, -12); g.lineTo(0, -6.5); g.lineTo(8, -12); g.strokeStyle = '#c33'; g.stroke(); C(0, -6.5, 1.6, '#c33'); break;
     case 'pizza': poly([-3, -5, 4, -5, 0.5, 3], '#f3c26b'); C(-0.5, -3.5, 0.9, '#c0392b'); C(1.8, -3.8, 0.9, '#c0392b'); break;
     case 'sandwich': poly([-4, 0, 4, 0, -4, -6], '#f0d9a8'); L(-4, -2, 2, -2, '#5cb85c', 1.2); break;
+    case 'briefcase': RR(-6, 1, 12, 8, 1.5, '#3b2a1a', '#1f150d', 0.8); L(-2, 1, -2, -1, '#1f150d', 1); L(2, 1, 2, -1, '#1f150d', 1);
+      L(-2, -1, 2, -1, '#1f150d', 1); R(-0.8, 4, 1.6, 1.6, '#d4af37'); break;
     case 'cig': L(0, 0, 5, -1, '#f5f5f5', 1.6); C(5.6, -1.2, 0.9, '#ff6a1a'); break;
     case 'keys': g.rotate(Math.sin(T * 12) * 0.4); g.beginPath(); g.arc(0, 3, 2.6, 0, TAU); g.strokeStyle = '#d4af37'; g.lineWidth = 1.2; g.stroke();
       L(1, 5, 3.5, 10, '#c9c9c9', 1.5); L(-1, 5, -3, 10, '#c9c9c9', 1.5); break;
@@ -1528,6 +1832,17 @@ function drawItem(it, hx, hy, ang, st) {
       else if (it === 'paddle') { L(0, 0, 0, 5, '#8b5a2b', 2.4); E(0, 9, 4.5, 5.5, '#d63c3c'); }
       else if (it === 'brush') { L(0, -2, 0, 12, '#c08b5c', 1.6); C(0, 13, 1.8, '#e74c3c'); }
       else if (it === 'rod') { L(0, -2, 0, 16, 'rgba(220,240,255,.95)', 1.5); }
+      else if (it === 'katana') {
+        L(0, -3, 0, 5, '#1f1f1f', 2.6); for (let k = -2; k < 5; k += 2) L(-1.3, k, 1.3, k + 1, '#6b7280', 0.6);
+        R(-3, 4.5, 6, 1.6, '#fbbf24');
+        g.globalAlpha = 0.35; g.beginPath(); g.moveTo(0, 6); g.quadraticCurveTo(2.2, 18, 1, 31); g.strokeStyle = st.saberColor || '#ff2bd6'; g.lineWidth = 4.5; g.stroke(); g.globalAlpha = 1;
+        g.beginPath(); g.moveTo(0, 6); g.quadraticCurveTo(2.2, 18, 1, 31); g.strokeStyle = '#fff'; g.lineWidth = 1.3; g.stroke();
+      }
+      else if (it === 'syringe') {
+        L(0, -3, 0, 0, '#94a3b8', 1.4); R(-2.2, -0.5, 4.4, 1, '#94a3b8');
+        RR(-1.6, 0, 3.2, 10, 1, 'rgba(200,240,255,.8)'); g.globalAlpha = 0.5 + Math.sin(T * 6) * 0.2; R(-1.1, 4, 2.2, 5.5, st.saberColor || '#a3e635'); g.globalAlpha = 1;
+        L(0, 10, 0, 15, '#cbd5e1', 0.7);
+      }
       else if (it === 'saber') {
         L(0, -3, 0, 4, '#9aa3ad', 2.8); L(0, -1, 0, 1, '#333', 2.8);
         g.globalAlpha = 0.35 + Math.sin(T * 30) * 0.05; L(0, 5, 0, 28, st.saberColor || '#4da3ff', 5.5); g.globalAlpha = 1;
@@ -1554,6 +1869,7 @@ function drawPerson(Lk, x, y, st) {
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
   if (Lk.slime) { drawSlime(Lk, st, pose, view, side); g.restore(); return; }
+  if (Lk.holo && (T + (Lk.id || 0) * 0.7) % 4 < 0.3) { g.globalAlpha = 0.5; g.translate(Math.sin(T * 90) * 1.6, 0); }   // holo glitch
   if (Lk.zombie && st.moving && side) st = { ...st, ra: 1.45 + Math.sin(st.walk) * 0.08, la: 1.4 };   // shambling, arms out
   const walking = st.moving && pose === 'stand';
   if (walking) g.translate(0, -Math.abs(Math.sin(st.walk)) * 1.6);
@@ -1625,9 +1941,9 @@ function drawPerson(Lk, x, y, st) {
     const hx = sx + dir * Math.sin(ang) * 14, hy2 = sh + Math.cos(ang) * 14;
     L(sx, sh, hx, hy2, color, 4.2); C(hx, hy2, 2.3, Lk.skin); return [hx, hy2];
   };
-  let hand;
+  let hand, lhand;
   if (side) {
-    arm(-1, st.la ?? 0.1, 1, shade(Lk.shirt, -0.16));
+    lhand = arm(-1, st.la ?? 0.1, 1, shade(Lk.shirt, -0.16));
     RR(-6, ty, 12, 22, 4, Lk.shirt, outline, 0.8);
   } else {
     RR(-8, ty, 16, 22, 5, Lk.shirt, outline, 0.8);
@@ -1665,6 +1981,11 @@ function drawPerson(Lk, x, y, st) {
     R(side ? -6 : -8, ty + 16, side ? 12 : 16, 1.6, Lk.trim); L(side ? 0 : -3, ty + 1, side ? 0 : -3, ty + 15, Lk.trim, 0.8);
     if (!back) { const pulse = 0.5 + Math.sin(T * 4 + (Lk.id || 0)) * 0.3; g.globalAlpha = pulse; C(side ? 2 : 3, ty + 8, 3.6, Lk.trim); g.globalAlpha = 1; C(side ? 2 : 3, ty + 8, 1.6, '#e0fbff'); }
   }
+  if (Lk.trim && !Lk.cyborg) {           // neon trim: a glowing hem line and seam
+    R(side ? -6 : -8, ty + 16, side ? 12 : 16, 1.4, Lk.trim);
+    if (!back) { g.globalAlpha = 0.8; L(side ? 2 : 0, ty + 4, side ? 2 : 0, ty + 15, Lk.trim, 0.8); g.globalAlpha = 1; }
+  }
+  if (Lk.reflect) { R(side ? -6 : -8, ty + 9, side ? 12 : 16, 1.6, '#e5e7eb'); R(side ? -6 : -8, ty + 13, side ? 12 : 16, 1.6, '#e5e7eb'); }
   if (Lk.straw) {
     if (!back) { R(side ? -2 : 2, ty + 10, 4, 4, '#c19a6b'); L(side ? -2 : 2, ty + 10, side ? 2 : 6, ty + 14, '#6b4423', 0.5); }
     for (const d of side ? [1] : [-1, 1]) for (let i = 0; i < 3; i++) L(d * 6, ty, d * (5 + i * 2), ty - 3, '#e3c46b', 1);
@@ -1674,9 +1995,16 @@ function drawPerson(Lk, x, y, st) {
     for (let i = 0; i < 3; i++) poly([x0 + 1 + i * wd / 3, ty + 22, x0 + 3 + i * wd / 3, ty + 17, x0 + 5 + i * wd / 3, ty + 22], Lk.skin);
     C(side ? 2 : 4, ty + 8, 1.7, 'rgba(90,20,20,.6)');
   }
-  if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], shade(Lk.shirt, -0.2));
+  if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
+  if (Lk.tie && !back) { if (side) L(3, ty + 2, 4, ty + 12, Lk.tie, 1.6); else poly([-1.6, ty + 3, 1.6, ty + 3, 2.2, ty + 14, 0, ty + 17, -2.2, ty + 14], Lk.tie); }
   if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.metalArm || Lk.shirt);
-  else { arm(-7.5, st.la ?? 0.12, -1, Lk.shirt); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.metalArm || Lk.shirt); }
+  else { lhand = arm(-7.5, st.la ?? 0.12, -1, Lk.shirt); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.metalArm || Lk.shirt); }
+  if (Lk.chromeHands) { C(hand[0], hand[1], 2.5, Lk.chromeHands); C(lhand[0], lhand[1], 2.5, Lk.chromeHands); }
+  if (Lk.shoulderPlate) {                  // street samurai: armored shoulder with a neon edge
+    if (side) poly([-4, ty - 1, 5, ty, 5, ty + 7, -3, ty + 6], '#3a3a48'); else poly([3, ty - 1, 12, ty + 1, 12, ty + 7, 4, ty + 5], '#3a3a48');
+    if (side) L(-4, ty - 1, 5, ty, Lk.trim, 1.2); else L(3, ty - 1, 12, ty + 1, Lk.trim, 1.2);
+  }
+  if (Lk.spikes) for (const d of side ? [1] : [-1, 1]) poly([d * 4, ty + 1, d * 6, ty - 4, d * 8, ty + 1], '#d1d5db');
   if (Lk.metalArm) {                      // cyborg: chrome hand and a blinking shoulder light
     C(hand[0], hand[1], 2.5, Lk.metalArm); C(side ? 1 : 7.5, sh, 1.1, Math.floor(T * 2 + (Lk.id || 0)) % 2 ? '#ff3b3b' : '#7f1d1d');
   }
@@ -1739,8 +2067,10 @@ function drawPerson(Lk, x, y, st) {
   }
   hairFront(Lk, view, hy);
   costumeTop(Lk, view, hy, side);
-  const item = st.item || (Lk.saber && !st.moving ? 'saber' : null);   // a space wizard's laser sword
-  if (item) { st.saberColor = Lk.saber; drawItem(item, hand[0], hand[1], st.ra ?? 0, st); }
+  // signature props when the hands are free: laser sword, neon katana, glowing syringe; a corpo always has the briefcase
+  const idle = mob === 'cane' ? null : Lk.saber ? 'saber' : Lk.katana ? 'katana' : Lk.syringe ? 'syringe' : null;   // a cane takes the hand
+  const item = st.item || (!st.moving ? idle : null) || (Lk.briefcase ? 'briefcase' : null);
+  if (item) { st.saberColor = Lk.saber || Lk.katana || Lk.syringe; drawItem(item, hand[0], hand[1], st.ra ?? 0, st); }
   g.restore();
 }
 
@@ -1767,6 +2097,65 @@ function costumeTop(Lk, view, hy, side) {
     }
     E(0, hy - 8, 14, 3, '#c9a35a'); RR(-6, hy - 15, 12, 8, [4, 4, 0, 0], '#b8914a'); R(-6, hy - 10, 12, 2, '#7a1f1f');
     for (let i = -1; i <= 1; i++) L(i * 5, hy + 8, i * 6, hy + 11, '#e3c46b', 1);
+  }
+  if (Lk.cables) {                         // netrunner: data cables from the back of the head
+    if (view === 'side') { g.beginPath(); g.moveTo(-7, hy + 1); g.quadraticCurveTo(-14, hy + 10, -9, hy + 22); g.strokeStyle = '#334155'; g.lineWidth = 1.4; g.stroke(); }
+    else if (view === 'back') { L(-2, hy + 3, -3, hy + 22, '#334155', 1.4); L(2, hy + 3, 3, hy + 22, '#475569', 1.4); }
+    else { L(-6, hy + 3, -9.5, hy + 15, '#334155', 1.3); L(-4, hy + 5, -7.5, hy + 18, '#475569', 1.3); }
+  }
+  if (Lk.visor) {
+    if (view === 'back') L(-8.5, hy - 1, 8.5, hy - 1, '#0b1020', 2);
+    else {
+      const vx = view === 'side' ? -1 : -8.5, vw = view === 'side' ? 10 : 17;
+      RR(vx, hy - 3, vw, 4.5, 1.5, '#0b1020');
+      g.globalAlpha = 0.35; RR(vx - 0.5, hy - 3.5, vw + 1, 5.5, 2, Lk.visor); g.globalAlpha = 1;
+      for (let k = 0; k < 3; k++) R(vx + 1.5 + (hh(Math.floor(T * 6) + k + (Lk.id || 0) * 7) % (vw - 4)), hy - 1.6, 1.6, 1.2, Lk.visor);
+    }
+  }
+  if (Lk.headband) {
+    if (view === 'side') { R(-8, hy - 5.5, 16, 2.4, Lk.headband); L(-8, hy - 4.5, -12, hy - 1, Lk.headband, 1.4); L(-8, hy - 4, -11, hy + 1, Lk.headband, 1.2); }
+    else { R(-8.6, hy - 5.5, 17.2, 2.4, Lk.headband); if (view === 'front') L(8, hy - 4.5, 12, hy - 1, Lk.headband, 1.4); else { L(0, hy - 4.5, -3, hy + 2, Lk.headband, 1.4); L(0, hy - 4.5, 3, hy + 2, Lk.headband, 1.4); } }
+  }
+  if (Lk.ledMask && view !== 'back') {     // LED mask cycling through pixel faces
+    const c = Lk.ledMask, side2 = view === 'side', mx = side2 ? 3 : 0;
+    RR(side2 ? -1 : -7.5, hy - 5.5, side2 ? 9.5 : 15, 12, 3.5, '#0d0d0d', '#333', 0.6);
+    const face = Math.floor((T + (Lk.id || 0) * 1.7) / 2.5) % 4;
+    g.globalAlpha = 0.3; C(mx, hy, 6, c); g.globalAlpha = 1;
+    const eyes = side2 ? [mx + 1.5] : [-3.5, 3.5];
+    if (face === 0) { for (const e of eyes) R(e - 1, hy - 2.5, 2, 2, c); R(mx - 3, hy + 2.5, 6, 1.3, c); if (!side2) { R(mx - 4.2, hy + 1.3, 1.2, 1.2, c); R(mx + 3, hy + 1.3, 1.2, 1.2, c); } }
+    else if (face === 1) { for (const e of eyes) { L(e - 1.2, hy - 2.7, e + 1.2, hy - 0.3, c, 0.9); L(e + 1.2, hy - 2.7, e - 1.2, hy - 0.3, c, 0.9); } for (let k = -2; k <= 2; k++) R(mx + k * 1.3 - 0.4, hy + 2, 0.8, 2, c); }
+    else if (face === 2) { const hx = mx; poly([hx, hy + 3.5, hx - 3.6, hy - 0.2, hx - 1.8, hy - 2.4, hx, hy - 0.8, hx + 1.8, hy - 2.4, hx + 3.6, hy - 0.2], c); }
+    else TXT(side2 ? '?' : '??', mx, hy + 0.5, 'bold 7px monospace', c);
+  }
+  if (Lk.monocle && view !== 'back') {     // corpo AR monocle
+    const mx = view === 'side' ? 4.5 : 3;
+    g.globalAlpha = 0.3; C(mx, hy, 2.8, Lk.monocle); g.globalAlpha = 1;
+    g.beginPath(); g.arc(mx, hy, 2.8, 0, TAU); g.strokeStyle = Lk.monocle; g.lineWidth = 1; g.stroke(); L(mx + 2.8, hy, mx + 5.5, hy - 1.5, '#9ca3af', 0.7);
+  }
+  if (Lk.surgMask && view !== 'back') {
+    if (view === 'side') RR(1, hy + 0.5, 7.5, 6, 2, '#bfe3ea');
+    else { RR(-6, hy + 0.5, 12, 6, 2, '#bfe3ea'); L(-6, hy + 2, -8.5, hy - 1, '#bfe3ea', 0.7); L(6, hy + 2, 8.5, hy - 1, '#bfe3ea', 0.7); L(-4, hy + 3, 4, hy + 3, '#9ccad3', 0.5); }
+  }
+  if (Lk.courierHelmet) {                  // courier helmet with a mirrored visor
+    const c = Lk.courierHelmet;
+    g.beginPath(); g.arc(0, hy - 0.5, 10, Math.PI, 0); g.lineTo(10, hy + 1); g.lineTo(-10, hy + 1); g.closePath(); g.fillStyle = c; g.fill();
+    if (view !== 'back') { const vx = view === 'side' ? 0 : -8.5, vw = view === 'side' ? 10 : 17; RR(vx, hy - 3, vw, 5, 2, '#0b1020'); L(vx + 2, hy - 2, vx + vw - 3, hy - 2, 'rgba(34,211,238,.7)', 0.8); }
+  }
+  if (Lk.drone) {                           // a little delivery drone hovering overhead
+    const k = Lk.id || 0, dx = Math.sin(T * 1.3 + k) * 3, dy = hy - 23 + Math.sin(T * 2.1 + k) * 1.5;
+    L(dx - 7, dy - 1, dx + 7, dy - 1, '#4b5563', 1);
+    for (const d of [-7, 7]) { E(dx + d, dy - 2.5, 4.2, 1, 'rgba(200,220,255,.55)'); L(dx + d - 3.5 * Math.cos(T * 40), dy - 2.5, dx + d + 3.5 * Math.cos(T * 40), dy - 2.5, '#9ca3af', 0.6); }
+    RR(dx - 4.5, dy - 1.5, 9, 3.6, 1.5, '#374151'); C(dx, dy + 0.3, 0.9, Math.floor(T * 3 + k) % 2 ? '#22c55e' : '#ef4444');
+  }
+  if (Lk.android && view !== 'back') {     // android: glowing seams and a blinking ID code
+    const c = Lk.android;
+    g.globalAlpha = 0.75;
+    if (view === 'side') { L(1, hy - 6, 1, hy + 6, c, 0.6); L(1, hy + 6, 6, hy + 7, c, 0.6); }
+    else { L(-6.5, hy + 1, -3, hy + 6.5, c, 0.6); L(6.5, hy + 1, 3, hy + 6.5, c, 0.6); L(-4, hy - 6.5, 4, hy - 6.5, c, 0.6); }
+    g.globalAlpha = 1;
+    const ix = view === 'side' ? -2 : 4;
+    for (let k = 0; k < 3; k++) R(ix + k * 1, hy + 1.5, 0.5, 1.6 + (k % 2), '#64748b');
+    C(ix + 3.5, hy + 2.3, 0.6, Math.floor(T * 2 + (Lk.id || 0)) % 2 ? c : '#0e7490');
   }
   if (Lk.cyborg && view !== 'back') {     // half-chrome head (over hair and beard) with a red bionic eye
     g.save(); g.beginPath(); g.arc(0, hy, 9, 0, TAU); g.clip();
@@ -1891,6 +2280,21 @@ function dress(L0, kind, id) {
     case 'robot': { const metal = ['#b8c0cc', '#c9a227'][id % 2];
       Object.assign(o, { skin: metal, hairStyle: 'none', beard: false, mustache: false, glasses: false, plaid: false, skirt: false,
         shirt: shade(metal, -0.1), pants: shade(metal, -0.22), robot: metal }); break; }
+    // ---- Neon City (cyberpunk)
+    case 'netrunner': { const c = ['#22d3ee', '#a3e635'][(id >> 3) % 2];
+      Object.assign(o, { shirt: '#1f2433', pants: '#141826', plaid: false, skirt: false, glasses: false, trim: c, visor: c, cables: true }); break; }
+    case 'samurai': { const c = ['#ff2bd6', '#22d3ee'][(id >> 3) % 2];
+      Object.assign(o, { shirt: '#2b2b35', pants: '#1a1a22', plaid: false, skirt: false, katana: c, trim: c, headband: '#ef4444', shoulderPlate: true }); break; }
+    case 'ledmask': Object.assign(o, { shirt: '#1c1c1c', pants: '#2a2a33', plaid: false, glasses: false, beard: false, mustache: false,
+      ledMask: ['#fbbf24', '#22d3ee'][(id >> 3) % 2], spikes: true }); break;
+    case 'idol': Object.assign(o, { shirt: '#2a1b3d', pants: '#3b1f5a', plaid: false, skirt: true, glasses: false, hairStyle: 'pigtails',
+      hair: ['#ff4fd8', '#22d3ee'][(id >> 3) % 2], trim: '#ff4fd8', holo: true }); break;
+    case 'corpo': Object.assign(o, { shirt: '#2b2f3a', pants: '#1f222b', plaid: false, skirt: false, tie: '#b91c1c', monocle: '#22d3ee', briefcase: true }); break;
+    case 'ripperdoc': Object.assign(o, { shirt: '#e5e7eb', pants: '#334155', plaid: false, skirt: false, surgMask: true, chromeHands: '#aab3c0',
+      syringe: '#a3e635', trim: '#a3e635' }); break;
+    case 'courier': Object.assign(o, { shirt: '#f97316', pants: '#1f2937', plaid: false, skirt: false, glasses: false,
+      courierHelmet: ['#111827', '#7c3aed'][(id >> 3) % 2], drone: true, reflect: true }); break;
+    case 'android': Object.assign(o, { shirt: '#f1f5f9', pants: '#cbd5e1', plaid: false, skirt: false, glasses: false, android: '#22d3ee', trim: '#22d3ee' }); break;
     case 'cyborg': Object.assign(o, { shirt: '#2b3140', pants: '#1e2330', plaid: false, skirt: false, glasses: false,
       cyborg: true, metalArm: '#aab3c0', trim: ['#22d3ee', '#e879f9'][(id >> 2) % 2] }); break;
     case 'pumpkin': Object.assign(o, { skin: '#e3c46b', hairStyle: 'none', beard: false, mustache: false, glasses: false, skirt: false,
@@ -1927,6 +2331,33 @@ function pumpkin(x, y) {
 function web(cx, cy, a0) {
   for (let r = 6; r <= 18; r += 6) { g.beginPath(); g.arc(cx, cy, r, a0, a0 + Math.PI / 2); g.strokeStyle = 'rgba(230,230,230,.4)'; g.lineWidth = 0.8; g.stroke(); }
   for (let a = 0; a <= 2; a++) { const an = a0 + a * Math.PI / 4; L(cx, cy, cx + Math.cos(an) * 20, cy + Math.sin(an) * 20, 'rgba(230,230,230,.4)', 0.8); }
+}
+function neonSign(text, x, y, c, flick) {
+  const on = !flick || Math.sin(T * 13 + x) > -0.85;
+  g.globalAlpha = on ? 0.35 : 0.08; RR(x - text.length * 4.2 - 4, y - 9, text.length * 8.4 + 8, 18, 4, c); g.globalAlpha = 1;
+  RR(x - text.length * 4.2 - 4, y - 9, text.length * 8.4 + 8, 18, 4, '#0b0b14', c, 1.2);
+  TXT(text, x, y + 0.5, 'bold 11px system-ui', on ? c : shade(c, -0.4));
+}
+function decorCyber() {
+  windowScene('#0a0618', '#3b2a5a', () => {
+    for (let b = 0; b < 9; b++) {
+      const bx = 670 + b * 13, bh = 18 + hh(b + 3) % 30;
+      R(bx, 84 - bh, 12, bh, b % 2 ? '#1a1033' : '#140b26');
+      for (let w = 0; w < 6; w++) if (hh(b * 7 + w + Math.floor(T / 3)) % 3 === 0) R(bx + 2 + (w % 2) * 5, 84 - bh + 3 + Math.floor(w / 2) * 5, 3, 2, w % 2 ? '#ff2bd6' : '#22d3ee');
+    }
+    const cx = 660 + (T * 25) % 150; RR(cx, 40, 14, 4, 2, '#e5e7eb'); C(cx + 1, 42, 1, '#ef4444'); C(cx + 13, 42, 1, '#fde68a');
+  });
+  neonSign('NOODLES', 120, 652, '#ff2bd6', true);
+  neonSign('OPEN 24/7', 270, 652, '#22d3ee', false);
+  const hx = 30 + (T * 45) % 320, hy = 700 + Math.sin(T) * 6;      // hover car over the patio
+  g.globalAlpha = 0.25; E(hx, hy + 14, 14, 3, '#22d3ee'); g.globalAlpha = 1;
+  RR(hx - 13, hy - 4, 26, 8, 4, '#7c3aed'); RR(hx - 6, hy - 8, 12, 5, 2, 'rgba(160,220,255,.85)'); C(hx + 12, hy, 1.4, '#fde68a');
+  g.save(); g.globalAlpha = 0.18; g.strokeStyle = '#a5c8ff'; g.lineWidth = 1; g.beginPath();
+  for (let i = 0; i < 90; i++) {                                     // rain over everything
+    const x = (hh(i) % 1600 + T * 40) % 1600, y = (hh(i + 99) % 960 + T * 520 + i * 37) % 960;
+    g.moveTo(x, y); g.lineTo(x - 3, y + 12);
+  }
+  g.stroke(); g.restore();
 }
 function decorHorror() {
   windowScene('#1b1033', '#8a7f99', () => {
@@ -2299,6 +2730,9 @@ function drawBoss() {
   if (THEME === 'scifi') {           // the boss's space helmet
     g.globalAlpha = 0.18; C(x, hy, 19, '#cfe8ff'); g.globalAlpha = 1;
     g.beginPath(); g.arc(x, hy, 19, 0, TAU); g.strokeStyle = '#e6eef7'; g.lineWidth = 1.8; g.stroke(); E(x, hy + 17, 12, 3, '#c9ced6');
+  } else if (THEME === 'cyber') {    // an AR visor in Neon City
+    RR(x - 9, hy - 4, 18, 5, 2, '#0b1020'); g.globalAlpha = 0.4; RR(x - 9.5, hy - 4.5, 19, 6, 2, '#ff2bd6'); g.globalAlpha = 1;
+    L(x - 6, hy - 2.5, x + 6, hy - 2.5, '#22d3ee', 0.9);
   } else if (THEME === 'horror') {   // and a witch's hat for Halloween
     E(x, hy - 12, 18, 4, '#1c1328'); poly([x - 10, hy - 13, x + 10, hy - 13, x + 4, hy - 33, x + 11, hy - 39, x, hy - 34], '#1c1328');
     R(x - 9, hy - 17, 18, 3, '#f28c28');
@@ -2680,7 +3114,7 @@ function render() {
   if (!online) {
     RR(W / 2 - 230, 120, 460, 54, 10, 'rgba(20,22,28,.92)', '#ef4444', 2);
     TXT('The office server is closed', W / 2, 138, 'bold 16px system-ui', '#fff');
-    TXT('Start it with start.bat (or: py server.py) — this page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
+    TXT('Start it with ClaudeOffice.exe or scripts\\start.bat — this page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
   }
 }
 let last = performance.now();

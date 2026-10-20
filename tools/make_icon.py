@@ -1,10 +1,10 @@
-"""Draws office.ico (Claude's orange starburst) with the standard library only. Run by build.bat."""
+"""Draws office.ico (Claude's orange starburst) at the repo root, standard library only. Run by scripts/build.bat."""
 import math
 import os
 import struct
 import zlib
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # tools/.. = the repo root
 COLOR = (0xD9, 0x77, 0x57)
 
 
@@ -48,7 +48,7 @@ def main() -> None:
     for s, img in zip(sizes, images):
         out += struct.pack("<BBBBHHII", s % 256, s % 256, 0, 0, 1, 32, len(img), offset)
         offset += len(img)
-    with open(os.path.join(HERE, "office.ico"), "wb") as f:
+    with open(os.path.join(ROOT, "office.ico"), "wb") as f:
         f.write(out + b"".join(images))
     print("wrote office.ico")
 

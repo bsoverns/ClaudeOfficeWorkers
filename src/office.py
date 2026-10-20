@@ -1,13 +1,13 @@
 """Send commands to the Claude Office from a command prompt (handy for testing).
 
-  py office.py start "Build the login page" [--id ID] [--project NAME]
-  py office.py working [ID] [--activity "Editing app.js"]
-  py office.py trouble [ID] [--message "Tests failed"]
-  py office.py wait    [ID] [--message "Need your OK"]
-  py office.py done    [ID | all]
-  py office.py list
-  py office.py clear
-  py office.py demo
+  py src/office.py start "Build the login page" [--id ID] [--project NAME]
+  py src/office.py working [ID] [--activity "Editing app.js"]
+  py src/office.py trouble [ID] [--message "Tests failed"]
+  py src/office.py wait    [ID] [--message "Need your OK"]
+  py src/office.py done    [ID | all]
+  py src/office.py list
+  py src/office.py clear
+  py src/office.py demo
 
 ID defaults to the newest job. Port comes from CLAUDE_OFFICE_PORT (default 8777).
 """

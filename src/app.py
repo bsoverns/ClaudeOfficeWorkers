@@ -1,14 +1,14 @@
-r"""ClaudeOffice.exe: the whole Claude Office in one program (built by build.bat).
+r"""ClaudeOffice.exe: the whole Claude Office in one program (built by scripts/build.bat).
 
   ClaudeOffice.exe                     open the office in its own window (starts the server;
                                        it shuts down a minute after the window is closed)
   ClaudeOffice.exe --server [port]     run the server only, no window, until stopped
   ClaudeOffice.exe --install [--project C:\repo] [--uninstall]
-                                       connect Claude Code (same as install_hooks.py)
+                                       connect Claude Code (same as src/install_hooks.py)
   ClaudeOffice.exe --hook              what Claude Code runs for each event (reads stdin)
-  ClaudeOffice.exe cmd <args>          same as office.py, e.g. cmd start "Test" / cmd demo
+  ClaudeOffice.exe cmd <args>          same as src/office.py, e.g. cmd start "Test" / cmd demo
 
-Also runs unbuilt: `py app.py ...`.
+Also runs unbuilt: `py src/app.py ...`.
 """
 from __future__ import annotations
 

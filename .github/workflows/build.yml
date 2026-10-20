@@ -1,6 +1,6 @@
 name: Build
 
-# Pull requests: check the Python, build ClaudeOffice.exe the same way build.bat does, and
+# Pull requests: check the Python, build ClaudeOffice.exe the same way scripts/build.bat does, and
 # smoke-test it. Pushes to main (merged PRs): the same, then publish a GitHub Release with
 # ClaudeOffice.zip attached and release notes generated from the merged PRs.
 
@@ -37,15 +37,15 @@ jobs:
           Write-Host "Version: $version"
 
       - name: Check the Python compiles
-        run: python -m py_compile app.py server.py office.py install_hooks.py claude_hook.py make_icon.py
+        run: python -m py_compile src/app.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py tools/make_icon.py
 
-      - name: Build ClaudeOffice.exe (same steps as build.bat)
+      - name: Build ClaudeOffice.exe (same steps as scripts/build.bat)
         shell: pwsh
         run: |
           python -m pip install --upgrade pyinstaller
-          python make_icon.py
-          python -m PyInstaller --noconfirm --clean --windowed --onedir --name ClaudeOffice --icon office.ico --add-data "index.html;." app.py
-          Copy-Item README.md, CONNECT_A_PROJECT.md, "Connect Claude Code.bat", "Disconnect Claude Code.bat" dist/ClaudeOffice/
+          python tools/make_icon.py
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name ClaudeOffice --icon office.ico --add-data "src/index.html;." src/app.py
+          Copy-Item README.md, LICENSE, docs/CONNECT_A_PROJECT.md, "package/Connect Claude Code.bat", "package/Disconnect Claude Code.bat" dist/ClaudeOffice/
           Set-Content dist/ClaudeOffice/VERSION.txt "$env:VERSION" -Encoding utf8
           Compress-Archive -Force -Path dist/ClaudeOffice -DestinationPath dist/ClaudeOffice.zip
 

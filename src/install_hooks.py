@@ -1,9 +1,9 @@
 r"""Connect Claude Code to the Claude Office (or disconnect it).
 
-  py install_hooks.py              add the office hooks to ~/.claude/settings.json
-  py install_hooks.py --uninstall  remove them again
-  py install_hooks.py --print      just show the hooks JSON, change nothing
-  py install_hooks.py --project C:\path\to\repo [--uninstall]
+  py src\install_hooks.py              add the office hooks to ~/.claude/settings.json
+  py src\install_hooks.py --uninstall  remove them again
+  py src\install_hooks.py --print      just show the hooks JSON, change nothing
+  py src\install_hooks.py --project C:\path\to\repo [--uninstall]
                                    only that project: writes <repo>/.claude/settings.local.json
                                    (Claude Code's personal, git-ignored settings file)
 

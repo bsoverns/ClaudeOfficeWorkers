@@ -2,7 +2,7 @@
 
 The office has two halves:
 
-- **The office itself** (`server.py` + `index.html`): runs on the machine, shows the animation.
+- **The office itself** (`src/server.py` + `src/index.html`): runs on the machine, shows the animation.
 - **The hooks**: a few lines in Claude Code's settings that make each session report to the
   office. You install them **globally** (every project on that machine) or **per project**.
 
@@ -14,7 +14,7 @@ Both halves live on the same machine. Each machine gets its own copy.
 
 Download `ClaudeOffice.zip` from the latest release
 (<https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest>), or build it yourself with
-`build.bat` (it lands in `dist\`). It's the whole office in one program.
+`scripts\build.bat` (it lands in `dist\`). It's the whole office in one program.
 
 1. Copy `ClaudeOffice.zip` to the PC and unzip it somewhere it can stay, e.g.
    `C:\Tools\ClaudeOffice\`. Keep the `_internal` folder next to the exe.
@@ -26,7 +26,7 @@ Download `ClaudeOffice.zip` from the latest release
 
 Per project instead of global: in that project, paste the 2b prompt but use
 `"C:\Tools\ClaudeOffice\ClaudeOffice.exe" --install --project .` as the command.
-Test without Claude: `ClaudeOffice.exe cmd demo` (all `office.py` commands work after `cmd`).
+Test without Claude: `ClaudeOffice.exe cmd demo` (all `src\office.py` commands work after `cmd`).
 Undo: **`Disconnect Claude Code.bat`**.
 
 If you move the folder, run `Connect Claude Code.bat` again. Windows SmartScreen or a
@@ -42,14 +42,13 @@ Python version below instead.
 **Work PC (or any new machine):**
 
 1. Copy the whole `ClaudeOfficeWorkers` folder over (USB, OneDrive, zip, or git). You only
-   need these files: `server.py`, `index.html`, `claude_hook.py`, `install_hooks.py`,
-   `office.py`, `start.bat`, `README.md` and this file.
+   need the `src` and `scripts` folders (plus `README.md` and this file).
    Put it anywhere, e.g. `C:\Tools\ClaudeOfficeWorkers`. Nothing depends on the path:
    the installer writes whatever folder it is run from into the hooks.
 2. Check Python 3.9 or newer is installed: `py --version` (or `python --version`).
    No packages are needed.
-3. Start the office: double-click `start.bat`, then click **Clock in** in the browser.
-4. Optional check: `py office.py demo` should send three workers across the office.
+3. Start the office: double-click `scripts\start.bat`, then click **Clock in** in the browser.
+4. Optional check: `py src\office.py demo` should send three workers across the office.
 
 > Work machines: it only listens on `127.0.0.1` (nothing leaves the PC), and needs no
 > admin rights or installs. If port 8777 is taken, see "Changing the port" below.
@@ -61,16 +60,16 @@ Python version below instead.
 From a command prompt, in the office folder:
 
 ```
-py install_hooks.py
+py src\install_hooks.py
 ```
 
 That adds the hooks to `%USERPROFILE%\.claude\settings.json` (a backup is saved next to it
 first; your other settings and hooks are kept). Restart any Claude Code sessions that were
 already open. Done: every project on this machine now reports to the office.
 
-Undo: `py install_hooks.py --uninstall`
+Undo: `py src\install_hooks.py --uninstall`
 
-If you ever **move the folder**, run `py install_hooks.py` again from the new place (it
+If you ever **move the folder**, run `py src\install_hooks.py` again from the new place (it
 replaces the old entries).
 
 ---
@@ -87,7 +86,7 @@ My Claude Office is at: C:\Sandbox\Games\ClaudeOfficeWorkers
 Connect this project to it. It's an animated office on this PC that shows when you are
 working, stuck, or waiting on me.
 
-1. Run: py "<office folder>\install_hooks.py" --project .
+1. Run: py "<office folder>\src\install_hooks.py" --project .
    It adds async hooks to .claude/settings.local.json (personal, git-ignored) that run
    claude_hook.py, which posts what you're doing to http://127.0.0.1:8777. The hook is
    silent, always exits 0, and does nothing if the office isn't running.
@@ -101,7 +100,7 @@ working, stuck, or waiting on me.
    should send a worker to the boss.
 ```
 
-Undo for one project: `py "<office folder>\install_hooks.py" --project . --uninstall`
+Undo for one project: `py "<office folder>\src\install_hooks.py" --project . --uninstall`
 
 ---
 
@@ -125,8 +124,8 @@ Hooks do all the reporting; Claude doesn't need to know. If you want Claude to r
 
 Default is 8777. To use another, e.g. 8790: set a user environment variable
 `CLAUDE_OFFICE_PORT=8790` (Windows: Settings → "Edit environment variables for your
-account"), then restart the office and Claude Code. The server, the hook and `office.py`
-all read it. Open the page at `http://127.0.0.1:8790/` (`start.bat` opens 8777, so edit
+account"), then restart the office and Claude Code. The server, the hook and `src\office.py`
+all read it. Open the page at `http://127.0.0.1:8790/` (`scripts\start.bat` opens 8777, so edit
 the URL in it too).
 
 ---
@@ -134,7 +133,7 @@ the URL in it too).
 ## What you'll see
 
 Pick a theme on the clock-in screen: **Classic Office**, **Dev Shop**, **Sci-Fi Station** or
-**Haunted House**. In all but Classic, workers go to the station for the kind of work (Azure
+**Haunted House** or **Neon City**. In all but Classic, workers go to the station for the kind of work (Azure
 DevOps, GitHub, SQL Server, Python…); see README.
 
 
@@ -151,10 +150,10 @@ DevOps, GitHub, SQL Server, Python…); see README.
 
 | Task | Command (run in the office folder) |
 |---|---|
-| Start the office | `start.bat` |
-| Connect all projects | `py install_hooks.py` |
-| Disconnect all | `py install_hooks.py --uninstall` |
-| Connect one project | `py install_hooks.py --project C:\path\to\project` |
-| Disconnect one project | `py install_hooks.py --project C:\path\to\project --uninstall` |
-| See the hook JSON only | `py install_hooks.py --print` |
-| Test without Claude | `py office.py demo` |
+| Start the office | `scripts\start.bat` |
+| Connect all projects | `py src\install_hooks.py` |
+| Disconnect all | `py src\install_hooks.py --uninstall` |
+| Connect one project | `py src\install_hooks.py --project C:\path\to\project` |
+| Disconnect one project | `py src\install_hooks.py --project C:\path\to\project --uninstall` |
+| See the hook JSON only | `py src\install_hooks.py --print` |
+| Test without Claude | `py src\office.py demo` |
