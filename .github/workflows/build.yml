@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pyinstaller
           python make_icon.py
           python -m PyInstaller --noconfirm --clean --windowed --onedir --name ClaudeOffice --icon office.ico --add-data "index.html;." app.py
-          Copy-Item README.md, CONNECT_A_PROJECT.md, "Connect Claude Code.bat", "Disconnect Claude Code.bat" dist/ClaudeOffice/
+          Copy-Item README.md, CONNECT_A_PROJECT.md, LICENSE, "Connect Claude Code.bat", "Disconnect Claude Code.bat" dist/ClaudeOffice/
           Set-Content dist/ClaudeOffice/VERSION.txt "$env:VERSION" -Encoding utf8
           Compress-Archive -Force -Path dist/ClaudeOffice -DestinationPath dist/ClaudeOffice.zip
 

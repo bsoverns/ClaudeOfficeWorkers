@@ -6,6 +6,7 @@ py -m pip install --upgrade pyinstaller || goto :fail
 py make_icon.py || goto :fail
 py -m PyInstaller --noconfirm --clean --windowed --onedir --name ClaudeOffice --icon office.ico --add-data "index.html;." app.py || goto :fail
 copy /y "README.md" "dist\ClaudeOffice\" >nul
+copy /y "LICENSE" "dist\ClaudeOffice\" >nul
 copy /y "CONNECT_A_PROJECT.md" "dist\ClaudeOffice\" >nul
 copy /y "Connect Claude Code.bat" "dist\ClaudeOffice\" >nul
 copy /y "Disconnect Claude Code.bat" "dist\ClaudeOffice\" >nul

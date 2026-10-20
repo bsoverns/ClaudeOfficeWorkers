@@ -177,6 +177,10 @@ Anyone can propose a change: fork the repo, push a branch, and open a pull reque
 their review, and the "Protect main" ruleset only lets a PR merge once the code owner has
 approved it. Nobody pushes to `main` directly.
 
+## License
+
+[MIT](LICENSE): use it, change it, share it, sell it; just keep the copyright notice. No warranty.
+
 ## Files
 
 | File | What it does |
