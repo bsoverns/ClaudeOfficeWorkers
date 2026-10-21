@@ -11,7 +11,56 @@ import sys
 import time
 import urllib.request
 
-KEEP_INPUT = ("command", "file_path", "pattern", "query", "url", "description", "subagent_type")
+KEEP_INPUT = ("command", "file_path", "pattern", "query", "url", "description", "subagent_type", "name")
+TITLE_TAIL = 2 * 1024 * 1024  # how much of the transcript's end to search for the session name
+TITLE_KINDS = ((b'"custom-title"', "custom-title", "customTitle"),  # a rename in the app
+               (b'"ai-title"', "ai-title", "aiTitle"))                # the app's own title
+
+
+def session_title(path: object) -> str:
+    """The session's name as the Claude app shows it: the last rename, else its auto title.
+    Reads only the end of the transcript (JSON lines); returns "" if there is none."""
+    if not isinstance(path, str) or not path:
+        return ""
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        f.seek(max(0, f.tell() - TITLE_TAIL))
+        data = f.read()
+    for needle, kind, field in TITLE_KINDS:
+        i = data.rfind(needle)
+        while i >= 0:
+            start = data.rfind(b"\n", 0, i) + 1
+            end = data.find(b"\n", i)
+            try:
+                rec = json.loads(data[start:end if end >= 0 else len(data)].decode("utf-8"))
+                if rec.get("type") == kind and isinstance(rec.get(field), str) and rec[field].strip():
+                    return rec[field][:200]
+            except Exception:
+                pass
+            i = data.rfind(needle, 0, start)
+    return ""
+
+
+def agent_meta(p: dict) -> dict:
+    """A subagent's task description (the Agent tool's "description") and the id of the Agent
+    call that started it, from the small <session>/subagents/agent-<id>.meta.json beside the
+    transcript; {} until Claude writes it."""
+    path, sid, aid = p.get("transcript_path"), p.get("session_id"), p.get("agent_id")
+    if not (isinstance(path, str) and path and isinstance(sid, str) and isinstance(aid, str)
+            and sid and aid and all(c.isalnum() or c in "-_" for c in sid + aid)):
+        return {}
+    folder = os.path.dirname(path)
+    if os.path.basename(folder) != "subagents":     # the lead's transcript, not the agent's own
+        folder = os.path.join(folder, sid, "subagents")
+    meta = os.path.join(folder, f"agent-{aid}.meta.json")
+    with open(meta, encoding="utf-8") as f:
+        m = json.loads(f.read(65536))
+    out = {}
+    if isinstance(m.get("description"), str):
+        out["agent_description"] = m["description"][:200]
+    if isinstance(m.get("toolUseId"), str):
+        out["agent_tool_use_id"] = m["toolUseId"][:100]
+    return out
 
 
 def read_stdin() -> bytes:
@@ -52,6 +101,13 @@ def main() -> None:
         if isinstance(p.get(k), str):
             p[k] = p[k][:2000]
     p["ts"] = ts
+    try:
+        if p.get("agent_id"):
+            p.update(agent_meta(p))
+        else:
+            p["session_title"] = session_title(p.get("transcript_path"))
+    except Exception:
+        pass
     port = os.environ.get("CLAUDE_OFFICE_PORT") or "8777"
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/api/hook", data=json.dumps(p).encode("utf-8"),
