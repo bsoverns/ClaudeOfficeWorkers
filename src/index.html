@@ -4605,13 +4605,13 @@ function endTalk(k) {
 function updTalks() {
   if (T > nextTalk) { if (TALKS.length < 3) startTalk(); nextTalk = T + rand(6, 16); }
   for (const k of [...TALKS]) {
-    if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length) { endTalk(k); continue; }
+    if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length || (k.rival && THEME !== 'hero')) { endTalk(k); continue; }
     if (T < k.next) continue;
     if (k.i >= k.lines.length) { endTalk(k); if (k.rival && THEME === 'hero' && Math.random() < 0.35) startDuel(k.hero, k.villain); continue; }
     let line = k.lines[k.i], who = k.i % 2 ? k.b : k.a;
     if (k.rival && /^[VH]:/.test(line)) { who = line[0] === 'V' ? k.villain : k.hero; line = line.slice(2); }
     const text = line.replace('{a}', k.a.L.name).replace('{b}', k.b.L.name);
-    say(who, text, 3.6); k.i++; k.next = T + 2.8 + text.length * 0.035;
+    say(who, text, Math.max(3.6, text.length * 0.055)); k.i++; k.next = T + 2.8 + text.length * 0.035;
   }
   // the couch reacts when something big happens on TV
   const big = tvBig();
@@ -4638,8 +4638,9 @@ function startDuel(hero, villain) {
 }
 function endDuel(d, cut) {
   DUELS.splice(DUELS.indexOf(d), 1);
+  for (let i = BEAMS.length - 1; i >= 0; i--) if (BEAMS[i].who === d.a || BEAMS[i].who === d.b) BEAMS.splice(i, 1);   // auras and clocks that follow a fighter
   for (const w of [d.a, d.b]) {
-    w.duel = null; w.mimic = null; w.frozenUntil = 0; w.jxUntil = 0; w.dashUntil = 0;
+    w.duel = null; w.mimic = null; w.frozenUntil = w.jxUntil = w.dashUntil = w.liftUntil = w.fadeUntil = w.shakeUntil = w.zapUntil = 0;
     if (w.mode === 'idle' && w.arrived && w.spot) { w.facing = w.spot.face || 'down'; w.nextChat = T + rand(10, 25); }
   }
   const stay = [d.a, d.b].filter(w => w.mode === 'idle');                // who's still on break gets the last word
@@ -5881,7 +5882,7 @@ function stationActive(s) { const w = stationWorker(s); return !!(w && w.job.sta
 // ============================================================================================
 function measureBubble(owner, x, bottom, text, opts = {}) {
   g.font = (opts.font || '12px system-ui');
-  const lines = wrap(text, opts.maxW || 170, 2);
+  const lines = wrap(text, opts.maxW || 170, opts.maxLines || 2);
   const tw = Math.max(...lines.map(l => g.measureText(l).width));
   const bw = tw + 14, bh = lines.length * 14 + 8;
   return { owner, x, bottom, lines, opts, bw, bh, bx: clamp(x - bw / 2, 4, W - bw - 4), by: bottom - bh - 6 };
@@ -5997,7 +5998,7 @@ function render() {
   const bubs = [];
   for (const w of order) {
     const top = drawSlip(w);
-    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, w.x, top, w.bubble, { maxW: 150 }));
+    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, w.x, top, w.bubble, { maxW: 150, maxLines: THEME === 'hero' ? 5 : 2 }));   // Hero HQ punchlines run long
     else w._lift = null;
   }
   if (BOSS.bubble && T < BOSS.bubbleUntil) bubs.push(measureBubble(BOSS, BOSS.x, BOSS.y - 70, BOSS.bubble, { bg: '#fff4ee', border: '#d97757' }));
