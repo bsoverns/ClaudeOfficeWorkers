@@ -98,6 +98,22 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   mammoth for lunch and who invented the wheel this time.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
+Every theme also re-skins the three rooms that used to stay a plain office, with the same furniture
+footprints so nobody walks differently. Troubleshooting room / meeting room / mailroom:
+
+| Theme | Troubleshooting | Meeting room | Mailroom |
+|---|---|---|---|
+| Classic Office | help desk | whiteboard and table | pigeonholes |
+| Dev Shop | on-call war room, red alert lamps, incident graph | stand-up with a kanban board and sticky notes | merge queue of PR envelopes and a CI light |
+| Sci-Fi Station | repair bay with a sparking panel and a force field | bridge with a holo planet | cargo teleporter pad and pods |
+| Haunted House | seance desk with a crystal ball and candles | candlelit banquet table | raven post with wax-sealed letters and a coffin crate |
+| Neon City | hacker den with neon terminals | holo-conference with a pulsing neon table | drone drop-off pad with glowing parcels |
+| North Pole | toy repair workbench | "Naughty or Nice" list table | letters to Santa and sacks of mail |
+| Pirate Cove | ship's surgeon corner with bottles | captain's chart table with a treasure map | bottle post with a parrot |
+| Stone Age | shaman's cave fire | stone circle round a flat rock table | carved tablets and a pterodactyl perch |
+
+The rubber duck stays in every theme, usually in a matching hat.
+
 Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove and Stone Age all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
@@ -234,7 +250,8 @@ anyone waits, and desktop notifications. Stored in the browser. **Done ✓** on 
 that task; **Find** highlights the worker. Hover or click a worker to see what they're up to.
 A worker whose Claude has gone quiet for 5 minutes dozes at their station; jobs with no
 news for 12 hours are sent home automatically. "Recently finished" says why each worker
-went home (you said done, Done button, `/clear`, helper finished, 12 hours).
+went home (you said done, Done button, `/clear`, helper finished, 12 hours); it shows only
+the last hour.
 
 The office remembers its jobs in `%LOCALAPPDATA%\ClaudeOffice\state.json`, so restarting it
 (or the exe quitting after its window closes) puts everyone back where they were.

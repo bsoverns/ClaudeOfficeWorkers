@@ -321,7 +321,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) seen
 // margin for the body). Paths are A* over that grid, then straightened where the line is clear.
 // Rects are [x, y, w, h] in feet coordinates (where a person's feet would be).
 const FLOORS = [
-  [28, 158, 580, 450],                          // break room, below the counters, TV and machines
+  [28, 158, 580, 450],                          // break room, below the counters, machines and TV
   [596, 304, 54, 38], [202, 600, 46, 44],       // break room doors: to the hall, to the patio
   [28, 640, 282, 262],                          // patio, above the fence
   [326, 692, 282, 240], [596, 680, 54, 40],     // meeting room, below the whiteboard + its door
@@ -335,7 +335,7 @@ const FLOORS = [
 // nearest free cell. Themes add their own pieces with `blocks`; every station's equipment
 // (right of the worker, x0 + 92 onward) is blocked in stationBlocks().
 const FURNITURE = [
-  [266, 222, 168, 36], [70, 276, 132, 48],      // couch, dining table
+  [436, 222, 168, 36], [70, 316, 132, 48],      // couch (under the TV), dining table
   [48, 476, 178, 98], [380, 470, 180, 89],      // pool table, ping pong table
   [259, 376, 22, 64],                           // water cooler
   [510, 380, 74, 24], [510, 414, 74, 24], [460, 414, 44, 28],                     // nap room cots and beanbag
@@ -456,20 +456,20 @@ function findPath(x0, y0, x1, y1) {
 
 // Idle spots in the break room and on the patio. couch: no wheelchair. smoke: smokers only.
 const IDLE_SPOTS = [
-  { id: 'tv1', x: 305, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
-  { id: 'tv2', x: 350, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
-  { id: 'tv3', x: 395, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
-  { id: 'tv4', x: 452, y: 262, face: 'up', act: 'tv' },
+  { id: 'tv1', x: 475, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
+  { id: 'tv2', x: 520, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
+  { id: 'tv3', x: 565, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
+  { id: 'tv4', x: 420, y: 262, face: 'up', act: 'tv' },
   { id: 'fridge', x: 56, y: 174, face: 'up', act: 'fridge' },
   { id: 'coffee', x: 111, y: 174, face: 'up', act: 'coffee' },
   { id: 'micro', x: 183, y: 174, face: 'up', act: 'micro' },
-  { id: 'vend', x: 475, y: 174, face: 'up', act: 'vend' },
-  { id: 'arcade', x: 549, y: 174, face: 'up', act: 'arcade' },
-  { id: 'eat1', x: 46, y: 300, face: 'right', pose: 'sit', act: 'eat' },
-  { id: 'eat2', x: 224, y: 300, face: 'left', pose: 'sit', act: 'eat' },
-  { id: 'eat3', x: 105, y: 262, face: 'down', pose: 'sit', act: 'eat' },
-  { id: 'eat4', x: 165, y: 262, face: 'down', pose: 'sit', act: 'eat' },
-  { id: 'eat5', x: 135, y: 340, face: 'up', pose: 'sit', act: 'eat' },
+  { id: 'vend', x: 315, y: 174, face: 'up', act: 'vend' },
+  { id: 'arcade', x: 389, y: 174, face: 'up', act: 'arcade' },
+  { id: 'eat1', x: 46, y: 340, face: 'right', pose: 'sit', act: 'eat' },
+  { id: 'eat2', x: 224, y: 340, face: 'left', pose: 'sit', act: 'eat' },
+  { id: 'eat3', x: 105, y: 302, face: 'down', pose: 'sit', act: 'eat' },
+  { id: 'eat4', x: 165, y: 302, face: 'down', pose: 'sit', act: 'eat' },
+  { id: 'eat5', x: 135, y: 380, face: 'up', pose: 'sit', act: 'eat' },
   { id: 'pool1', x: 34, y: 525, face: 'right', act: 'pool', partner: 'pool2' },
   { id: 'pool2', x: 242, y: 515, face: 'left', act: 'pool', partner: 'pool1' },
   { id: 'pool3', x: 137, y: 586, face: 'up', act: 'poolwatch' },
@@ -2732,7 +2732,8 @@ for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE]) STATION_ORDE
 const AREA_SLOT = { ado: 'workbench', azure: 'forge', github: 'dairy', support: 'valet', sql: 'bakery', dbproj: 'garden',
   impl: 'pizza', python: 'easel', service: 'lumber', qa: 'lab', hardware: 'servers', tracking: 'packing' };
 // A theme: its 12 stations, whether workers follow the work area (routed), optional
-// costumes, a color wash over the static rooms and animated decor.
+// costumes, a color wash over the static rooms, animated decor and optional `rooms`
+// (skins for the troubleshooting room, meeting room and mailroom, assigned in the "Themed rooms" section).
 const THEMES = {
   classic: { name: 'Classic Office', stations: STA },
   dev: { name: 'Dev Shop', stations: DEV, routed: true },
@@ -3726,9 +3727,9 @@ function decorXmas() {
   xmasTree(690, 258, 1.15, T);
   present(668, 250, 14, 12, '#ef4444', '#facc15'); present(700, 252, 16, 11, '#3b82f6', '#fff'); present(684, 256, 11, 9, '#a855f7', '#facc15');
   // a wreath on the break room door frame and stockings by the TV
-  g.beginPath(); g.arc(598, 280, 9, 0, TAU); g.strokeStyle = '#166534'; g.lineWidth = 5; g.stroke();
-  for (let i = 0; i < 6; i++) C(598 + Math.cos(i) * 9, 280 + Math.sin(i) * 9, 1.4, '#ef4444'); poly([594, 289, 602, 289, 598, 284], '#b91c1c');
-  for (let i = 0; i < 3; i++) { const sx = 300 + i * 50; RR(sx, 104, 10, 14, 2, i % 2 ? '#166534' : '#b91c1c'); RR(sx, 118, 15, 6, 3, i % 2 ? '#166534' : '#b91c1c'); R(sx - 1, 102, 12, 4, '#f8fafc'); }
+  g.beginPath(); g.arc(606, 293, 9, 0, TAU); g.strokeStyle = '#166534'; g.lineWidth = 5; g.stroke();
+  for (let i = 0; i < 6; i++) C(606 + Math.cos(i) * 9, 293 + Math.sin(i) * 9, 1.4, '#ef4444'); poly([602, 302, 610, 302, 606, 297], '#b91c1c');
+  for (let i = 0; i < 3; i++) { const sx = 470 + i * 45; RR(sx, 134, 10, 14, 2, i % 2 ? '#166534' : '#b91c1c'); RR(sx, 148, 15, 6, 3, i % 2 ? '#166534' : '#b91c1c'); R(sx - 1, 132, 12, 4, '#f8fafc'); }
   // patio: snow drifts, a snowcap on the bench, a snowman
   g.globalAlpha = 0.8;
   for (const [x, y, rx, ry] of [[60, 900, 50, 8], [170, 902, 60, 7], [280, 900, 34, 8], [40, 650, 26, 6], [260, 640, 40, 6], [110, 830, 40, 7]]) E(x, y, rx, ry, '#f8fafc');
@@ -3793,13 +3794,14 @@ function decorPirate() {
     }
   }
   // ship's wheel on the break room door frame, an anchor and a rope coil on the wall
-  g.save(); g.translate(598, 280); g.rotate(Math.sin(T * 0.5) * 0.15);
+  g.save(); g.translate(606, 293); g.rotate(Math.sin(T * 0.5) * 0.15);
   g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.strokeStyle = '#8a5a36'; g.lineWidth = 2.4; g.stroke();
   for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; L(Math.cos(a) * 3, Math.sin(a) * 3, Math.cos(a) * 11.5, Math.sin(a) * 11.5, '#a0703d', 1.8); }
   C(0, 0, 2.4, '#d4af37'); g.restore();
+  g.save(); g.translate(427, 64); g.scale(0.6, 0.6); g.translate(-325, -105);      // the anchor, in the gap between the arcade and the TV
   g.strokeStyle = '#4b5563'; g.lineWidth = 2; g.beginPath(); g.moveTo(325, 106); g.lineTo(325, 128); g.moveTo(319, 111); g.lineTo(331, 111); g.stroke();
-  g.beginPath(); g.arc(325, 128, 9, 0.2, Math.PI - 0.2); g.stroke(); C(325, 105, 2, '#4b5563');
-  for (let r = 3; r <= 8; r += 2.5) { g.beginPath(); g.ellipse(420, 118, r, r * 0.55, 0, 0, TAU); g.strokeStyle = '#c9a46a'; g.lineWidth = 1.6; g.stroke(); }
+  g.beginPath(); g.arc(325, 128, 9, 0.2, Math.PI - 0.2); g.stroke(); C(325, 105, 2, '#4b5563'); g.restore();
+  for (let r = 3; r <= 8; r += 2.5) { g.beginPath(); g.ellipse(470, 126, r, r * 0.55, 0, 0, TAU); g.strokeStyle = '#c9a46a'; g.lineWidth = 1.6; g.stroke(); }
   // patio beach: sand, X marks the spot, a barrel and a treasure chest on the old bush spots, a palm, waves
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip();
   g.globalAlpha = 0.85;
@@ -3924,15 +3926,17 @@ function decorStone() {
   }
   // stone-wheel clock on the break room door frame (real time) and a mammoth tusk arch on the wall
   { const d = new Date(), mA = (d.getMinutes() + d.getSeconds() / 60) / 60 * TAU - Math.PI / 2, hA = ((d.getHours() % 12) + d.getMinutes() / 60) / 12 * TAU - Math.PI / 2;
-    C(598, 280, 10.5, '#57534e'); C(598, 280, 9, '#a8a29e'); C(598, 280, 7.2, '#d6d3d1');
-    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; L(598 + Math.cos(a) * 6.3, 280 + Math.sin(a) * 6.3, 598 + Math.cos(a) * 8.2, 280 + Math.sin(a) * 8.2, '#57534e', i % 3 ? 0.8 : 1.4); }
-    L(598, 280, 598 + Math.cos(hA) * 4, 280 + Math.sin(hA) * 4, '#3b2417', 1.6); L(598, 280, 598 + Math.cos(mA) * 6, 280 + Math.sin(mA) * 6, '#3b2417', 1.1); C(598, 280, 1.2, '#3b2417'); }
+    C(606, 293, 10.5, '#57534e'); C(606, 293, 9, '#a8a29e'); C(606, 293, 7.2, '#d6d3d1');
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; L(606 + Math.cos(a) * 6.3, 293 + Math.sin(a) * 6.3, 606 + Math.cos(a) * 8.2, 293 + Math.sin(a) * 8.2, '#57534e', i % 3 ? 0.8 : 1.4); }
+    L(606, 293, 606 + Math.cos(hA) * 4, 293 + Math.sin(hA) * 4, '#3b2417', 1.6); L(606, 293, 606 + Math.cos(mA) * 6, 293 + Math.sin(mA) * 6, '#3b2417', 1.1); C(606, 293, 1.2, '#3b2417'); }
   g.lineCap = 'round';
+  g.save(); g.translate(427, 92); g.scale(0.45, 0.45); g.translate(-372, -134);      // a small tusk arch in the gap between the arcade and the TV
   for (const d of [-1, 1]) {
     g.beginPath(); g.moveTo(372 + d * 22, 134); g.quadraticCurveTo(372 + d * 24, 100, 372 + d * 3, 106);
     g.strokeStyle = '#f5f0e1'; g.lineWidth = 4.2; g.stroke(); g.strokeStyle = '#d6c3a1'; g.lineWidth = 1; g.stroke();
   }
   C(372, 110, 2, '#a16207'); L(372, 112, 372, 120, '#a16207', 1);
+  g.restore();
   // patio: a jungle clearing. Grass and mud, footprints, big ferns, the egg nest, the campfire, the cycad
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip();
   g.globalAlpha = 0.55;
@@ -3973,7 +3977,7 @@ function decorHorror() {
       poly([bx - 6, by - f, bx, by, bx + 6, by - f, bx, by + 2], '#000'); }
   });
   for (const [cx, cy, a0] of [[24, 24, 0], [611, 24, Math.PI / 2], [644, 24, 0], [971, 24, Math.PI / 2], [984, 24, 0], [1286, 24, Math.PI / 2], [1304, 24, 0], [1591, 24, Math.PI / 2]]) web(cx, cy, a0);
-  for (const [px, py] of [[44, 300], [300, 600], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
+  for (const [px, py] of [[44, 340], [300, 600], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip(); g.globalAlpha = 0.2;
   for (let i = 0; i < 4; i++) E(((T * 8 + i * 90) % 400) - 40, 860 + i * 18, 80, 12, '#e9e3ff');
   g.restore(); g.globalAlpha = 1;
@@ -4256,7 +4260,7 @@ function idleTick(w, dt, t) {
   } else if (a === 'nap' && Math.random() < dt * 0.6) puff(w.x - 16, w.y - 18, { kind: 'text', text: 'Z', vx: 6, vy: -14, life: 2, color: '#fff', font: 'bold 12px system-ui' });
   else if (a === 'coffee' && Math.random() < dt * 2) puff(111 + rand(-3, 3), 82, { vy: -14, grow: 2, life: 1.4, size: 1.6, color: 'rgba(255,255,255,.5)' });
   else if (a === 'micro' && Math.random() < dt * 0.1) puff(183, 72, { kind: 'text', text: 'DING!', vy: -12, life: 1.2, color: '#ffd23f', font: 'bold 11px system-ui' });
-  else if (a === 'vend' && Math.random() < dt * 0.08) puff(475, 60, { kind: 'text', text: '*thunk*', vy: -10, life: 1.2, color: '#fff', font: 'italic 10px system-ui' });
+  else if (a === 'vend' && Math.random() < dt * 0.08) puff(315, 60, { kind: 'text', text: '*thunk*', vy: -10, life: 1.2, color: '#fff', font: 'italic 10px system-ui' });
   else if (a === 'pool') { const p = t % 7, prev = (t - dt) % 7; if (prev < 6.3 && p >= 6.3) strikePool(); }
   else if (a === 'cooler' && Math.random() < dt * 1.5) puff(270 + rand(-4, 4), 398, { vy: -10, life: 0.8, size: 1.2, color: 'rgba(255,255,255,.8)' });
 }
@@ -4418,8 +4422,10 @@ function drawDuck() {
   poly([x - 3, y - 4, x + 3, y - 4, x + 4, y + 10, x, y + 14, x - 4, y + 10], '#2f6fd6');
   g.beginPath(); g.arc(x, y - 18, 17, Math.PI * 1.1, Math.PI * 1.9); g.strokeStyle = '#333'; g.lineWidth = 2; g.stroke();
   E(x - 16, y - 16, 3, 5, '#333'); L(x - 16, y - 12, x - 8, y - 9, '#333', 1.4);
+  const sk = roomSkin('trouble'); if (sk && sk.duck) sk.duck(x, y);
 }
 function drawTellerCounter() {
+  const sk = roomSkin('trouble'); if (sk && sk.counter) return sk.counter();
   g.fillStyle = 'rgba(190,225,240,.30)'; g.fillRect(1000, 96, 260, 86);
   for (const xx of [1000, 1065, 1195, 1260]) L(xx, 96, xx, 182, '#8aa4b3', 3);
   L(1000, 96, 1260, 96, '#8aa4b3', 3);
@@ -4432,13 +4438,13 @@ function drawTellerCounter() {
 }
 // break room furniture that people can be in front of / behind
 function drawCouch() {
-  RR(272, 222, 156, 36, 8, '#3f6d8e'); RR(266, 226, 14, 32, 6, '#355d7a'); RR(420, 226, 14, 32, 6, '#355d7a');
-  L(325, 226, 325, 254, 'rgba(0,0,0,.15)', 1.5); L(375, 226, 375, 254, 'rgba(0,0,0,.15)', 1.5);
+  RR(442, 222, 156, 36, 8, '#3f6d8e'); RR(436, 226, 14, 32, 6, '#355d7a'); RR(590, 226, 14, 32, 6, '#355d7a');
+  L(495, 226, 495, 254, 'rgba(0,0,0,.15)', 1.5); L(545, 226, 545, 254, 'rgba(0,0,0,.15)', 1.5);
 }
 function drawDiningTable() {
-  RR(70, 276, 132, 26, 6, '#a87b4f'); R(74, 302, 124, 6, '#8a6340'); R(80, 306, 5, 18, '#6b4b30'); R(187, 306, 5, 18, '#6b4b30');
-  RR(98, 280, 34, 18, 2, '#f5f0e6'); C(115, 289, 7, '#f3c26b'); C(112, 287, 1.2, '#c0392b'); C(118, 291, 1.2, '#c0392b'); C(116, 286, 1, '#2e7d32');
-  RR(150, 282, 7, 11, 2, '#e74c3c'); RR(162, 284, 7, 11, 2, '#3498db'); RR(176, 286, 14, 6, 1, '#fff');
+  RR(70, 316, 132, 26, 6, '#a87b4f'); R(74, 342, 124, 6, '#8a6340'); R(80, 346, 5, 18, '#6b4b30'); R(187, 346, 5, 18, '#6b4b30');
+  RR(98, 320, 34, 18, 2, '#f5f0e6'); C(115, 329, 7, '#f3c26b'); C(112, 327, 1.2, '#c0392b'); C(118, 331, 1.2, '#c0392b'); C(116, 326, 1, '#2e7d32');
+  RR(150, 322, 7, 11, 2, '#e74c3c'); RR(162, 324, 7, 11, 2, '#3498db'); RR(176, 326, 14, 6, 1, '#fff');
 }
 const POOL = { balls: [] };
 (function () {
@@ -4478,6 +4484,7 @@ function drawPingPongBall() {
 }
 
 function drawMeetingTable() {
+  const sk = roomSkin('meeting'); if (sk && sk.table) return sk.table();
   RR(375, 764, 190, 62, 12, '#8a5a36'); RR(381, 768, 178, 52, 9, '#9c6a42');
   for (const [x, y] of [[410, 778], [470, 776], [530, 778], [420, 810], [520, 810]]) RR(x - 5, y - 4, 10, 7, 1, '#fffef5');
   RR(462, 800, 7, 8, 2, '#fff', '#999', 0.8); RR(492, 786, 7, 8, 2, '#d97757');
@@ -4503,6 +4510,521 @@ function drawWhiteboard() {
 }
 
 // ============================================================================================
+// Themed rooms: the troubleshooting room, the meeting room and the mailroom follow the theme
+// ============================================================================================
+// A theme's optional `rooms` field is {trouble, meeting, mail}; each entry may have
+//   back()      baked into the static background: floor, walls, sign, wall decor (drawStatic)
+//   fx()        animated wall/floor extras drawn every frame under the furniture (drawDynamicBg)
+//   counter()   replaces drawTellerCounter()  (trouble)    table()  replaces drawMeetingTable()  (meeting)
+//   duck(x, y)  an accessory on the rubber duck (trouble)
+// A theme or room without an entry keeps the Classic look. Furniture footprints (FURNITURE) never
+// change here, so pathing and the spots where people stand or sit are the same in every theme.
+const ROOM_BOX = { trouble: [980, 24, 1286, 296], meeting: [322, 634, 611, 936], mail: [1294, 24, 1591, 296] };
+function roomSkin(kind) { const r = THEMES[THEME].rooms; return r && r[kind]; }
+function roomShell(kind, wallC, floorC, floorFn) {          // repaint a room's wall band and floor inside its walls
+  const [x0, y0, x1, y1] = ROOM_BOX[kind], wb = kind === 'meeting' ? 690 : 95, w = x1 - x0;
+  R(x0, y0, w, wb - y0, wallC); R(x0, wb, w, y1 - wb, floorC);
+  if (floorFn) floorFn(x0, wb, w, y1 - wb);
+  R(x0, wb - 3, w, 3, 'rgba(0,0,0,.28)');
+}
+const fGrid = (c, s = 24) => (x, y, w, h) => { for (let i = x; i <= x + w; i += s) L(i, y, i, y + h, c, 1); for (let j = y; j <= y + h; j += s) L(x, j, x + w, j, c, 1); };
+const fPlanks = (c, s = 14) => (x, y, w, h) => { for (let j = y, k = 0; j < y + h; j += s, k++) { L(x, j, x + w, j, c, 1); for (let i = x + (k % 3) * 40 + 20; i < x + w; i += 120) L(i, j, i, j + s, c, 1); } };
+const fCheck = (c, s = 24) => (x, y, w, h) => { for (let i = 0; i * s < w; i++) for (let j = 0; j * s < h; j++) if ((i + j) % 2) R(x + i * s, y + j * s, Math.min(s, w - i * s), Math.min(s, h - j * s), c); };
+const fRocks = () => (x, y, w, h) => { for (let i = 0; i < 34; i++) E(x + hh(i * 3 + 1) % w, y + hh(i * 3 + 2) % h, 3 + hh(i) % 5, 2 + hh(i + 7) % 3, i % 2 ? 'rgba(0,0,0,.13)' : 'rgba(255,255,255,.05)'); };
+function roomSign(cx, cy, w, h, lines, bg, fg, edge, size) {
+  RR(cx - w / 2, cy - h / 2, w, h, 4, bg, edge, 1.5);
+  lines.forEach((t, i) => TXT(t, cx, cy + (i - (lines.length - 1) / 2) * (size + 1.5), 'bold ' + size + 'px system-ui', fg));
+}
+function seatsOf(fn) { for (const s of SEATS) fn(s.x, s.y); }
+const chairOf = (top, leg) => (x, y) => { RR(x - 9, y - 13, 18, 6, 2, top); R(x - 8, y - 7, 3, 8, leg); R(x + 5, y - 7, 3, 8, leg); };
+function cornersOf(fn) { fn(336, 930, 0); fn(600, 930, 1); }
+function counterBase(top, front, trim, plate, label, labelC, mark, markC) {   // the help desk counter, same footprint as Classic
+  RR(1110, 168, 40, 12, 6, 'rgba(0,0,0,.25)');
+  R(996, 182, 268, 10, top); R(1000, 192, 260, 34, front); L(1000, 192, 1260, 192, trim, 2);
+  TXT(mark, 1032, 209, 'bold 16px system-ui', markC); TXT(mark, 1228, 209, 'bold 16px system-ui', markC);
+  RR(1100, 198, 60, 20, 3, plate); TXT(label, 1130, 208, 'bold 11px system-ui', labelC);
+}
+function flame(x, y, s, t) {                                   // a flickering fire tongue with its base at x, y
+  const k = 1 + Math.sin(t * 11 + x) * 0.15;
+  g.globalAlpha = 0.22; C(x, y - 5 * s, 9 * s, '#fbbf24'); g.globalAlpha = 1;
+  E(x, y - 5 * s, 4 * s, 8 * s * k, '#f97316'); E(x, y - 4 * s, 2.4 * s, 5 * s * k, '#fde047');
+}
+function logScreen(x, y, w, h, c1, c2, bg) {                   // a monitor with scrolling lines
+  RR(x, y, w, h, 3, bg, '#475569', 2);
+  g.save(); g.beginPath(); g.rect(x + 3, y + 3, w - 6, h - 6); g.clip();
+  for (let k = 0; k < 7; k++) R(x + 5, y + 3 + ((k * 7 + T * 9) % (h - 4)), 8 + hh(k + x) % (w - 20), 2, k % 3 ? c1 : c2);
+  g.restore();
+}
+const mailCells = (cell, item) => { for (let r = 0; r < 4; r++) for (let c = 0; c < 10; c++) { const x = 1334 + c * 23.6, y = 56 + r * 23.2; R(x, y, 20, 19, cell); if (hh(r * 10 + c) % 3 === 0) item(x, y, hh(c + r)); } };
+
+// ---- Dev Shop: on-call war room, stand-up, merge queue ----------------------------------
+THEMES.dev.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#1a2130', '#252d3d', fGrid('rgba(255,255,255,.05)'));
+      R(980, 24, 306, 3, '#7f1d1d');
+      roomSign(1130, 36, 200, 24, ['ON-CALL WAR ROOM'], '#0b1220', '#fca5a5', '#ef4444', 12);
+      RR(988, 54, 66, 34, 3, '#0b1220', '#334155', 1.5); TXT('SEV-1', 1021, 65, 'bold 11px monospace', '#ef4444'); TXT('3 pages', 1021, 79, '8px monospace', '#94a3b8');
+      RR(1168, 52, 114, 38, 3, '#06101c', '#334155', 1.5); L(1174, 84, 1276, 84, '#1e293b', 1);
+      RR(1252, 206, 22, 40, 3, '#c0392b'); R(1256, 214, 14, 6, '#fff');
+    },
+    fx() {
+      const on = Math.sin(T * 6) > 0;                                   // the red alert lamps
+      for (const lx of [1008, 1252]) { if (on) { g.globalAlpha = 0.35; C(lx, 36, 13, '#ef4444'); g.globalAlpha = 1; } RR(lx - 6, 30, 12, 12, 5, on ? '#ff3b3b' : '#7f1d1d'); }
+      g.beginPath(); g.moveTo(1174, 80);                                // incident graph with a spike
+      for (let i = 0; i <= 12; i++) g.lineTo(1174 + i * 8.5, 73 - Math.sin(T * 2 + i * 1.3) * 6 - (i === Math.floor(T * 3) % 13 ? 12 : 0));
+      g.strokeStyle = '#f87171'; g.lineWidth = 1.5; g.stroke();
+    },
+    counter() {
+      counterBase('#3c485e', '#2a3344', '#ef4444', '#111827', 'HELP', '#fca5a5', '!', '#ef4444');
+      for (const mx of [1010, 1186]) { logScreen(mx, 120, 64, 46, '#4ade80', '#f87171', '#0b1220'); R(mx + 28, 166, 8, 14, '#475569'); R(mx + 18, 178, 28, 4, '#475569'); }
+    },
+    duck(x, y) { RR(x + 9, y + 2, 8, 7, 1, '#111827'); C(x + 13, y + 5, 1.5, Math.sin(T * 8) > 0 ? '#ef4444' : '#450a0a'); },   // a pager on its chest
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#dfe6f0', '#46526b', fGrid('rgba(255,255,255,.05)', 22));
+      R(322, 680, 289, 10, '#b9c2d3');
+      roomSign(347, 659, 34, 34, ['STAND', 'UP'], '#1e293b', '#a5f3fc', '#0ea5e9', 6.5);
+      RR(577, 638, 33, 48, 2, '#fff', '#94a3b8', 1.5);                  // a tiny kanban board
+      ['#f87171', '#fbbf24', '#4ade80'].forEach((c, i) => { R(579 + i * 10.4, 640, 9.5, 4, c); for (let k = 0; k < 3 - i; k++) R(580 + i * 10.4, 647 + k * 11, 8, 8, ['#fde047', '#f9a8d4', '#86efac'][(i + k) % 3]); });
+      seatsOf(chairOf('#0f766e', '#134e4a'));
+      plant(600, 930, 0.9); plant(336, 930, 0.9);
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#aeb8c8'); RR(381, 768, 178, 52, 9, '#d6dbe4');
+      for (const [x, y] of [[410, 778], [470, 776], [530, 778], [420, 810], [520, 810]]) { RR(x - 10, y - 5, 20, 12, 1.5, '#1f2937'); R(x - 8, y - 3, 16, 7, '#38bdf8'); }
+      [[440, 795, '#fde047'], [455, 800, '#f9a8d4'], [490, 796, '#86efac'], [505, 803, '#fde047'], [472, 812, '#f9a8d4']].forEach(([x, y, c]) => R(x, y, 8, 8, c));   // sticky notes
+      RR(542, 796, 7, 8, 2, '#fff', '#999', 0.8); RR(398, 794, 7, 8, 2, '#d97757');
+      R(380, 826, 6, 12, '#64748b'); R(554, 826, 6, 12, '#64748b');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#1b2536', '#33415a', fGrid('rgba(255,255,255,.05)', 30));
+      roomSign(1450, 35, 228, 22, ['MERGE QUEUE · WAITING ON YOU'], '#0f172a', '#86efac', '#22c55e', 11);
+      RR(1330, 52, 240, 98, 3, '#0f172a');
+      mailCells('#1e293b', (x, y, h) => { RR(x + 2, y + 8, 16, 10, 1, '#f8fafc'); R(x + 4, y + 10, 12, 2, ['#22c55e', '#f59e0b', '#ef4444'][h % 3]); R(x + 4, y + 14, 8, 2, '#94a3b8'); });   // PR envelopes
+      RR(1299, 56, 22, 44, 4, '#0b1220', '#475569', 1);                  // CI status light housing
+      R(1320, 150, 260, 10, '#475569'); R(1322, 160, 256, 22, '#1e293b'); TXT('main ← PR', 1450, 173, 'bold 9px monospace', '#4ade80'); RR(1442, 142, 16, 8, 3, '#22c55e');
+      RR(1540, 250, 44, 34, 4, '#334155'); RR(1544, 244, 36, 10, 2, '#e2e8f0'); TXT('DRAFTS', 1562, 270, 'bold 7px system-ui', '#94a3b8');
+    },
+    fx() {                                                              // the CI light cycles red / amber / green
+      const a = Math.floor(T / 1.5) % 3;
+      ['#ef4444', '#f59e0b', '#22c55e'].forEach((c, i) => { if (i === a) { g.globalAlpha = 0.4; C(1310, 66 + i * 14, 9, c); g.globalAlpha = 1; } C(1310, 66 + i * 14, 4.5, i === a ? c : shade(c, -0.6)); });
+    },
+  },
+};
+
+// ---- Sci-Fi Station: repair bay, holo bridge, cargo teleporter ---------------------------
+THEMES.scifi.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#18213d', '#222c47', fGrid('rgba(120,200,255,.08)', 20));
+      R(980, 88, 306, 7, '#facc15'); for (let x = 984; x < 1286; x += 14) poly([x, 88, x + 6, 88, x + 2, 95, x - 4, 95], '#111827');
+      roomSign(1130, 36, 200, 24, ['REPAIR BAY'], '#0b1026', '#67e8f9', '#22d3ee', 14);
+      RR(988, 52, 56, 30, 3, '#06101c', '#64748b', 1.5);
+      RR(1190, 50, 72, 34, 2, '#0b1026', '#64748b', 2);                  // the open panel
+      L(1198, 78, 1214, 62, '#f87171', 1.2); L(1214, 62, 1230, 76, '#60a5fa', 1.2); L(1230, 76, 1250, 58, '#facc15', 1.2);
+      RR(1252, 206, 22, 40, 6, '#0ea5e9'); R(1256, 214, 14, 6, '#fff');
+    },
+    fx() {
+      g.beginPath(); g.moveTo(992, 68);
+      for (let i = 1; i <= 12; i++) { const ph = (i + T * 6) % 12; g.lineTo(992 + i * 4, 70 - (ph < 1.5 ? 12 : 0) + Math.sin(i + T)); }
+      g.strokeStyle = '#4ade80'; g.lineWidth = 1.2; g.stroke();
+      if (Math.sin(T * 7) + Math.sin(T * 3.1) > 1.2) for (let i = 0; i < 5; i++) { const a = (hh(i + Math.floor(T * 10)) % 628) / 100; L(1214, 62, 1214 + Math.cos(a) * 9, 62 + Math.sin(a) * 9, '#fde047', 1.2); }   // sparks
+    },
+    counter() {
+      counterBase('#5b6ba0', '#2a3558', '#22d3ee', '#0b1026', 'FIX', '#67e8f9', '!', '#67e8f9');
+      g.globalAlpha = 0.1; R(1000, 96, 260, 86, '#7dd3fc'); g.globalAlpha = 1;      // a force field instead of glass
+      for (const xx of [1000, 1065, 1195, 1260]) L(xx, 96, xx, 182, '#22d3ee', 2);
+      L(1000, 96, 1260, 96, '#22d3ee', 2);
+      const sy = 96 + (T * 30) % 86; g.globalAlpha = 0.3; L(1000, sy, 1260, sy, '#a5f3fc', 1.5); g.globalAlpha = 1;
+      L(1012, 176, 1040, 168, '#9ca3af', 3); C(1042, 167, 4, '#9ca3af');
+    },
+    duck(x, y) { g.globalAlpha = 0.2; C(x, y - 16, 21, '#cfe8ff'); g.globalAlpha = 1; g.beginPath(); g.arc(x, y - 16, 21, 0, TAU); g.strokeStyle = '#e6eef7'; g.lineWidth = 1.6; g.stroke(); },   // a space helmet
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#141c36', '#1d2746', fGrid('rgba(103,232,249,.1)', 22));
+      roomSign(347, 659, 34, 34, ['BRIDGE'], '#0b1026', '#67e8f9', '#22d3ee', 6.5);
+      C(592, 662, 17, '#0b1026'); for (let i = 0; i < 9; i++) C(582 + hh(i) % 20, 652 + hh(i + 9) % 20, 0.8, '#fff');   // viewport
+      g.beginPath(); g.arc(592, 662, 17, 0, TAU); g.strokeStyle = '#94a3b8'; g.lineWidth = 3; g.stroke();
+      seatsOf(chairOf('#0e7490', '#164e63'));
+      cornersOf((x, y) => { RR(x - 7, y - 12, 14, 12, 3, '#334155'); C(x, y - 18, 7, '#22d3ee'); C(x - 2, y - 20, 2, '#cffafe'); });
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#2b3655'); RR(381, 768, 178, 52, 9, '#0f172a', '#22d3ee', 1.5);
+      for (const [x, y] of [[410, 778], [470, 776], [530, 778], [420, 810], [520, 810]]) RR(x - 6, y - 3, 12, 6, 1, 'rgba(34,211,238,.5)');
+      E(470, 796, 60, 17, 'rgba(34,211,238,.18)');
+      g.globalAlpha = 0.14; poly([452, 796, 488, 796, 482, 772, 458, 772], '#67e8f9'); g.globalAlpha = 1;
+      const a = T * 1.2;                                                  // the holo planet
+      C(470, 784, 9, '#3b82f6'); C(467, 781, 4, 'rgba(255,255,255,.35)');
+      g.beginPath(); g.ellipse(470, 784, 17, 5, -0.4 + Math.sin(a) * 0.15, 0, TAU); g.strokeStyle = '#a5f3fc'; g.lineWidth = 1.2; g.stroke();
+      C(470 + Math.cos(a * 2) * 17, 784 + Math.sin(a * 2) * 5, 1.8, '#fde047');
+      R(380, 826, 6, 12, '#334155'); R(554, 826, 6, 12, '#334155');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#17213c', '#252f4d', fGrid('rgba(120,200,255,.08)', 30));
+      roomSign(1450, 35, 228, 22, ['CARGO TELEPORT · WAITING ON YOU'], '#0b1026', '#67e8f9', '#22d3ee', 10);
+      RR(1330, 52, 240, 98, 3, '#0b1026');
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 10; c++) {         // cargo pods
+        const x = 1334 + c * 23.6, y = 56 + r * 23.2; RR(x, y, 20, 19, 5, '#1e293b', '#334155', 1);
+        if (hh(r * 10 + c) % 3 === 0) { RR(x + 4, y + 5, 12, 9, 3, '#0e7490'); C(x + 10, y + 9.5, 2.2, ['#22d3ee', '#f472b6', '#facc15'][hh(c + r) % 3]); }
+      }
+      R(1320, 150, 260, 10, '#64748b'); R(1322, 160, 256, 22, '#1e293b'); L(1330, 171, 1570, 171, '#22d3ee', 1.5); C(1450, 147, 5, '#22d3ee');
+      E(1562, 272, 24, 10, '#1e293b'); g.beginPath(); g.ellipse(1562, 270, 22, 8, 0, 0, TAU); g.strokeStyle = '#22d3ee'; g.lineWidth = 2; g.stroke();   // teleporter pad
+    },
+    fx() {
+      const p = (T * 0.8) % 1;
+      g.globalAlpha = 0.16; poly([1544, 270, 1580, 270, 1574, 238, 1550, 238], '#67e8f9'); g.globalAlpha = 1;
+      g.beginPath(); g.ellipse(1562, 270, 22 * p, 8 * p, 0, 0, TAU); g.strokeStyle = 'rgba(165,243,252,' + (1 - p) + ')'; g.lineWidth = 1.5; g.stroke();
+      RR(1556, 258 - Math.sin(T * 2) * 4, 12, 9, 2, '#0e7490', '#67e8f9', 1);
+    },
+  },
+};
+
+// ---- Haunted House: seance, banquet, raven post ------------------------------------------
+THEMES.horror.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#231531', '#150d1f', fCheck('rgba(255,255,255,.04)', 24));
+      g.beginPath(); g.arc(1130, 262, 30, 0, TAU); g.strokeStyle = 'rgba(168,85,247,.35)'; g.lineWidth = 1.2; g.stroke();     // a pentagram on the floor
+      g.beginPath(); for (let i = 0; i <= 5; i++) { const an = -Math.PI / 2 + ((i * 2) % 5) * TAU / 5; g.lineTo(1130 + Math.cos(an) * 30, 262 + Math.sin(an) * 30); } g.stroke();
+      web(984, 28, 0); web(1282, 28, Math.PI / 2);
+      roomSign(1130, 36, 200, 24, ['SEANCE DESK'], '#120a1c', '#c084fc', '#7e22ce', 14);
+      RR(996, 54, 40, 34, 2, '#2a1a10', '#7c5a2a', 2); RR(1000, 58, 32, 26, 1, '#3b2a40');
+      for (const bx of [1200, 1236, 1262]) poly([bx - 7, 62, bx, 66, bx + 7, 62, bx + 4, 72, bx, 69, bx - 4, 72], '#0b0612');
+      RR(1252, 214, 22, 32, 8, '#22c55e'); R(1258, 204, 10, 10, '#a3e635');          // a potion jar
+    },
+    fx() { for (const ex of [1010, 1022]) { E(ex, 69, 3, 2, '#fde68a'); C(ex + Math.sin(T * 0.8) * 1.6, 69, 1, '#111'); } },   // the portrait's eyes follow nobody in particular
+    counter() {
+      counterBase('#2a1a3d', '#3b2457', '#a855f7', '#120a1c', 'HELP', '#c084fc', '?', '#7e22ce');
+      R(1000, 96, 260, 7, '#4c1d95'); for (let x = 1008; x < 1260; x += 16) C(x, 103, 8, '#4c1d95');     // curtain valance
+      for (const cx of [1030, 1240]) { RR(cx - 4, 160, 8, 22, 2, '#f5f0e1'); flame(cx, 158, 0.9, T); }
+      RR(1181, 172, 18, 10, 3, '#3b2457'); C(1190, 164, 10, 'rgba(167,139,250,.55)'); C(1186, 160, 3, 'rgba(255,255,255,.5)');   // crystal ball
+      C(1190 + Math.sin(T * 2) * 3, 164 + Math.cos(T * 2.3) * 3, 2.5, 'rgba(236,72,153,.7)');
+      RR(1075, 172, 9, 12, 1, '#fef3c7', '#b45309', 0.8);
+    },
+    duck(x, y) { E(x, y - 31, 15, 3.5, '#1c1328'); poly([x - 8, y - 31, x + 8, y - 31, x + 3, y - 50, x - 1, y - 52], '#1c1328'); R(x - 8, y - 35, 16, 3, '#f28c28'); },
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#1f1230', '#160d22', fCheck('rgba(255,255,255,.035)', 22));
+      R(400, 694, 140, 238, 'rgba(127,29,29,.45)');                      // red runner
+      web(326, 638, 0); web(607, 638, Math.PI / 2); web(326, 932, -Math.PI / 2); web(607, 932, Math.PI);
+      roomSign(347, 659, 34, 34, ['HAUNTED', 'HALL'], '#120a1c', '#c084fc', '#7e22ce', 6);
+      RR(577, 638, 32, 48, 2, '#7f1d1d'); for (let i = 0; i < 5; i++) L(581 + i * 6, 640, 581 + i * 6, 684, 'rgba(0,0,0,.3)', 1.5);   // drapes
+      seatsOf(chairOf('#5b1414', '#2a0a0a'));
+      cornersOf((x, y) => { R(x - 7, y - 10, 14, 10, '#3f3f46'); C(x, y - 15, 6, '#e5e7eb'); C(x - 2, y - 15, 1.3, '#111'); C(x + 2, y - 15, 1.3, '#111'); });
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#2a0f10'); RR(381, 768, 178, 52, 9, '#1b1024', '#7f1d1d', 1.5); R(385, 792, 170, 6, '#7f1d1d');
+      for (const [x, y] of [[410, 778], [470, 776], [530, 778], [420, 810], [520, 810]]) { C(x, y, 7, '#cbd5e1'); C(x, y, 4.5, '#94a3b8'); }
+      for (const cx of [430, 470, 510]) { R(cx - 1, 774, 2, 18, '#a3a3a3'); RR(cx - 4, 768, 8, 8, 2, '#f5f0e1'); flame(cx, 768, 0.7, T); }
+      RR(496, 800, 6, 9, 2, '#9f1239'); RR(444, 806, 6, 9, 2, '#9f1239');
+      R(380, 826, 6, 12, '#111'); R(554, 826, 6, 12, '#111');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#1e1230', '#130b1f', fCheck('rgba(255,255,255,.035)', 30));
+      web(1298, 28, 0); web(1587, 28, Math.PI / 2);
+      roomSign(1450, 35, 228, 22, ['RAVEN POST · WAITING ON YOU'], '#120a1c', '#c084fc', '#7e22ce', 11);
+      RR(1330, 52, 240, 98, 3, '#2a1a10');
+      mailCells('#0c0610', (x, y, h) => { RR(x + 2, y + 8, 16, 10, 1, '#0b0b12', '#555', 0.8); if (h % 2) C(x + 10, y + 13, 2.2, '#b91c1c'); });   // black wax seals
+      R(1320, 150, 260, 10, '#3b2a1a'); R(1322, 160, 256, 22, '#241709'); C(1450, 147, 5, '#e5e7eb');
+      poly([1552, 246, 1572, 246, 1581, 258, 1572, 284, 1552, 284, 1543, 258], '#3b2412');                 // the coffin-shaped mail crate
+      poly([1556, 250, 1568, 250, 1575, 259, 1568, 280, 1556, 280, 1549, 259], '#4a2e18'); L(1562, 254, 1562, 274, '#d4af37', 1.5); L(1555, 262, 1569, 262, '#d4af37', 1.5);
+    },
+    fx() {                                                              // two ravens on the counter
+      for (const [x, ph] of [[1380, 0], [1522, 2]]) {
+        const hb = Math.sin(T * 1.7 + ph) > 0.7 ? 2 : 0;
+        E(x, 142, 9, 6, '#0b0b12'); poly([x - 8, 141, x - 16, 146, x - 8, 145], '#0b0b12'); C(x + 7, 136 + hb, 4, '#0b0b12');
+        poly([x + 10, 136 + hb, x + 15, 138 + hb, x + 10, 139 + hb], '#f59e0b'); C(x + 8, 135 + hb, 0.8, '#fde047');
+        L(x - 2, 147, x - 2, 150, '#f59e0b', 1); L(x + 3, 147, x + 3, 150, '#f59e0b', 1);
+      }
+    },
+  },
+};
+
+// ---- Neon City: hacker den, holo-conference, drone drop-off ------------------------------
+THEMES.cyber.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#0d0a1f', '#15112c', fGrid('rgba(255,43,214,.12)'));
+      R(980, 24, 306, 2, '#22d3ee');
+      roomSign(1130, 36, 200, 24, ['TROUBLESHOOTING'], '#05030f', '#22d3ee', '#ff2bd6', 14);
+      RR(990, 54, 50, 34, 2, '#02050a', '#22d3ee', 1);
+      RR(1252, 206, 22, 40, 3, '#1a1433', '#ff2bd6', 1.5); R(1256, 214, 14, 6, '#22d3ee');
+    },
+    fx() {
+      neonSign('RTFM', 1215, 72, '#ff2bd6', true);
+      g.save(); g.beginPath(); g.rect(992, 56, 46, 30); g.clip();
+      for (let k = 0; k < 6; k++) R(996, 58 + ((k * 6 + T * 8) % 30), 8 + hh(k) % 28, 2, '#22d3ee');
+      g.restore();
+    },
+    counter() {
+      counterBase('#2b2150', '#1a1433', '#22d3ee', '#05030f', 'HELP', '#ff2bd6', '>_', '#22d3ee');
+      g.globalAlpha = 0.1; R(1000, 96, 260, 86, '#22d3ee'); g.globalAlpha = 1;
+      L(1000, 96, 1260, 96, '#ff2bd6', 2);
+      for (const mx of [1008, 1190]) { logScreen(mx, 122, 62, 44, '#22d3ee', '#ff2bd6', '#02050a'); R(mx + 26, 166, 10, 12, '#334155'); RR(mx + 8, 176, 46, 6, 2, '#1f2937'); }
+    },
+    duck(x, y) { RR(x - 12, y - 25, 24, 6, 3, '#0b1020'); g.globalAlpha = 0.5; RR(x - 12.5, y - 25.5, 25, 7, 3, '#ff2bd6'); g.globalAlpha = 1; L(x - 8, y - 22, x + 8, y - 22, '#22d3ee', 0.9); },
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#0d0a1f', '#120e27', fGrid('rgba(34,211,238,.13)', 22));
+      R(322, 636, 289, 2, '#ff2bd6');
+      roomSign(347, 659, 34, 34, ['MEETING', 'ROOM'], '#05030f', '#22d3ee', '#ff2bd6', 6);
+      RR(577, 640, 32, 44, 2, '#0a0618', '#3b2a5a', 1.5);
+      for (let b = 0; b < 4; b++) { const bh = 10 + hh(b + 3) % 24; R(579 + b * 7.5, 683 - bh, 7, bh, b % 2 ? '#1a1033' : '#241548'); R(581 + b * 7.5, 686 - bh, 2, 2, b % 2 ? '#ff2bd6' : '#22d3ee'); }
+      seatsOf(chairOf('#7c3aed', '#22d3ee'));
+      plant(600, 930, 0.9); plant(336, 930, 0.9);
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#0b0b1a');
+      g.globalAlpha = 0.6 + Math.sin(T * 3) * 0.3; RR(375, 764, 190, 62, 12, null, '#22d3ee', 2.5); g.globalAlpha = 1;   // a pulsing neon edge
+      RR(381, 768, 178, 52, 9, '#161232', '#ff2bd6', 1);
+      g.globalAlpha = 0.2; E(470, 797, 50, 14, '#22d3ee'); g.globalAlpha = 1;
+      const a = T * 1.5, ring = yy => { g.beginPath(); for (let i = 0; i <= 6; i++) { const an = a + i * Math.PI / 3; g.lineTo(470 + Math.cos(an) * 16, yy + Math.sin(an) * 5); } g.strokeStyle = '#67e8f9'; g.lineWidth = 1.2; g.stroke(); };
+      ring(776); ring(800);                                               // a spinning holo prism
+      for (let i = 0; i < 6; i++) { const an = a + i * Math.PI / 3; L(470 + Math.cos(an) * 16, 776 + Math.sin(an) * 5, 470 + Math.cos(an) * 16, 800 + Math.sin(an) * 5, 'rgba(255,43,214,.6)', 1); }
+      for (const [x, y] of [[410, 778], [530, 778], [420, 810], [520, 810]]) { g.globalAlpha = 0.5; E(x, y, 8, 3, '#22d3ee'); g.globalAlpha = 1; }
+      R(380, 826, 6, 12, '#1f2937'); R(554, 826, 6, 12, '#1f2937');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#0d0a1f', '#15112c', fGrid('rgba(255,43,214,.12)', 30));
+      R(1294, 24, 297, 2, '#ff2bd6');
+      roomSign(1450, 35, 228, 22, ['DRONE DROP · WAITING ON YOU'], '#05030f', '#22d3ee', '#ff2bd6', 11);
+      RR(1330, 52, 240, 98, 3, '#05030f', '#3b2a5a', 1);
+      mailCells('#120e27', (x, y, h) => { L(x + 4, y + 8, x + 16, y + 8, '#475569', 2); C(x + 10, y + 8, 2.5, '#7c3aed'); RR(x + 6, y + 11, 8, 5, 1, h % 2 ? '#22d3ee' : '#ff2bd6'); });   // drone docks with glowing parcels
+      R(1320, 150, 260, 10, '#2b2150'); R(1322, 160, 256, 22, '#1a1433'); L(1322, 160, 1578, 160, '#22d3ee', 1.5);
+      RR(1380, 138, 14, 12, 2, '#22d3ee'); RR(1500, 140, 12, 10, 2, '#ff2bd6'); C(1450, 147, 5, '#ff2bd6');
+      RR(1538, 244, 48, 40, 6, '#1a1433', '#22d3ee', 1.5); TXT('H', 1562, 270, 'bold 16px system-ui', '#ff2bd6');
+    },
+    fx() {                                                              // a drone hovering over the landing pad with a parcel
+      const y = 256 + Math.sin(T * 2) * 3, f = Math.abs(Math.sin(T * 30)) * 1.5 + 0.3;
+      g.globalAlpha = 0.25; E(1562, 272, 18, 5, '#22d3ee'); g.globalAlpha = 1;
+      RR(1553, y - 3, 18, 6, 3, '#7c3aed'); for (const dx of [-9, 9]) L(1562 + dx - 5, y - 5, 1562 + dx + 5, y - 5, '#a5f3fc', f);
+      RR(1557, y + 4, 10, 7, 1, '#22d3ee');
+    },
+  },
+};
+
+// ---- North Pole: toy repair, Naughty-or-Nice list, letters to Santa ----------------------
+THEMES.xmas.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#8f2a2a', '#c7a77a', fPlanks('rgba(80,50,20,.25)'));
+      for (let x = 984; x < 1286; x += 20) R(x, 24, 8, 71, 'rgba(255,255,255,.07)');
+      roomSign(1130, 38, 200, 24, ['ELF TROUBLESHOOTING'], '#14532d', '#fef3c7', '#facc15', 12);
+      RR(988, 54, 62, 38, 2, '#a16207', '#7c4a1e', 1.5);                // pegboard of tools
+      L(996, 82, 1008, 64, '#e5e7eb', 2); R(1002, 60, 12, 5, '#9ca3af'); L(1018, 64, 1018, 86, '#e5e7eb', 2.5); C(1018, 64, 4, '#e5e7eb'); poly([1028, 72, 1046, 72, 1046, 82, 1028, 78], '#cbd5e1');
+      R(1172, 78, 108, 4, '#7c4a1e');                                    // shelf of toys waiting for repair
+      RR(1180, 64, 16, 14, 2, '#dc2626', '#fef3c7', 1); C(1214, 72, 6, '#8b5a2b'); C(1210, 66, 2.5, '#8b5a2b'); C(1218, 66, 2.5, '#8b5a2b'); L(1209, 74, 1203, 79, '#8b5a2b', 2.5);
+      RR(1236, 62, 12, 16, 1, '#9ca3af'); R(1239, 65, 6, 3, '#22d3ee'); poly([1262, 64, 1272, 64, 1267, 78], '#3b82f6');
+      present(1252, 208, 22, 34, '#22c55e', '#facc15');
+    },
+    counter() {
+      counterBase('#a16207', '#7c4a1e', '#facc15', '#14532d', 'HELP', '#fef3c7', '★', '#facc15');
+      g.beginPath(); g.moveTo(1000, 100); for (let x = 1000; x < 1260; x += 52) g.quadraticCurveTo(x + 26, 122, x + 52, 100);   // a swag of lights instead of glass
+      g.strokeStyle = '#14532d'; g.lineWidth = 2; g.stroke();
+      for (let x = 1026, i = 0; x < 1260; x += 52, i++) { const c = ['#ef4444', '#facc15', '#3b82f6', '#22c55e'][i % 4]; C(x, 111, 4, (Math.floor(T * 2) + i) % 3 ? c : shade(c, -0.5)); }
+      RR(1010, 164, 18, 14, 2, '#dc2626'); RR(1032, 168, 14, 10, 1, '#22c55e'); RR(1050, 168, 14, 10, 1, '#3b82f6');      // a toy train being fixed
+      for (const wx of [1016, 1024, 1038, 1056]) C(wx, 179, 2.2, '#111827');
+      C(1016, 158 - (T * 8) % 10, 2.5, 'rgba(255,255,255,.55)');
+      RR(1206, 166, 26, 14, 2, '#6b7280'); R(1214, 160, 4, 6, '#9ca3af'); L(1190, 178, 1202, 170, '#e5e7eb', 2.5);
+    },
+    duck(x, y) { poly([x - 13, y - 29, x + 13, y - 29, x + 4, y - 50, x + 17, y - 42], '#c0392b'); RR(x - 14, y - 33, 28, 6, 3, '#f8fafc'); C(x + 17, y - 42, 3.6, '#f8fafc'); },
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#14532d', '#7f1d1d', fCheck('rgba(255,255,255,.08)', 22));
+      roomSign(347, 659, 34, 34, ['NAUGHTY', 'OR NICE?'], '#7f1d1d', '#fef3c7', '#facc15', 6);
+      RR(577, 638, 33, 48, 2, '#fef3c7', '#b45309', 1.5); L(593.5, 641, 593.5, 683, '#b45309', 1);
+      TXT('✓', 585, 652, 'bold 14px system-ui', '#166534'); TXT('✗', 602, 652, 'bold 14px system-ui', '#b91c1c');
+      for (let i = 0; i < 4; i++) { L(581, 664 + i * 5, 590, 664 + i * 5, '#78716c', 1); L(597, 664 + i * 5, 606, 664 + i * 5, '#78716c', 1); }
+      seatsOf(chairOf('#15803d', '#14532d'));
+      cornersOf((x, y) => { R(x - 1, y - 4, 3, 4, '#7c4a1e'); poly([x - 8, y - 4, x + 8, y - 4, x, y - 16], '#166534'); poly([x - 6, y - 11, x + 6, y - 11, x, y - 22], '#15803d'); C(x, y - 23, 2, '#facc15'); });
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#991b1b'); RR(381, 768, 178, 52, 9, '#b91c1c', '#f8fafc', 2.5);
+      RR(430, 772, 100, 44, 2, '#fef3c7', '#b45309', 1);                  // the list
+      for (let i = 0; i < 5; i++) { const yy = 779 + i * 8, ok = i % 2;
+        L(438, yy, 468, yy, '#78716c', 1.2); TXT(ok ? '✓' : '✗', 478, yy, 'bold 8px system-ui', ok ? '#166534' : '#b91c1c');
+        L(494, yy, 518, yy, '#78716c', 1.2); TXT(ok ? '✗' : '✓', 524, yy, 'bold 8px system-ui', ok ? '#b91c1c' : '#166534'); }
+      L(540, 806, 556, 790, '#f8fafc', 1.6);
+      C(398, 794, 6, '#f8fafc'); C(396, 792, 1.5, '#92400e'); C(400, 796, 1.5, '#92400e'); RR(397, 802, 8, 11, 2, '#fff', '#999', 0.8);   // cookies and milk
+      g.strokeStyle = '#f8fafc'; g.lineWidth = 3; g.beginPath(); g.moveTo(545, 812); g.lineTo(545, 802); g.arc(540, 802, 5, 0, Math.PI, true); g.stroke();
+      g.setLineDash([2, 3]); g.strokeStyle = '#dc2626'; g.beginPath(); g.moveTo(545, 812); g.lineTo(545, 802); g.arc(540, 802, 5, 0, Math.PI, true); g.stroke(); g.setLineDash([]);
+      R(380, 826, 6, 12, '#7c4a1e'); R(554, 826, 6, 12, '#7c4a1e');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#14532d', '#dbe7f0', fCheck('rgba(147,197,253,.28)', 30));
+      for (let i = 0; i < 12; i++) TXT('❄', 1310 + hh(i) % 270, 58 + hh(i + 20) % 36, '10px system-ui', 'rgba(255,255,255,.25)');
+      roomSign(1450, 35, 228, 22, ['LETTERS TO SANTA · WAITING ON YOU'], '#7f1d1d', '#fef3c7', '#facc15', 10);
+      RR(1330, 52, 240, 98, 3, '#7c4a1e');
+      mailCells('#4a2a10', (x, y, h) => { RR(x + 2, y + 8, 16, 10, 1, h % 2 ? '#fff7ed' : '#fecaca'); R(x + 13, y + 9, 4, 4, '#dc2626'); L(x + 2, y + 8, x + 10, y + 14, 'rgba(0,0,0,.2)', 0.8); L(x + 18, y + 8, x + 10, y + 14, 'rgba(0,0,0,.2)', 0.8); });
+      R(1320, 150, 260, 10, '#a16207'); R(1322, 160, 256, 22, '#7c4a1e'); C(1450, 147, 5, '#facc15');
+      for (const sx of [1360, 1544]) { E(sx, 142, 17, 11, '#b08a5a'); R(sx - 4, 128, 8, 6, '#b08a5a'); R(sx - 5, 131, 10, 2.5, '#dc2626'); RR(sx - 7, 125, 8, 5, 1, '#fff7ed'); }   // sacks of letters
+      E(1562, 270, 22, 15, '#b91c1c'); E(1562, 258, 13, 5, '#f8fafc'); R(1558, 246, 8, 10, '#b91c1c'); C(1562, 247, 4, '#facc15');   // the big red sack
+    },
+  },
+};
+
+// ---- Pirate Cove: ship's surgeon, captain's chart table, bottle post ---------------------
+THEMES.pirate.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#4a2f17', '#6b4423', fPlanks('rgba(0,0,0,.3)'));
+      for (let x = 984; x < 1286; x += 30) L(x, 24, x, 95, 'rgba(0,0,0,.25)', 1.5);
+      roomSign(1130, 45, 200, 20, ["SHIP'S SURGEON"], '#2b1a0b', '#fde68a', '#b8860b', 13);   // a little lower than Classic, under the bunting
+      R(990, 78, 66, 4, '#3b2410');                                       // shelf of bottles
+      [[998, '#16a34a'], [1010, '#d97706'], [1022, '#0ea5e9'], [1034, '#16a34a'], [1046, '#d97706']].forEach(([x, c]) => { RR(x - 3, 64, 6, 14, 2, c); R(x - 1, 60, 2, 5, c); R(x - 1, 58, 2, 3, '#d6b88a'); });
+      C(1240, 72, 17, '#b8860b'); C(1240, 72, 13, '#0c4a6e');           // porthole
+      RR(1252, 214, 22, 28, 3, '#7c4a1e'); L(1252, 222, 1274, 222, '#d4af37', 1.5); L(1252, 234, 1274, 234, '#d4af37', 1.5);
+    },
+    fx() {
+      g.save(); g.beginPath(); g.arc(1240, 72, 13, 0, TAU); g.clip();
+      R(1227, 59, 26, 26, '#7dd3fc'); R(1227, 70 + Math.sin(T) * 2, 26, 16, '#0c4a6e');
+      for (let i = 0; i < 4; i++) E(1227 + ((i * 9 + T * 6) % 30), 72 + Math.sin(T + i) * 2, 5, 1.2, '#38bdf8');
+      g.restore();
+      g.beginPath(); g.arc(1240, 72, 13, 0, TAU); g.strokeStyle = '#b8860b'; g.lineWidth = 3; g.stroke();
+    },
+    counter() {
+      counterBase('#8b5a2b', '#5e3b22', '#d4af37', '#2b1a0b', 'HELP', '#fde68a', '☠', '#d4af37');
+      for (const xx of [1000, 1065, 1195, 1260]) L(xx, 96, xx, 182, '#7c4a1e', 4);
+      g.strokeStyle = '#d6b88a'; g.lineWidth = 2;                          // rope rails instead of glass
+      for (const [a, b] of [[1000, 1065], [1065, 1195], [1195, 1260]]) { g.beginPath(); g.moveTo(a, 100); g.quadraticCurveTo((a + b) / 2, 118, b, 100); g.stroke(); }
+      RR(1010, 164, 8, 18, 2, '#16a34a'); C(1040, 174, 6, '#f5f0e1'); C(1040, 174, 2.5, '#d6b88a'); C(1054, 176, 5, '#f5f0e1');
+      L(1180, 178, 1216, 178, '#cbd5e1', 3); for (let i = 0; i < 6; i++) L(1182 + i * 6, 178, 1184 + i * 6, 182, '#cbd5e1', 1.5);
+      C(1236, 172, 6, '#f5f0e1'); R(1232, 175, 8, 4, '#f5f0e1'); C(1234, 171, 1.4, '#111'); C(1238, 171, 1.4, '#111');
+    },
+    duck(x, y) { RR(x - 14, y - 32, 28, 6, 3, '#dc2626'); C(x + 15, y - 30, 3, '#dc2626'); poly([x + 15, y - 30, x + 22, y - 24, x + 17, y - 23], '#dc2626'); C(x - 5, y - 22, 3.4, '#111'); L(x - 15, y - 28, x + 14, y - 20, '#111', 1); },
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#4a2f17', '#6b4423', fPlanks('rgba(0,0,0,.3)'));
+      roomSign(347, 659, 34, 34, ["CAPTAIN'S", 'CABIN'], '#2b1a0b', '#fde68a', '#b8860b', 6);
+      C(592, 662, 14, 'rgba(0,0,0,.2)');                                  // the ship's wheel
+      for (let i = 0; i < 8; i++) { const an = i * TAU / 8; L(592, 662, 592 + Math.cos(an) * 15, 662 + Math.sin(an) * 15, '#a16207', 2.2); }
+      g.beginPath(); g.arc(592, 662, 11, 0, TAU); g.strokeStyle = '#8b5a2b'; g.lineWidth = 3; g.stroke(); C(592, 662, 4, '#d4af37');
+      seatsOf(chairOf('#8b5a2b', '#4a2a14'));
+      cornersOf((x, y, i) => {
+        if (!i) { RR(x - 7, y - 14, 14, 14, 3, '#8b5a2b'); L(x - 7, y - 10, x + 7, y - 10, '#3b2410', 1.2); L(x - 7, y - 5, x + 7, y - 5, '#3b2410', 1.2); }    // barrel
+        else { RR(x - 8, y - 12, 16, 12, 2, '#6b3e1f'); R(x - 8, y - 8, 16, 2, '#d4af37'); R(x - 1, y - 8, 2, 4, '#d4af37'); }                                   // chest
+      });
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#5e3b22'); RR(381, 768, 178, 52, 9, '#e8d5a3', '#a8864a', 1.5);
+      E(430, 790, 26, 12, '#d9c48a'); E(500, 802, 34, 9, '#d9c48a'); E(520, 782, 14, 7, '#d9c48a');      // the treasure map
+      g.setLineDash([4, 3]); g.beginPath(); g.moveTo(405, 806); g.lineTo(440, 786); g.lineTo(480, 806); g.lineTo(520, 788); g.strokeStyle = '#7f1d1d'; g.lineWidth = 1.4; g.stroke(); g.setLineDash([]);
+      L(514, 782, 526, 794, '#b91c1c', 2.5); L(526, 782, 514, 794, '#b91c1c', 2.5);
+      C(405, 780, 7, '#f5f0e1'); L(405, 773, 405, 787, '#7f1d1d', 1); L(398, 780, 412, 780, '#7f1d1d', 1);
+      g.globalAlpha = 0.25 + Math.sin(T * 8) * 0.08; C(549, 776, 10, '#fde047'); g.globalAlpha = 1; RR(545, 771, 8, 11, 1, '#d4af37'); C(549, 776, 3, '#fde047');   // lantern
+      R(380, 826, 6, 12, '#3b2410'); R(554, 826, 6, 12, '#3b2410');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#4a2f17', '#6b4423', fPlanks('rgba(0,0,0,.3)'));
+      roomSign(1450, 44, 228, 18, ['BOTTLE POST · WAITING ON YOU'], '#2b1a0b', '#fde68a', '#b8860b', 10);
+      RR(1330, 52, 240, 98, 3, '#3b2410');
+      mailCells('#2a1809', (x, y) => { RR(x + 2, y + 7, 16, 6, 3, 'rgba(110,200,170,.85)'); R(x + 16, y + 8.5, 3, 3, '#d6b88a'); RR(x + 5, y + 8, 8, 4, 1, '#f5f0e1'); });   // messages in bottles
+      R(1320, 150, 260, 10, '#8b5a2b'); R(1322, 160, 256, 22, '#5e3b22'); L(1322, 171, 1578, 171, '#3b2410', 1.2); C(1450, 147, 5, '#d4af37');
+      RR(1330, 134, 22, 18, 1, '#a16207', '#5e3b22', 1.2); L(1330, 134, 1352, 152, '#5e3b22', 1); RR(1334, 118, 16, 16, 1, '#a16207', '#5e3b22', 1.2);   // crates
+      RR(1540, 250, 44, 34, 3, '#8b5a2b', '#4a2a14', 1.5); L(1540, 261, 1584, 261, '#4a2a14', 1.5); L(1540, 272, 1584, 272, '#4a2a14', 1.5);
+      for (const x of [1550, 1562, 1574]) { RR(x - 3, 240, 6, 12, 2, 'rgba(110,200,170,.9)'); R(x - 1, 237, 2, 4, '#d6b88a'); }
+    },
+    fx() {                                                              // the parrot on its perch
+      const x = 1500, y = 150, bob = Math.sin(T * 3) * 0.8, blink = T % 4 < 0.12;
+      R(x - 14, y - 2, 28, 3, '#7c4a1e');
+      poly([x - 4, y - 3, x - 2, y - 3, x - 5, y + 8, x - 8, y + 7], '#2563eb');
+      E(x, y - 12 + bob, 6, 9, '#dc2626'); E(x - 2, y - 11 + bob, 3.5, 6, '#2563eb'); C(x + 2, y - 23 + bob, 5, '#dc2626');
+      poly([x + 6, y - 24 + bob, x + 12, y - 21 + bob, x + 6, y - 19 + bob], '#facc15'); if (!blink) C(x + 3, y - 24 + bob, 1.2, '#111');
+      L(x, y - 3, x, y, '#facc15', 1.5);
+    },
+  },
+};
+
+// ---- Stone Age: shaman's cave fire, stone circle council, tablet post --------------------
+THEMES.stone.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#4b3a2c', '#6b5640', fRocks());
+      for (let i = 0; i < 16; i++) E(984 + hh(i + 40) % 300, 30 + hh(i + 60) % 60, 6 + hh(i) % 8, 4 + hh(i + 3) % 5, i % 2 ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.04)');
+      for (let x = 990; x < 1280; x += 22) poly([x, 24, x + 10, 24, x + 5, 32 + hh(x) % 18], '#3a2c20');   // stalactites
+      roomSign(1130, 45, 200, 20, ['TROUBLE CAVE'], '#78716c', '#292524', '#44403c', 13);
+      C(1012, 70, 5, '#e07a3f'); for (let i = 0; i < 8; i++) L(1012 + Math.cos(i * TAU / 8) * 7, 70 + Math.sin(i * TAU / 8) * 7, 1012 + Math.cos(i * TAU / 8) * 11, 70 + Math.sin(i * TAU / 8) * 11, '#e07a3f', 1.5);   // painted sun
+      g.beginPath(); g.ellipse(1236, 74, 18, 10, 0, 0, TAU); g.strokeStyle = '#e07a3f'; g.lineWidth = 1.6; g.stroke();                     // painted mammoth
+      L(1252, 78, 1258, 90, '#e07a3f', 1.6); L(1222, 80, 1220, 90, '#e07a3f', 1.6); L(1232, 82, 1232, 90, '#e07a3f', 1.6); L(1244, 82, 1244, 90, '#e07a3f', 1.6);
+      g.beginPath(); g.arc(1252, 68, 5, Math.PI * 0.7, Math.PI * 1.7); g.stroke();
+      C(1200, 66, 2.2, '#e07a3f'); L(1200, 68, 1200, 80, '#e07a3f', 1.5); L(1200, 72, 1210, 68, '#e07a3f', 1.5); L(1200, 80, 1196, 88, '#e07a3f', 1.5); L(1200, 80, 1204, 88, '#e07a3f', 1.5);
+      E(1263, 228, 10, 16, '#a16207'); R(1259, 210, 8, 5, '#7c4a1e');     // a water skin
+    },
+    fx() {                                                              // firelight washing over the cave
+      const k = 0.16 + Math.sin(T * 9) * 0.03 + Math.sin(T * 13) * 0.02, gr = g.createRadialGradient(1040, 160, 4, 1040, 160, 150);
+      gr.addColorStop(0, 'rgba(255,170,60,' + (k * 2) + ')'); gr.addColorStop(1, 'rgba(255,170,60,0)');
+      g.fillStyle = gr; g.fillRect(980, 24, 306, 272);
+    },
+    counter() {
+      counterBase('#a8a29e', '#78716c', '#57534e', '#57534e', 'HELP', '#e7e5e4', '?', '#d6d3d1');
+      for (const xx of [1000, 1065, 1195, 1260]) { L(xx, 96, xx, 128, '#d6c7a1', 1.5); L(xx - 6, 128, xx + 6, 128, '#f5f0e1', 3); C(xx - 6, 128, 2.2, '#f5f0e1'); C(xx + 6, 128, 2.2, '#f5f0e1'); }   // hanging bones
+      L(1020, 180, 1060, 172, '#5b3a1e', 5); L(1060, 180, 1022, 172, '#6b4423', 5);                       // the fire pit
+      for (let i = 0; i < 7; i++) C(1018 + i * 7, 183, 4, '#78716c');
+      flame(1036, 172, 2.2, T); flame(1048, 173, 1.7, T + 1);
+      L(1190, 176, 1226, 170, '#f5f0e1', 3); C(1190, 176, 3, '#f5f0e1'); C(1226, 170, 3, '#f5f0e1'); C(1240, 174, 6, '#e7e5e4'); C(1238, 173, 1.3, '#111'); C(1242, 173, 1.3, '#111');
+    },
+    duck(x, y) { R(x - 15, y - 30, 30, 3, '#7c4a2d'); poly([x + 8, y - 30, x + 12, y - 48, x + 16, y - 30], '#ef4444'); L(x + 12, y - 48, x + 12, y - 31, '#b91c1c', 0.8); },   // a feather headband
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#4b3a2c', '#6b5640', fRocks());
+      for (let i = 0; i < 30; i++) { const an = i / 30 * TAU; C(470 + Math.cos(an) * 138, 797 + Math.sin(an) * 80, 3, 'rgba(214,211,209,.5)'); }   // a ring of pebbles
+      roomSign(347, 659, 34, 34, ['TRIBE', 'COUNCIL'], '#78716c', '#292524', '#44403c', 6);
+      R(589, 662, 5, 22, '#7c4a2d');                                      // wall torch (the flame is animated)
+      seatsOf((x, y) => { E(x, y - 6, 11, 6.5, '#78716c'); E(x - 3, y - 8, 5, 3, '#a8a29e'); });
+      cornersOf((x, y) => { E(x, y - 5, 8, 6, '#78716c'); E(x + 3, y - 9, 4, 3.5, '#a8a29e'); });
+    },
+    fx() { flame(591, 662, 1.4, T); },
+    table() {
+      E(383, 832, 11, 7, '#57534e'); E(557, 832, 11, 7, '#57534e');
+      poly([381, 778, 392, 766, 470, 762, 548, 766, 562, 776, 566, 812, 552, 826, 470, 830, 392, 826, 378, 812], '#8a837d');
+      poly([388, 780, 398, 770, 470, 767, 544, 770, 556, 780, 558, 810, 548, 821, 470, 825, 398, 821, 386, 810], '#a8a29e');
+      E(410, 782, 7, 3.5, '#78716c'); E(520, 812, 6, 3, '#78716c');         // stone cups
+      L(440, 802, 470, 812, '#f5f0e1', 4); C(440, 802, 2.6, '#f5f0e1'); C(470, 812, 2.6, '#f5f0e1');
+      L(500, 792, 530, 786, '#f5f0e1', 3); C(500, 792, 2.2, '#f5f0e1'); C(530, 786, 2.2, '#f5f0e1');
+      C(412, 808, 3, '#dc2626'); C(418, 806, 3, '#f59e0b');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#4b3a2c', '#6b5640', fRocks());
+      for (let x = 1300; x < 1590; x += 24) poly([x, 24, x + 10, 24, x + 5, 30 + hh(x) % 12], '#3a2c20');
+      roomSign(1450, 44, 228, 18, ['TABLET POST · WAITING ON YOU'], '#78716c', '#292524', '#44403c', 10);
+      RR(1330, 52, 240, 98, 3, '#3a2c20');
+      mailCells('#241a12', (x, y) => { RR(x + 2, y + 3, 16, 13, 3, '#a8a29e'); L(x + 5, y + 7, x + 15, y + 7, '#57534e', 1); L(x + 5, y + 11, x + 12, y + 11, '#57534e', 1); });   // carved stone tablets
+      R(1320, 150, 260, 10, '#a8a29e'); R(1322, 160, 256, 22, '#78716c'); L(1322, 171, 1578, 171, '#57534e', 1.2); C(1450, 147, 5, '#f5f0e1');
+      RR(1350, 138, 22, 14, 2, '#a8a29e'); RR(1354, 126, 22, 14, 2, '#d6d3d1'); L(1358, 132, 1372, 132, '#57534e', 1);
+      RR(1542, 270, 40, 14, 2, '#78716c'); RR(1546, 258, 32, 14, 2, '#a8a29e'); RR(1550, 246, 24, 14, 2, '#d6d3d1'); L(1555, 253, 1569, 253, '#57534e', 1);
+    },
+    fx() {                                                              // a pterodactyl on its bone perch
+      const flap = T % 7 < 0.9 ? Math.sin(T * 16) * 9 : 0, x = 1500;
+      R(x - 2, 124, 4, 26, '#d6c7a1'); C(x, 124, 3, '#f5f0e1');
+      poly([x - 3, 112, x - 20, 108 - flap, x - 5, 118], '#6b4f3a'); poly([x + 3, 112, x + 18, 108 - flap, x + 5, 118], '#6b4f3a');
+      E(x, 116, 8, 6, '#7c5c46'); poly([x + 5, 112, x + 24, 114, x + 5, 118], '#7c5c46'); poly([x - 2, 108, x - 12, 103, x - 1, 112], '#7c5c46'); C(x + 5, 112, 1.2, '#fde047');
+    },
+  },
+};
+
+// ============================================================================================
 // Static background (cached to an offscreen canvas)
 // ============================================================================================
 function wall(x1, y1, x2, y2) { L(x1, y1, x2, y2, '#3b3f4a', 8); }
@@ -4522,7 +5044,7 @@ function drawStatic() {
     R(20, y, 595, 16, k % 2 ? '#c79a66' : '#c1925d');
     for (let x = 20 + (k % 3) * 60; x < 615; x += 180) L(x, y, x, y + 16, 'rgba(0,0,0,.12)', 1);
   }
-  RR(255, 168, 196, 114, 12, '#5b7db1'); RR(263, 176, 180, 98, 8, null, '#89a7d4', 2);
+  RR(430, 166, 180, 114, 12, '#5b7db1'); RR(438, 174, 164, 98, 8, null, '#89a7d4', 2);
   // kitchen
   RR(84, 26, 152, 34, 3, '#7f8fa6'); for (const xx of [122, 160, 198]) L(xx, 27, xx, 59, '#6b7a90', 1.5);
   R(80, 118, 156, 32, '#8095ad'); R(78, 105, 160, 13, '#dfe4ea'); for (const xx of [118, 158, 198]) L(xx, 120, xx, 148, '#6b7a90', 1.5);
@@ -4530,12 +5052,14 @@ function drawStatic() {
   RR(210, 98, 22, 8, 2, '#b8c2cc'); L(221, 98, 221, 88, '#9aa3ad', 2); L(221, 88, 226, 88, '#9aa3ad', 2);
   // employee board + clock wall
   RR(245, 30, 26, 32, 2, '#c49a6c'); R(249, 34, 18, 18, '#d97757'); TXT('★', 258, 43, '10px system-ui', '#fff'); TXT('MVP', 258, 57, 'bold 6px system-ui', '#5a3d2b');
-  R(300, 128, 100, 22, '#5a3d2b'); R(304, 132, 30, 14, '#4a3122'); R(366, 132, 30, 14, '#4a3122');
+  R(452, 132, 136, 18, '#5a3d2b'); R(456, 135, 30, 12, '#4a3122'); R(554, 135, 30, 12, '#4a3122');
   // vending + arcade bodies
+  g.save(); g.translate(-160, 0);
   RR(450, 36, 50, 114, 4, '#c0392b'); R(456, 44, 30, 84, '#1d2733'); R(489, 50, 8, 26, '#2a2a2a'); R(458, 132, 26, 12, '#111');
   for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) RR(459 + c * 9, 48 + r * 20, 7, 12, 1, ['#f1c40f', '#e67e22', '#2ecc71', '#3498db'][(r + c) % 4]);
   RR(522, 44, 52, 106, 4, '#2c1f5e'); RR(524, 46, 48, 10, 2, '#ff4fa3'); TXT('ARCADE', 548, 51.5, 'bold 7px system-ui', '#fff');
   R(526, 94, 44, 12, '#3b2c80'); C(538, 100, 2.6, '#e74c3c'); C(550, 100, 2.2, '#f1c40f'); C(558, 100, 2.2, '#2ecc71');
+  g.restore();
   // water cooler
   R(259, 400, 22, 40, '#f0f0f0'); R(263, 416, 6, 4, '#4aa3ff'); R(271, 416, 6, 4, '#e74c3c'); E(270, 388, 11, 14, 'rgba(120,190,255,.75)');
   // dining chairs (people sit on them)
@@ -4548,7 +5072,7 @@ function drawStatic() {
   C(601, 368, 5, 'rgba(253,230,138,.35)'); C(601, 368, 2.4, '#fde68a');
   wall(455, 355, 466, 355); wall(510, 355, 615, 355); wall(455, 355, 455, 445); wall(455, 445, 615, 445);
   RR(530, 349, 66, 12, 3, '#1e293b'); TXT('NAP ROOM · shhh', 563, 355.5, 'bold 6.5px system-ui', '#c7d2fe');
-  plant(595, 140, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
+  plant(428, 150, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
   // walls
   wall(20, 20, 615, 20); wall(20, 20, 20, 615); wall(615, 20, 615, 300); wall(615, 345, 615, 615);
   wall(20, 615, 200, 615); wall(250, 615, 615, 615);
@@ -4622,16 +5146,18 @@ function drawStatic() {
   wall(640, 20, 1595, 20); wall(1595, 20, 1595, 940); wall(975, 20, 975, 300); wall(1290, 20, 1290, 300);
   wall(615, 300, 778, 300); wall(822, 300, 1108, 300); wall(1152, 300, 1428, 300); wall(1472, 300, 1595, 300);
   wall(615, 940, 1595, 940);
+  for (const k of ['trouble', 'meeting', 'mail']) { const sk = roomSkin(k); if (sk && sk.back) sk.back(); }   // themed rooms
   const wash = THEMES[THEME].wash;
   if (wash) { g.globalAlpha = wash[1]; R(0, 0, W, H, wash[0]); g.globalAlpha = 1; }
 }
 
-// The TV screen (288..412 x 35..93): the match, a paternity-test talk show, a survey game show, a soap.
+// The TV screen (drawn in a 288..412 x 35..93 box, scaled 1.25x onto 443..598 x 42..114.5): the match, a paternity-test talk show, a survey game show, a soap.
 function drawTV() {
   const show = tvShow(), p = T % 40, big = tvBig();
   const guy = (x, y, c, up) => { RR(x - 4, y - 12, 8, 12, 2, c); C(x, y - 15, 3.4, '#e0ac69');
     if (up) { L(x - 3, y - 11, x - 6, y - 19, c, 1.6); L(x + 3, y - 11, x + 6, y - 19, c, 1.6); } };
-  g.save(); g.beginPath(); g.rect(288, 35, 124, 58); g.clip();
+  g.save(); g.beginPath(); g.rect(443, 42, 155, 72.5); g.clip();
+  g.translate(443, 42); g.scale(1.25, 1.25); g.translate(-288, -35);
   if (show === 'sports') {
     R(288, 35, 124, 58, big ? (Math.floor(T * 8) % 2 ? '#ffd23f' : '#2f8f46') : '#2f8f46');
     L(350, 35, 350, 93, 'rgba(255,255,255,.4)', 1); g.beginPath(); g.arc(350, 64, 10, 0, TAU); g.strokeStyle = 'rgba(255,255,255,.4)'; g.stroke();
@@ -4677,11 +5203,11 @@ function drawTV() {
 // animated bits of the scenery (drawn every frame, under the people)
 function drawDynamicBg() {
   // TV
-  RR(282, 30, 136, 70, 4, '#111');
+  RR(438, 37, 165, 82.5, 4, '#111');
   drawTV();
-  g.globalAlpha = 0.07 + Math.sin(T * 3) * 0.02; E(350, 150, 70, 30, '#9fd3ff'); g.globalAlpha = 1;
+  g.globalAlpha = 0.07 + Math.sin(T * 3) * 0.02; E(520, 152, 84, 30, '#9fd3ff'); g.globalAlpha = 1;
   // real wall clock in the break room
-  const now = new Date(), ox = 434, oy = 50;
+  const now = new Date(), ox = 351, oy = 50;
   C(ox, oy, 11, '#fff'); g.beginPath(); g.arc(ox, oy, 11, 0, TAU); g.strokeStyle = '#333'; g.lineWidth = 2; g.stroke();
   const hr = (now.getHours() % 12 + now.getMinutes() / 60) / 12 * TAU, mn = now.getMinutes() / 60 * TAU, sc = now.getSeconds() / 60 * TAU;
   L(ox, oy, ox + Math.sin(hr) * 5.5, oy - Math.cos(hr) * 5.5, '#222', 2);
@@ -4702,7 +5228,7 @@ function drawDynamicBg() {
   R(164, 86, 28, 15, micro ? '#ffd36b' : '#333'); R(195, 87, 7, 3, '#777'); if (micro) C(178, 93, 4, '#c97f38');
   // arcade screen
   const arc = SPOT_BY_ID.arcade.by !== null;
-  R(530, 60, 36, 30, '#000'); for (let i = 0; i < 4; i++) C(536 + ((T * (arc ? 40 : 12) + i * 9) % 26), 66 + i * 6, 1.6, ['#ff4fa3', '#4ff', '#ff0', '#0f0'][i]);
+  R(370, 60, 36, 30, '#000'); for (let i = 0; i < 4; i++) C(376 + ((T * (arc ? 40 : 12) + i * 9) % 26), 66 + i * 6, 1.6, ['#ff4fa3', '#4ff', '#ff0', '#0f0'][i]);
   // mailroom beacons
   const waiting = STATE ? STATE.jobs.some(j => j.status === 'waiting') : false;
   for (const lx of [1318, 1582]) {
@@ -4716,6 +5242,7 @@ function drawDynamicBg() {
   const br = Math.sin(T * 1.6) * 0.8;
   E(150, 774, 12 + br * 0.4, 6 + br * 0.3, '#f39c4a'); C(160, 771, 5, '#f39c4a'); poly([157, 768, 159, 763, 161, 768], '#f39c4a'); poly([161, 768, 163, 763, 165, 768], '#f39c4a');
   L(139, 776, 133, 772 + Math.sin(T) * 2, '#f39c4a', 2.5);
+  for (const k of ['trouble', 'meeting', 'mail']) { const sk = roomSkin(k); if (sk && sk.fx) sk.fx(); }   // themed rooms: animated extras
   drawWhiteboard();
   // tree
   const sway = Math.sin(T * 0.8) * 2;
@@ -4732,17 +5259,44 @@ function stationActive(s) { const w = stationWorker(s); return !!(w && w.job.sta
 // ============================================================================================
 // Labels, bubbles, tooltip
 // ============================================================================================
-function drawBubble(x, bottom, text, opts = {}) {
+function measureBubble(owner, x, bottom, text, opts = {}) {
   g.font = (opts.font || '12px system-ui');
   const lines = wrap(text, opts.maxW || 170, 2);
   const tw = Math.max(...lines.map(l => g.measureText(l).width));
-  const bw = tw + 14, bh = lines.length * 14 + 8, bx = clamp(x - bw / 2, 4, W - bw - 4), by = bottom - bh - 6;
-  RR(bx, by, bw, bh, 7, opts.bg || '#fff', opts.border || 'rgba(0,0,0,.35)', 1);
-  poly([x - 5, by + bh - 0.5, x + 5, by + bh - 0.5, x, by + bh + 6], opts.bg || '#fff');
-  lines.forEach((l, i) => TXT(l, bx + 7, by + 11 + i * 14, g.font, opts.color || '#222', 'left'));
-  return by;
+  const bw = tw + 14, bh = lines.length * 14 + 8;
+  return { owner, x, bottom, lines, opts, bw, bh, bx: clamp(x - bw / 2, 4, W - bw - 4), by: bottom - bh - 6 };
+}
+const boxesHit = (a, b, pad) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
+// Lift bubbles that would cover another bubble (or another worker's slip) until they are clear.
+// The lowest bubbles keep their spot; the lift is eased per speaker so bubbles slide, not jump.
+function layoutBubbles(bubs, obstacles) {
+  const placed = [];
+  for (const b of [...bubs].sort((p, q) => q.by - p.by)) {
+    let y = b.by;
+    for (let n = 0; n < 24; n++) {
+      const me = { x: b.bx, y, w: b.bw, h: b.bh + 6 };
+      const hit = placed.concat(obstacles.filter(o => o.owner !== b.owner)).find(o => boxesHit(me, o, 3));
+      if (!hit) break;
+      y = hit.y - b.bh - 6 - 4;
+    }
+    y = Math.max(4, y);
+    const o = b.owner, target = b.by - y;
+    o._lift = o._lift == null || Math.abs(o._lift - target) > 120 ? target : o._lift + (target - o._lift) * 0.25;
+    if (Math.abs(o._lift - target) < 0.5) o._lift = target;
+    b.by -= o._lift;
+    placed.push({ x: b.bx, y, w: b.bw, h: b.bh + 6 });
+  }
+}
+function drawBubble(b) {
+  const { x, bx, by, bw, bh, lines, opts } = b, bg = opts.bg || '#fff', border = opts.border || 'rgba(0,0,0,.35)';
+  // a lifted bubble keeps a thin leader line down to its speaker
+  if (b.bottom - (by + bh + 6) > 3) { g.strokeStyle = border; g.lineWidth = 1; g.beginPath(); g.moveTo(x, by + bh + 6); g.lineTo(x, b.bottom - 2); g.stroke(); }
+  RR(bx, by, bw, bh, 7, bg, border, 1);
+  poly([x - 5, by + bh - 0.5, x + 5, by + bh - 0.5, x, by + bh + 6], bg);
+  lines.forEach((l, i) => TXT(l, bx + 7, by + 11 + i * 14, opts.font || '12px system-ui', opts.color || '#222', 'left'));
 }
 function drawSlip(w) {
+  w.slipBox = null;
   const j = w.job; if (!j || !w.slip) return w.y + headTop(w);
   const color = STATUS_COLOR[j.status] || '#888';
   g.font = 'bold 11px system-ui';
@@ -4752,6 +5306,7 @@ function drawSlip(w) {
   g.font = 'bold 11px system-ui'; const tw = Math.max(subW, ...lines.map(l => g.measureText(l).width));
   const cw = clamp(tw + 16, 70, 148), ch = 16 + lines.length * 13 + 3;
   const bx = clamp(w.x - cw / 2, 4, W - cw - 4), by = w.y + headTop(w) - 6 - ch;
+  w.slipBox = { owner: w, x: bx, y: by, w: cw, h: ch };
   RR(bx + 1.5, by + 2, cw, ch, 4, 'rgba(0,0,0,.28)');
   RR(bx, by, cw, ch, 4, '#fffdf4', color, j.status === 'waiting' ? 2 + Math.abs(Math.sin(T * 4)) * 1.5 : 1.6);
   R(bx + 1, by + 1, 4, ch - 2, color);
@@ -4797,7 +5352,7 @@ function update(dt) {
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
-  { y: 258, draw: drawCouch }, { y: 299, draw: drawDiningTable }, { y: PY + 88, draw: drawPoolTable },
+  { y: 258, draw: drawCouch }, { y: 339, draw: drawDiningTable }, { y: PY + 88, draw: drawPoolTable },
   { y: 540, draw: drawPingPong }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
   { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
 ];
@@ -4817,12 +5372,18 @@ function render() {
   drawParticles();
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
+  const bubs = [];
   for (const w of order) {
-    let top = drawSlip(w);
-    if (w.bubble && T < w.bubbleUntil) drawBubble(w.x, top, w.bubble, { maxW: 150 });
+    const top = drawSlip(w);
+    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, w.x, top, w.bubble, { maxW: 150 }));
+    else w._lift = null;
   }
-  if (BOSS.bubble && T < BOSS.bubbleUntil) drawBubble(BOSS.x, BOSS.y - 70, BOSS.bubble, { bg: '#fff4ee', border: '#d97757' });
-  if (DUCK.bubble && T < DUCK.bubbleUntil) drawBubble(1130, 128, DUCK.bubble, { bg: '#fffbe0', border: '#e0b000' });
+  if (BOSS.bubble && T < BOSS.bubbleUntil) bubs.push(measureBubble(BOSS, BOSS.x, BOSS.y - 70, BOSS.bubble, { bg: '#fff4ee', border: '#d97757' }));
+  else BOSS._lift = null;
+  if (DUCK.bubble && T < DUCK.bubbleUntil) bubs.push(measureBubble(DUCK, 1130, 128, DUCK.bubble, { bg: '#fffbe0', border: '#e0b000' }));
+  else DUCK._lift = null;
+  layoutBubbles(bubs, workers.map(w => w.slipBox).filter(Boolean));
+  for (const b of bubs) drawBubble(b);   // still in `order`, so the hovered/selected one is on top
   const tip = hovered || selected; if (tip) drawTooltip(tip);
   if (!online) {
     RR(W / 2 - 230, 120, 460, 54, 10, 'rgba(20,22,28,.92)', '#ef4444', 2);
@@ -4957,7 +5518,8 @@ function renderPanel() {
   const idle = workers.filter(w => !w.job);
   $('#listIdle').innerHTML = idle.map(w => `<span class="chip"><i style="background:${w.L.shirt}"></i>${esc(w.L.name)}</span>`).join('') || '<div class="empty">The break room is empty — all hands on deck!</div>';
   const now = serverNow();
-  $('#listRecent').innerHTML = (STATE.recent || []).map(r => {
+  // the server keeps the last few; show only the past hour so the list doesn't pile up
+  $('#listRecent').innerHTML = (STATE.recent || []).filter(r => now - r.finished < 3600).map(r => {
     const w = r.worker != null ? workers[r.worker] : null;
     return `<div class="recent"><b>${w ? esc(w.L.name) : '?'}</b> finished “${esc(r.title)}” <span>· ${ago(now - r.finished)} ago${r.reason ? ' · ' + esc(r.reason) : ''}</span></div>`;
   }).join('') || '<div class="empty">Nothing yet.</div>';
