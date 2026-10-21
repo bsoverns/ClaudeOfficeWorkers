@@ -587,6 +587,75 @@ const STONE_BANTER = [
   ['Lunch? Mammoth again?', 'It is always mammoth.', 'One mammoth feeds the team for a month.', 'Agile, {a}.'],
   ['Did the pterodactyl drop the deploy?', 'Only half of it.', 'Which half?', 'The important half, {a}.'],
 ];
+// Super HQ: villain/hero exchanges, the villain speaks first. h / v: the hero's / villain's power it suits best.
+const SUPER_DIALOGUES = [
+  { h: "heat", v: "cold", lines: ["You're about to get cold feet!", "Good. I'll put them out with your face."] },
+  { h: null, v: null, lines: ["My intelligence is beyond your comprehension!", "You built a doomsday machine with a USB port. I'm not impressed."] },
+  { h: "speed", v: null, lines: ["You can't outrun your destiny!", "I already did. Destiny's still looking for me."] },
+  { h: "telepathy", v: null, lines: ["Get out of my head!", "Gladly. There's nothing interesting in here."] },
+  { h: "flight", v: null, lines: ["You're so full of yourself!", "And you're so down to earth."] },
+  { h: "electro", v: null, lines: ["I've hacked every system in the city!", "Including your own security cameras?", "Why?", "Because they're recording you picking your nose."] },
+  { h: "strength", v: null, lines: ["Size doesn't matter!", "That's what you tell your tailor, too?"] },
+  { h: "portal", v: "portal", lines: ["You'll never catch me!", "I don't need to catch you. I just need to close the door."] },
+  { h: "invisible", v: null, lines: ["Show yourself!", "I'm right behind you.", "Where?", "Exactly."] },
+  { h: "time", v: null, lines: ["You're too late!", "I can fix that.", "How?", "First, I'm going to rewind this conversation. It was terrible."] },
+  { h: null, v: "heat", lines: ["You're all wet!", "And you're all washed up."] },
+  { h: "changeling", v: null, lines: ["You can't fool me!", "Really?", "Of course not!", "Then why are you arguing with your own reflection?"] },
+  { h: null, v: null, lines: ["You'll never take me alive!", "I was hoping to take you dead tired. Saves paperwork."] },
+  { h: null, v: null, lines: ["You can't hold me!", "I'm attracted to your confidence.", "What?", "And repelled by your personality."] },
+  { h: "telepathy", v: null, lines: ["You can't read my mind!", "I don't have to. Your evil plan is written on your whiteboard."] },
+  { h: null, v: "eyes", lines: ["Prepare to be cut down!", "Can you cut my lawn first? I've been meaning to get to that."] },
+  { h: null, v: null, lines: ["Your powers are a joke!", "That's a bit of a stretch."] },
+  { h: null, v: "cold", lines: ["Freeze!", "I would, but I'm having a heated argument with your boss later."] },
+  { h: null, v: null, lines: ["You're nothing but a blockhead!", "And you're just throwing dirt at the situation."] },
+  { h: null, v: null, lines: ["You can't stop my army!", "I can stop your army and make your troops turnip their uniforms."] },
+  { h: null, v: null, lines: ["You'll never catch me!", "You're wanted for grand theft sneakers. This is a running shoe case."] },
+  { h: null, v: null, lines: ["Behold my ultimate creation!", "Does it come in a smaller size? Your parking is terrible."] },
+  { h: null, v: "telekinesis", lines: ["I'll bring you to your knees!", "You always bring the mood down."] },
+  { h: null, v: null, lines: ["I'll dissolve you into nothing!", "That sounds like a corrosive personality."] },
+  { h: null, v: null, lines: ["The darkness will consume you!", "I've been in darker places. Have you seen my basement?"] },
+  { h: null, v: null, lines: ["You'll be blown away!", "I've heard that one before. It really sucks."] },
+  { h: null, v: null, lines: ["My sonic scream will shatter your bones!", "Could you repeat that? Your argument isn't making any sense."] },
+  { h: null, v: null, lines: ["One drop of this toxin will end you!", "And one drop of your cologne already did."] },
+  { h: null, v: null, lines: ["You'll have to fight all of me!", "I can barely tolerate one of you."] },
+  { h: null, v: "time", lines: ["I know every move you'll make!", "Then you already know I'm about to ask if you've tried turning your future off and on again."] },
+  { h: null, v: null, lines: ["The beasts will tear you apart!", "Even the rabbits?", "Especially the rabbits!", "That's hare-raising."] },
+  { h: null, v: null, lines: ["You'll never get your hands on me!", "I know. You keep making a vapor trail of bad decisions."] },
+  { h: null, v: null, lines: ["I'll shatter your confidence!", "You first. Your plan looks fragile."] },
+  { h: null, v: null, lines: ["I've calculated ten thousand ways to defeat you!", "And not one way to get a girlfriend?", "That's irrelevant!", "That's what I thought."] },
+  { h: null, v: null, lines: ["Soon, you'll forget who you are!", "Can you make me forget this conversation first?"] },
+  { h: null, v: null, lines: ["Money makes the world go round!", "Then why are you always going in circles?"] },
+  { h: null, v: null, lines: ["My swarm will bring you to your knees!", "I guess this is going to sting a little.", "A little? THERE ARE FOUR MILLION BEES!", "Okay, that's a buzzkill."] },
+  { h: null, v: null, lines: ["I can make a thousand bombs!", "Can you make a thousand good decisions? Start with one."] },
+  { h: null, v: "telekinesis", lines: ["I will crush you like aluminum foil!", "You're really pushing your metal."] },
+  { h: null, v: null, lines: ["I can erase you from existence!", "Can you erase my browser history instead?"] },
+  { h: null, v: null, lines: ["Tonight, your nightmares become reality!", "My nightmare is waking up on Monday. Beat that."] },
+  { h: null, v: null, lines: ["I'll make you smaller than an ant!", "Finally, a chance to get into affordable housing."] },
+  { h: null, v: null, lines: ["I'll unleash a storm unlike anything you've seen!", "You sound like my local weather app. Lots of warnings, no accuracy."] },
+  { h: null, v: "telepathy", lines: ["I can hear your heartbeat!", "Then you can hear how disappointed I am."] },
+  { h: null, v: null, lines: ["I'll make your skeleton dance!", "Can you teach it the electric slide? I've got a wedding coming up."] },
+  { h: null, v: null, lines: ["Luck is on my side!", "That's unfortunate. I was hoping for a fair fight."] },
+  { h: null, v: null, lines: ["Whatever you can do, I can do better!", "Can you do taxes?", "What?", "Didn't think so."] },
+  { h: null, v: null, lines: ["You'll be drawn to your doom!", "I already feel a strong attraction to your defeat."] },
+  { h: null, v: "time", lines: ["I have all the time in the world!", "And somehow, you still wasted it on this outfit."] },
+  { h: null, v: null, lines: ["I am the end of everything! The destroyer of worlds! The terror of all existence!", "Okay, but are you the one who keeps leaving the microwave at 00:01?", "That was me.", "I KNEW IT. YOU'RE A MONSTER."] },
+  { h: "regen", v: "eyes", lines: ["I'll burn a hole right through you!", "Go ahead. It'll grow back before lunch."] },
+  { h: "teleport", v: "speed", lines: ["Nobody is faster than me!", "I'm not faster. I'm just already there."] },
+  { h: null, v: "telekinesis", lines: ["I can move anything with my mind!", "Great. Move your car. It's in my spot."] },
+  { h: "electro", v: "portal", lines: ["My portals can take me anywhere!", "Then take yourself to the help desk. Your Wi-Fi is down.", "Is it?", "It is now. Zap."] },
+  { h: "strength", v: "psycho", lines: ["I'll crush you with the power of my mind!", "I'll crush you with the power of leg day."] },
+  { h: "telepathy", v: "changeling", lines: ["I can become anyone!", "Then become someone who refills the coffee pot."] },
+  { h: "flight", v: "cold", lines: ["I'll freeze you right out of the sky!", "Too late. I'm already above it all."] },
+  { h: "heat", v: "time", lines: ["I'll freeze time itself!", "Perfect. My coffee might finally stay hot."] },
+  { h: null, v: null, lines: ["I will destroy this office!", "Get in line. The printer is way ahead of you."] },
+  { h: null, v: null, lines: ["Join me, and together we will rule the break room!", "Only if you clean the microwave.", "Never!", "Then we fight."] },
+  { h: null, v: null, lines: ["Your stapler is mine!", "Over my dead body.", "It's a stapler.", "It's MY stapler."] },
+  { h: null, v: null, lines: ["Mwahaha! I have stolen the last donut!", "You monster. That was a team donut."] },
+  { h: "invisible", v: null, lines: ["I put decaf in the coffee machine!", "Some people just want to watch the world sleep.", "Where did you go?", "Getting real coffee. You'll never see me coming."] },
+];
+const TRUCE_LINES = ['Truce. Duty calls.', 'Saved by the page!', 'To be continued...', "This isn't over. After work.", 'Hold that thought, nemesis.'];
+const TAUNT_V = ['Prepare to meet your doom!', 'Mwahaha!', 'You and what army?', "Is that all you've got?", 'Feel my wrath!'];
+const TAUNT_H = ['Not on my watch!', 'Justice never takes a break!', 'Eat my power!', 'Stand down, villain!', 'Take that!'];
 // The break room TV flips channels every 40 seconds; TV_CHAT is what the couch says about each.
 const TV_SHOWS = ['sports', 'talk', 'game', 'soap'];
 const TV_NAMES = { sports: 'the match', talk: 'a trashy talk show', game: 'a game show', soap: 'a soap opera' };
@@ -4332,9 +4401,10 @@ function goTo(w, spot) {
   release(w);
   if (!spot.temp) spot.by = w.id;
   w.spot = spot; w.arrived = false; w.path = buildPath(w, spot);
+  superTravel(w);
 }
 function teleport(w, spot) {
-  release(w); if (!spot.temp) spot.by = w.id;
+  release(w); if (!spot.temp) spot.by = w.id; w.blink = null;
   w.spot = spot; w.x = spot.x; w.y = spot.y; w.path = []; arrive(w);
 }
 function allowed(s, w) {
@@ -4386,6 +4456,8 @@ function setTheme(name) {
   try { localStorage.setItem('office-theme', name); } catch (e) {}
   const sel = document.getElementById('optTheme'); if (sel) sel.value = name;
   if (name === THEME) return;
+  endFight('stop'); AFX.length = 0;
+  for (const w of workers) { if (w.blink) teleport(w, w.spot); w.speedMul = 1; w.shimmer = false; }
   THEME = name; navGrid = null;
   for (const w of workers) if (w.mode === 'job' && w.locKind === 'st') { w.locKind = null; w.stDwell = 0; }
   resize(); renderPanel();
@@ -4399,7 +4471,8 @@ function jobSpot(w, kind) {
   return sp;
 }
 function assignJob(w, j, instant) {
-  w.job = j; w.mode = 'job'; w.locKind = null; w.dwellUntil = 0; w.paperSent = false; w._p = undefined;
+  if (w.fight) endFight('truce', w);
+  w.job = j; w.mode = 'job'; w.locKind = null; w.dwellUntil = 0; w.paperSent = false; w._p = undefined; w.blink = null;
   if (instant) { w.slip = true; w.jobPhase = 'go'; w.locKind = desiredKind(j); w.stDef = stationOf(j); teleport(w, jobSpot(w, w.locKind)); }
   else {
     // Nobody wanders off on their own: the boss (or the team lead, for a helper) pages them first.
@@ -4446,7 +4519,7 @@ function finishJob(w, celebrate, old) {
   chooseIdle(w);
 }
 function arrive(w) {
-  w.arrived = true; w.facing = (w.spot && w.spot.face) || 'down'; w.arrivedAt = T;
+  w.arrived = true; w.facing = (w.spot && w.spot.face) || 'down'; w.arrivedAt = T; w.speedMul = 1; w.shimmer = false;
   if (w.mode === 'idle' || w.mode === 'returning') { w.mode = 'idle'; w.actUntil = T + rand(12, 28); w.food = pick(['pizza', 'sandwich']); }
   else if (w.mode === 'job') {
     if (w.jobPhase === 'toBoss') { w.jobPhase = 'brief'; w.briefStart = T; BOSS.visitor = w; bossSay(pick(BRIEF_LINES)); }
@@ -4458,7 +4531,7 @@ function arrive(w) {
   }
 }
 function stepMove(w, dt) {
-  let budget = w.speed * dt;
+  let budget = w.speed * (w.speedMul || 1) * dt;
   while (budget > 0 && w.path.length) {
     const tgt = w.path[0], dx = tgt.x - w.x, dy = tgt.y - w.y, d = Math.hypot(dx, dy);
     if (d > 0.5) w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
@@ -4473,12 +4546,16 @@ function serverNow() { return Date.now() / 1000 + skew; }
 function dozing(w) { return w.job && w.job.status === 'working' && serverNow() - w.job.updated > 300; }
 
 function updateWorker(w, dt) {
-  if (w.path.length) stepMove(w, dt);
+  if (w.blink) stepBlink(w);
+  else if (w.path.length) {
+    stepMove(w, dt);
+    if (w.speedMul === 3 && Math.random() < dt * 30) puff(w.x + rand(-4, 4), w.y - rand(8, 40), { kind: 'spark', vx: (w.facing === 'left' ? 1 : w.facing === 'right' ? -1 : 0) * 120, vy: (w.facing === 'up' ? 1 : w.facing === 'down' ? -1 : 0) * 120, life: 0.25, color: '#facc15' });
+  }
   if (THEME === 'superhq' || w.hov) { w.hov = lerp(w.hov || 0, hoverTarget(w), Math.min(1, dt * 4)); if (w.hov < 0.05) w.hov = 0; }
   const t = T + w.seed;
   if (w.mode === 'idle') {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
-    else if (w.arrived && T > w.nextChat && !w.talk) {
+    else if (w.arrived && T > w.nextChat && !w.talk && !w.fight) {
       const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : CHAT[w.spot.act]);
       if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
@@ -4531,31 +4608,42 @@ function updateWorker(w, dt) {
 // Banter: pairs on break within earshot (and not asleep) talk through one BANTER script.
 const TALKS = [], recentTalks = [];
 let nextTalk = 10, tvWasBig = false;
-function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && w.spot && w.spot.act !== 'nap'; }
+function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && !w.fight && w.spot && w.spot.act !== 'nap'; }
+// In Super HQ about half the chats are a villain and a hero trading one-liners (SUPER_DIALOGUES), matched by power when possible.
+function superTalk(pairs) {
+  const mixed = pairs.filter(([a, b]) => isHero(a) !== isHero(b) && a.spot.area === b.spot.area);
+  if (!mixed.length) return null;
+  const [p, q] = pick(mixed), v = isHero(p) ? q : p, h = v === p ? q : p;
+  const fit = SUPER_DIALOGUES.filter(d => !recentTalks.includes(d.lines) && (d.h === powerOf(h) || d.v === powerOf(v)));
+  let d = fit.length && Math.random() < 0.6 ? pick(fit) : pick(SUPER_DIALOGUES);
+  for (let k = 0; k < 6 && recentTalks.includes(d.lines); k++) d = pick(SUPER_DIALOGUES);
+  return { a: v, b: h, lines: d.lines, superFight: true };
+}
 function startTalk() {
   const free = workers.filter(canTalk), pairs = [];
   for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++)
     if (Math.hypot(free[i].x - free[j].x, free[i].y - free[j].y) < 170) pairs.push(Math.random() < 0.5 ? [free[i], free[j]] : [free[j], free[i]]);
   if (!pairs.length) return;
-  const [a, b] = pick(pairs);
+  const sup = THEME === 'superhq' && Math.random() < 0.5 ? superTalk(pairs) : null;
+  const [a, b] = sup ? [sup.a, sup.b] : pick(pairs);
   const list = THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : THEME === 'pirate' ? BANTER.concat(PIRATE_BANTER, PIRATE_BANTER)
     : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER) : BANTER;
-  let lines = pick(list);
-  for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(list);
+  let lines = sup ? sup.lines : pick(list);
+  for (let k = 0; !sup && k < 6 && recentTalks.includes(lines); k++) lines = pick(list);
   recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
-  const talk = { a, b, lines, i: 0, next: T + 0.3 };
+  const talk = { a, b, lines, i: 0, next: T + 0.3, superFight: !!sup };
   TALKS.push(talk);
   for (const w of [a, b]) {
     w.talk = talk; w.actUntil = Math.max(w.actUntil, T + lines.length * 4 + 3);
-    if (!w.spot.pose && !['pool', 'pingpong', 'arcade'].includes(w.spot.act)) {      // standing: turn to the other one
-      const o = w === a ? b : a, dx = o.x - w.x, dy = o.y - w.y;
-      w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-    }
+    if (!w.spot.pose && !['pool', 'pingpong', 'arcade'].includes(w.spot.act)) faceTo(w, w === a ? b : a);
   }
 }
+function faceTo(w, o) { const dx = o.x - w.x, dy = o.y - w.y; w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); }
 function endTalk(k) {
   for (const w of [k.a, k.b]) { w.talk = null; if (w.arrived && w.spot && w.mode === 'idle') w.facing = w.spot.face || 'down'; w.nextChat = T + rand(10, 25); }
   TALKS.splice(TALKS.indexOf(k), 1);
+  // a finished villain/hero exchange sometimes turns into a fight
+  if (k.superFight && k.i >= k.lines.length && THEME === 'superhq' && Math.random() < 0.5) startFight(k.a, k.b);
 }
 function updTalks() {
   if (T > nextTalk) { if (TALKS.length < 3) startTalk(); nextTalk = T + rand(6, 16); }
@@ -4571,6 +4659,151 @@ function updTalks() {
   if (big && !tvWasBig) for (const w of workers)
     if (w.mode === 'idle' && w.arrived && !w.talk && w.spot && w.spot.act === 'tv' && Math.random() < 0.6) say(w, pick(TV_REACT[tvShow()]), 2.5);
   tvWasBig = big;
+}
+// ---- Super HQ fights: an idle hero and villain in the same room trade power blasts, then go back to their break.
+// Nobody really moves (the knockback is only drawn) and nothing breaks. Paging, leaving the break or a theme change ends it.
+let FIGHT = null, nextFight = 40;
+const SFX = [], AFX = [];      // SFX: power shots { k, att, tgt, t0, dur, hit }; AFX: loose effects { k, x, y, t0, dur, text, c }
+const POW_TEXT = { heat: 'FWOOSH!', cold: 'CRACK!', electro: 'ZAP!', eyes: 'ZZAP!', time: 'TICK!', strength: 'SMASH!', changeling: 'SLASH!',
+  invisible: 'BOO!', speed: 'WHOOSH!', portal: 'BONK!', telekinesis: 'CLONK!', telepathy: 'BZZT!', psycho: 'KABOOM!', teleport: 'BAMF!', flight: 'POW!', regen: 'WHAM!' };
+function canFight(w) { return canTalk(w) && (w.spot.area === 'break' || w.spot.area === 'patio'); }
+function startFight(v, h) {
+  if (FIGHT || THEME !== 'superhq' || isHero(v) === isHero(h) || !canFight(v) || !canFight(h) || v.spot.area !== h.spot.area) return false;
+  if (isHero(v)) [v, h] = [h, v];
+  const shots = 3 + Math.floor(Math.random() * 3);
+  FIGHT = { a: h, b: v, shot: 0, shots, next: T + 1.3 };
+  for (const w of [v, h]) {
+    w.fight = FIGHT; w.actUntil = Math.max(w.actUntil, T + shots * 1.8 + 4);
+    const p = powerOf(w);
+    if (p === 'flight' && !w.spot.pose) { w.lift = 18; w.liftUntil = T + 999; }
+    else if (p === 'telekinesis') { w.lift = 7; w.liftUntil = T + 999; }       // Sam's chair floats up
+    faceTo(w, w === v ? h : v);
+  }
+  say(v, pick(TAUNT_V), 2.2);
+  return true;
+}
+function endFight(reason, who) {
+  const f = FIGHT; if (!f) return;
+  FIGHT = null; nextFight = T + rand(45, 90); SFX.length = 0;
+  for (const w of [f.a, f.b]) { w.fight = null; w.liftUntil = 0; w.vanish = 0; w.castUntil = 0; if (w.mode === 'idle' && w.arrived && w.spot) w.facing = w.spot.face || 'down'; }
+  if (reason === 'truce' && who) say(who, pick(TRUCE_LINES), 2.5);
+  else if (reason === 'done') say(Math.random() < 0.5 ? f.a : f.b, pick(['Good fight.', 'Same time tomorrow?', "Break's over anyway.", 'You got lucky.', 'Rematch at lunch!']), 2.5);
+}
+function shoot(att, tgt) {
+  const k = powerOf(att), dur = { eyes: 0.35, electro: 0.3, psycho: 0.3, time: 0.4, teleport: 0.5, invisible: 0.6, portal: 0.5, changeling: 0.35, speed: 0.35, telepathy: 0.6, flight: 0.45 }[k] || 0.55;
+  faceTo(att, tgt); att.castUntil = T + dur + 0.3;
+  if (k === 'teleport' || k === 'invisible') att.vanish = T + dur;
+  if (k === 'flight' && att.liftUntil) att.lift = 30;
+  SFX.push({ k, att, tgt, t0: T, dur, hit: false });
+  if (Math.random() < 0.4) say(att, pick(isHero(att) ? TAUNT_H : TAUNT_V), 1.8);
+}
+function impact(e) {
+  const t = e.tgt, a = e.att, cy = t.y + headTop(t) + 20;
+  t.hitAt = T; t.hitDir = t.x >= a.x ? 1 : -1;
+  if (e.k === 'flight' && a.liftUntil) a.lift = 18;
+  AFX.push({ k: 'pow', x: t.x + t.hitDir * 10, y: cy - 22, t0: T, dur: 0.8, text: POW_TEXT[e.k] || 'POW!', c: shade(SUPER_CAST[a.id % 16].suit, -0.2) });
+  const col = SUPER_CAST[a.id % 16].accent;
+  for (let i = 0; i < 8; i++) puff(t.x, cy, { kind: 'spark', vx: rand(-80, 80), vy: rand(-90, 20), ay: 200, life: 0.45, color: i % 2 ? col : '#fff' });
+  if (powerOf(t) === 'regen') puff(t.x, cy - 30, { kind: 'text', text: '+HP', vy: -18, life: 1.2, color: '#16a34a', font: 'bold 11px system-ui' });
+}
+function updFight() {
+  if (THEME === 'superhq' && !FIGHT && T > nextFight) {
+    nextFight = T + rand(45, 90);
+    const free = workers.filter(canFight), pairs = [];
+    for (const v of free) if (!isHero(v)) for (const h of free) if (isHero(h) && v.spot.area === h.spot.area && Math.hypot(v.x - h.x, v.y - h.y) < 170) pairs.push([v, h]);
+    if (pairs.length) startFight(...pick(pairs));
+  }
+  if (FIGHT) for (const w of [FIGHT.a, FIGHT.b]) if (w.mode !== 'idle' || w.path.length || THEME !== 'superhq') { endFight(w.mode === 'job' ? 'truce' : 'stop', w.mode === 'job' ? w : null); break; }
+  for (let i = SFX.length - 1; i >= 0; i--) { const e = SFX[i]; if (!e.hit && T - e.t0 >= e.dur) { e.hit = true; impact(e); } if (T - e.t0 > e.dur * 1.5) SFX.splice(i, 1); }
+  for (let i = AFX.length - 1; i >= 0; i--) if (T - AFX[i].t0 > AFX[i].dur) AFX.splice(i, 1);
+  const F = FIGHT;
+  if (F && T > F.next) {
+    if (F.shot >= F.shots) { endFight('done'); return; }
+    const att = F.shot % 2 ? F.b : F.a;             // the hero goes first
+    shoot(att, att === F.a ? F.b : F.a); F.shot++; F.next = T + rand(1.4, 1.9);
+  }
+}
+// where a shot starts (the hand, or the eyes for eye rays) and lands (the chest)
+function shotEnds(e) {
+  const a = e.att, t = e.tgt, dir = t.x >= a.x ? 1 : -1;
+  const ay = a.y + headTop(a) + (e.k === 'eyes' ? 9 : 24), ty = t.y + headTop(t) + 24;
+  return [a.x + dir * (e.k === 'eyes' ? 4 : 11), ay, t.x - dir * 4, ty, dir];
+}
+function zig(x0, y0, x1, y1, n, amp, c, w) {
+  g.beginPath(); g.moveTo(x0, y0);
+  for (let i = 1; i < n; i++) { const k = i / n; g.lineTo(lerp(x0, x1, k) + rand(-amp, amp), lerp(y0, y1, k) + rand(-amp, amp)); }
+  g.lineTo(x1, y1); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.stroke();
+}
+function drawSuperFx() {
+  for (const e of SFX) {
+    if (e.hit) continue;
+    const k = clamp((T - e.t0) / e.dur, 0, 1), [x0, y0, x1, y1, dir] = shotEnds(e), x = lerp(x0, x1, k), y = lerp(y0, y1, k), arc = y - Math.sin(k * Math.PI) * 26;
+    switch (e.k) {
+      case 'heat': g.globalAlpha = 0.35; C(x, y, 8, '#f97316'); g.globalAlpha = 1; C(x, y, 4.5, '#f97316'); C(x, y, 2.4, '#fde047');
+        if (Math.random() < 0.6) puff(x, y, { vx: -dir * 30, vy: rand(-20, -5), life: 0.35, size: 2, color: '#fb923c' }); break;
+      case 'cold': for (let i = 0; i < 3; i++) { const ox = x - dir * i * 7, oy = y + (i - 1) * 4; poly([ox + dir * 5, oy, ox - dir * 3, oy - 2.2, ox - dir * 3, oy + 2.2], i % 2 ? '#e0f2fe' : '#7dd3fc'); } break;
+      case 'eyes': g.globalAlpha = 0.35; L(x0, y0, x1, y1, '#ef4444', 4); g.globalAlpha = 1; L(x0, y0, x1, y1, '#fecaca', 1.2); C(x1, y1, 3 + Math.random() * 2, '#fca5a5'); break;
+      case 'electro': zig(x0, y0, x1, y1, 7, 5, '#60a5fa', 2.6); zig(x0, y0, x1, y1, 7, 3, '#fef9c3', 1.1); break;
+      case 'telepathy': for (let i = 0; i < 3; i++) { const kk = clamp(k - i * 0.15, 0, 1); g.globalAlpha = 1 - kk * 0.5; g.beginPath(); g.arc(lerp(x0, x1, kk), lerp(y0 - 14, y1, kk), 5 + i, dir > 0 ? -1 : Math.PI - 1, dir > 0 ? 1 : Math.PI + 1); g.strokeStyle = '#f0abfc'; g.lineWidth = 1.8; g.stroke(); } g.globalAlpha = 1; break;
+      case 'psycho': g.globalAlpha = 1 - k * 0.6; g.beginPath(); g.arc(x1, y1, 4 + k * 16, 0, TAU); g.strokeStyle = '#f472b6'; g.lineWidth = 3; g.stroke(); g.globalAlpha = 1; L(x0, y0, x0 + dir * 6, y0 - 4, '#f472b6', 1.5); break;
+      case 'time': g.globalAlpha = 0.25; C(x1, y1 - 8, 18, '#60a5fa'); g.globalAlpha = 1; g.beginPath(); g.arc(x1, y1 - 8, 18, 0, TAU); g.strokeStyle = '#fbbf24'; g.lineWidth = 1.4; g.stroke();
+        L(x1, y1 - 8, x1 + Math.cos(T * 14) * 12, y1 - 8 + Math.sin(T * 14) * 12, '#fbbf24', 1.6); L(x1, y1 - 8, x1 + Math.cos(T * 2) * 8, y1 - 8 + Math.sin(T * 2) * 8, '#fbbf24', 2); break;
+      case 'strength': g.save(); g.translate(x, arc); g.rotate(k * 9); RR(-6, -5, 12, 10, 2, '#a16207', '#713f12', 1); L(-6, 0, 6, 0, '#713f12', 0.8); g.restore(); break;
+      case 'telekinesis': g.globalAlpha = 0.35; C(x, arc, 7, '#a3e635'); g.globalAlpha = 1; g.save(); g.translate(x, arc); g.rotate(k * 7); RR(-3, -4, 6, 7, 1.5, '#fff', '#999', 0.8); g.restore(); break;
+      case 'regen': g.globalAlpha = 0.4; C(x, y, 7, '#4ade80'); g.globalAlpha = 1; C(x, y, 3, '#bbf7d0'); break;
+      case 'speed': for (let i = 0; i < 4; i++) L(x0, y0 - 8 + i * 5, x, y - 8 + i * 5, i % 2 ? '#fde047' : '#facc15', 1.2); break;
+      case 'flight': g.globalAlpha = 0.6; L(x0, y0 - 6, x, y, '#93c5fd', 3); g.globalAlpha = 1; C(x, y, 3, '#fff'); break;
+      case 'teleport': for (const [px, py, s] of [[x0, y0, 1 - k], [x1 - dir * 8, y1, k]]) { g.globalAlpha = 0.7; g.beginPath(); g.arc(px, py - 8, 4 + s * 12, 0, TAU); g.strokeStyle = '#a855f7'; g.lineWidth = 2; g.stroke(); } g.globalAlpha = 1; break;
+      case 'portal': for (const px of [x0 + dir * 6, x1 - dir * 12]) { E(px, y1 - 4, 4 + k * 3, 11, '#0e7490'); E(px, y1 - 4, 2.5 + k * 2, 8.5, '#67e8f9'); }
+        if (k > 0.5) C(x1 - dir * (12 - (k - 0.5) * 16), y1 - 4, 3, '#5c3a22'); break;
+      case 'invisible': if (k > 0.6) { g.globalAlpha = (k - 0.6) * 2; g.beginPath(); g.arc(x1, y1 - 6, 14, 0, TAU); g.strokeStyle = '#a5b4fc'; g.lineWidth = 1.5; g.setLineDash([2, 3]); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; } break;
+      case 'changeling': for (let i = 0; i < 3; i++) { const kk = clamp(k * 1.5 - i * 0.15, 0, 1); if (kk > 0) L(x1 - 8, y1 - 16 + i * 6, lerp(x1 - 8, x1 + 8, kk), lerp(y1 - 16 + i * 6, y1 - 6 + i * 6, kk), '#84cc16', 2); } break;
+    }
+  }
+  for (const f of AFX) {
+    const k = (T - f.t0) / f.dur;
+    if (f.k === 'pow') {
+      const s = k < 0.2 ? k / 0.2 : 1; g.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
+      starburst(f.x, f.y, 14 * s + 1, '#facc15', k * 2); C(f.x, f.y, 10 * s + 0.5, '#fef08a');
+      TXT(f.text, f.x, f.y, 'bold ' + Math.round(8 * s + 1) + 'px system-ui', f.c); g.globalAlpha = 1;
+    } else if (f.k === 'ring') {                 // portal ring (Jamal), opening then closing
+      const s = Math.sin(Math.min(1, k) * Math.PI); E(f.x, f.y - 22, 9 * s + 0.5, 22 * s + 0.5, '#0e7490'); E(f.x, f.y - 22, 6 * s + 0.3, 18 * s + 0.3, '#67e8f9');
+    } else if (f.k === 'clock') {                // time skip (Kenji)
+      g.globalAlpha = Math.max(0, 1 - k); g.beginPath(); g.arc(f.x, f.y - 28, 10 + k * 14, 0, TAU); g.strokeStyle = '#fbbf24'; g.lineWidth = 2; g.stroke();
+      L(f.x, f.y - 28, f.x + Math.cos(T * 20) * 9, f.y - 28 + Math.sin(T * 20) * 9, '#fbbf24', 1.5); g.globalAlpha = 1;
+    }
+  }
+}
+// Super HQ travel: on long trips (over 250px) the teleporter, the portal maker and the time keeper blink there,
+// the speedster runs at 3x with a blur, the flyer flies at 1.6x and Sam's chair hovers at 1.3x; Fatima shimmers.
+function superTravel(w) {
+  w.blink = null; w.speedMul = 1; w.shimmer = false;
+  if (THEME !== 'superhq' || !w.path.length) return;
+  let d = 0, px = w.x, py = w.y;
+  for (const p of w.path) { d += Math.hypot(p.x - px, p.y - py); px = p.x; py = p.y; }
+  if (d < 250) return;
+  const p = powerOf(w);
+  if (p === 'teleport' || p === 'portal' || p === 'time') { w.blink = { t0: T, k: p, moved: false }; blinkFx(w, p); }
+  else w.speedMul = { speed: 3, flight: 1.6, telekinesis: 1.3 }[p] || 1;
+  w.shimmer = p === 'invisible';
+}
+function blinkFx(w, p) {
+  if (p === 'portal') AFX.push({ k: 'ring', x: w.x, y: w.y, t0: T, dur: 0.8 });
+  else if (p === 'time') AFX.push({ k: 'clock', x: w.x, y: w.y, t0: T, dur: 0.6 });
+  else for (let i = 0; i < 12; i++) puff(w.x, w.y - 28, { kind: 'spark', vx: rand(-70, 70), vy: rand(-70, 70), life: 0.4, color: i % 2 ? '#a855f7' : '#e9d5ff' });
+}
+function stepBlink(w) {
+  const b = w.blink, e = T - b.t0, f = w.path[w.path.length - 1];
+  if (!f) { w.blink = null; return; }
+  if (!b.moved && e > 0.35) { w.x = f.x; w.y = f.y; b.moved = true; blinkFx(w, b.k); }
+  if (e > 0.7) { w.blink = null; w.path = []; arrive(w); }
+}
+// how see-through a worker is right now (blinking, a vanishing attack, Fatima on the move)
+function superAlpha(w) {
+  if (w.blink) { const e = T - w.blink.t0; return e < 0.35 ? 1 - e / 0.35 : Math.min(1, (e - 0.35) / 0.35); }
+  if (w.vanish && T < w.vanish) return 0.15;
+  if (w.shimmer && w.path.length) return 0.4 + Math.sin(T * 9) * 0.1;
+  return 1;
 }
 // idle side effects (smoke, steam, Zzz, pool strikes)
 function idleTick(w, dt, t) {
@@ -4680,16 +4913,22 @@ function drawWorker(w) {
     g.globalAlpha = 0.6 + Math.sin(T * 6) * 0.3; g.beginPath(); g.ellipse(w.x, w.y, 17, 6, 0, 0, TAU);
     g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
   }
-  const st = poseFor(w), h = hoverOf(w);
+  const st = poseFor(w);
+  let h = hoverOf(w), dx = 0;
+  if (w.castUntil && T < w.castUntil) { st.ra = w.facing === 'left' || w.facing === 'right' ? 1.7 : 2.4; st.item = null; st.open = true; }   // casting: arm out at the target
+  if (w.hitAt && T - w.hitAt < 0.5) { const s = Math.sin((T - w.hitAt) / 0.5 * Math.PI); dx = (w.hitDir || 1) * s * 7; h += s * 6; st.open = true; st.shake = true; }
+  const alpha = THEME === 'superhq' ? superAlpha(w) : 1;
+  if (alpha < 1) g.filter = 'opacity(' + Math.round(alpha * 100) + '%)';
   if (h) {
     st.hover = h;
     E(w.x, w.y, 12 - Math.min(5, h * 0.3), 3.5 - Math.min(1.5, h * 0.08), 'rgba(0,0,0,.14)');
-    if (w.L.mobility === 'wheelchair') { g.globalAlpha = 0.3 + Math.sin(T * 5) * 0.1; E(w.x, w.y - 1, 13, 4, SUPER_CAST[w.id % 16].accent); g.globalAlpha = 1; }
+    if (w.L.mobility === 'wheelchair' && w.hov > 0.5) { g.globalAlpha = 0.3 + Math.sin(T * 5) * 0.1; E(w.x, w.y - 1, 13, 4, SUPER_CAST[w.id % 16].accent); g.globalAlpha = 1; }
     else if (st.moving && powerOf(w) === 'flight') {                    // flying pose: fist forward, no walking legs
       st.moving = false; st.ra = w.facing === 'left' || w.facing === 'right' ? 1.9 : 2.7; st.la = 0.35;
     }
   }
-  drawPerson(lookOf(w), w.x, w.y, st);
+  drawPerson(lookOf(w), w.x + dx, w.y, st);
+  if (alpha < 1) g.filter = 'none';
 }
 
 // ============================================================================================
@@ -5685,7 +5924,7 @@ let hovered = null, selected = null, selectUntil = 0, online = false;
 function update(dt) {
   T += dt;
   for (const w of workers) updateWorker(w, dt);
-  updParticles(dt); updPool(dt); updTalks();
+  updParticles(dt); updPool(dt); updTalks(); updFight();
   if (T > BOSS.nextQuip) { if (!BOSS.visitor) bossSay(pick(activeCount() ? BOSS_BUSY : BOSS_IDLE), 3); BOSS.nextQuip = T + rand(35, 70); }
   const atDesk = workers.some(w => w.mode === 'job' && w.locKind === 'trouble' && w.arrived);
   if (atDesk && T > DUCK.next) { DUCK.bubble = pick(DUCK_LINES); DUCK.bubbleUntil = T + 3.5; DUCK.next = T + rand(7, 11); }
@@ -5710,6 +5949,7 @@ function render() {
   drawPingPongBall();
   drawPager();
   drawParticles();
+  drawSuperFx();
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
   const bubs = [];
