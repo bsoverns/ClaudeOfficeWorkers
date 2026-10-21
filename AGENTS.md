@@ -40,7 +40,7 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
   and `index.html` `STATION_ORDER` (stations), which must match `STATIONS` in `server.py`.
   Work areas: `AREA_RULES` in `server.py` and `AREA_SLOT` in `index.html` must use the same keys.
   A theme (`THEMES` in `index.html`) is a set of 12 station definitions keyed by those slots
-  (`STA` Classic, `DEV` Dev Shop, `SCIFI`, `HORROR`, `CYBER` Neon City, `XMAS` North Pole, `PIRATE` Pirate Cove, `STONE` Stone Age), plus optional
+  (`STA` Classic, `DEV` Dev Shop, `SCIFI`, `HORROR`, `CYBER` Neon City, `XMAS` North Pole, `PIRATE` Pirate Cove, `STONE` Stone Age, `HERO` Hero HQ), plus optional
   `routed`, `costumes` (see `dress()`), `wash`, `decor`, `blocks` and `rooms` (skins for the troubleshooting room, meeting room
   and mailroom: `{trouble, meeting, mail}`, each with optional `back`/`fx`/`counter`|`table`/`duck`; assigned in the "Themed rooms" section, a missing entry means Classic, and furniture footprints must not change). Station draws use coordinates
   relative to the cell (x, y) and keep their equipment right of x + 92 (that area is blocked for walking).
