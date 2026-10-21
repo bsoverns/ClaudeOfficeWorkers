@@ -35,11 +35,19 @@ boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss
 slip and head to a station: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse, pizzeria,
 art studio, lumber yard, chem lab, server room or shipping. Everyone gets a turn before
 anyone goes twice, and a session keeps the same worker and station for every task it
-gives (as long as they're free). When Claude starts subagents, the session's worker becomes
+gives (as long as they're free). Each subagent gets its own random character, kept for the whole
+session: an agent named in its description ("Neo: fix three bugs") or by the Agent tool's `name`
+comes back as the same character every time (its slip reads "Tasha as Neo"), and a continued agent
+keeps its character. Those links are saved with the office and freed when the session ends (done,
+**Done ✓**, `/clear`, `/exit`, 12 hours). When Claude starts subagents, the session's worker becomes
 team lead: they run a meeting at the whiteboard, page each helper to the meeting room, hand
-them their slips there, and supervise until the helpers are done. A failed tool sends the worker to the Troubleshooting desk (staffed by a
+them their slips there, and supervise until the helpers are done (a lead whose turn ends while
+helpers are still out keeps waiting for them in the meeting; it only waits on you once the last
+one is back). A failed tool sends the worker to the Troubleshooting desk (staffed by a
 rubber duck); when Claude stops or needs permission, the worker waits in the mailroom,
-a chime plays and the tab shows a red icon. Say "done" and they go back on break.
+a chime plays and the tab shows a red icon. Say "done" and they go back on break. The work slip
+shows the session's name as the Claude app shows it (your rename, else the app's own title),
+or your first prompt until the session has a name.
 
 On break, people chat with whoever is nearby: short back-and-forth exchanges about fish in the
 microwave, last night's game, the stock market, reply-all disasters, TPS reports and the
@@ -260,6 +268,11 @@ py src\office.py list
 py src\office.py demo            (a 90-second show with three workers)
 ```
 
+`py tests\sim_hooks.py` simulates Claude Code sessions through the real hook script against a test
+office on port 8790 (it starts one if needed) and checks session names on the slips and that a
+team lead waits for its helpers in the meeting room, and that each subagent keeps its own
+character. It prints `all passed` or the failures.
+
 ## Settings (right-hand panel)
 
 Chime when someone waits, soft blips on start/finish, re-chime every 5 minutes while
@@ -305,6 +318,8 @@ package/                 shipped inside the zip next to the exe
   mac/                   the Mac app's launcher, Info.plist and Connect/Disconnect .command files
 tools/
   make_icon.py           draws office.ico for the build (office.icns with --icns)
+tests/
+  sim_hooks.py           simulated sessions through the hook against a test office on port 8790
 docs/
   CONNECT_A_PROJECT.md   setup for a new PC, global or per-project, with a paste-in prompt
 .github/                 CI build + release, PR auto-assign, CODEOWNERS
@@ -315,11 +330,26 @@ docs/
 
 | Hook event | Effect |
 |---|---|
-| `UserPromptSubmit` | New job (title = your prompt) or resume; "done"/"thanks"/"task complete" ends it |
+| `UserPromptSubmit` | New job or resume; "done"/"thanks"/"task complete" ends it |
 | `PreToolUse` | Working; bubble shows the tool |
 | `PostToolUseFailure` | Troubleshooting desk (an interrupt → mailroom) |
-| `Notification`, `Stop` | Mailroom, waiting on you |
-| `SubagentStart` / `SubagentStop` | A helper is paged to the meeting room by the team lead / goes back on break |
+| `Notification`, `Stop` | Mailroom, waiting on you. With helpers still out, `Stop` keeps the lead working in the meeting ("Waiting for N helpers") and an idle `Notification` is ignored; a permission request still goes to the mailroom |
+| `SubagentStart` / `SubagentStop` | A helper is paged to the meeting room by the team lead / goes back on break. When the last helper is back and the lead's turn had ended, the lead waits on you in the mailroom (also if its helpers go quiet for 10 minutes, e.g. a lost `SubagentStop`) |
 | `SessionEnd` | `/clear`, `/logout` or exiting at the prompt: back to the break room. Any other end (e.g. the app closing an idle session): keeps waiting until you say done |
 
 All hooks are async and time-stamped, so the server ignores events that arrive out of order.
+
+The slip title is the session's name: the hook reads the end of the session transcript
+(`transcript_path`, up to 2 MB) for the last rename (`custom-title`), else the app's own title
+(`ai-title`), and sends it as `session_title`. A rename shows on the next event. Without a name
+the title is your first prompt; helpers are titled "<type> helper for: <session name>".
+
+A subagent's name and task come from its description: the hook reads
+`<session>/subagents/agent-<id>.meta.json` beside the transcript on each subagent event and sends
+it as `agent_description` (with the file's `toolUseId` as `agent_tool_use_id`). The server matches
+that id to the lead's own `Agent` call (its `name`, else a leading "Name:" in its `description`);
+with no id yet it guesses the oldest call of that agent type, and drops the guessed name if the
+description has no "Name:". Calls that never start are dropped after 10 minutes or at your next
+prompt; a subagent's own `Agent` calls are never taken as the lead's. Named subagents are keyed by name, others
+by agent id. A new subagent gets a random free character no live session has linked; if none is
+left, one linked to another session's idle agent, then any free one; with nobody free it queues.
