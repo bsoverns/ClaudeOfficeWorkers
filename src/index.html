@@ -105,7 +105,8 @@
         <option value="classic">Classic Office</option><option value="dev">Dev Shop</option>
         <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option>
         <option value="cyber">Neon City (cyberpunk)</option><option value="xmas">North Pole (Christmas)</option>
-        <option value="pirate">Pirate Cove</option><option value="stone">Stone Age</option></select></label>
+        <option value="pirate">Pirate Cove</option><option value="stone">Stone Age</option>
+        <option value="hero">Hero HQ (superheroes)</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
@@ -147,6 +148,7 @@ py src\office.py demo</pre>
     <button class="theme" data-theme="cyber"><b>🌃 Neon City</b><span>Cyberpunk: netrunners, street samurai with neon katanas, LED-mask punks, holo-idols, corpos, ripperdocs, drone couriers and androids. The Gig Board, Fork Alley, the Blackwall… (also follows the work)</span></button>
     <button class="theme" data-theme="pirate"><b>🦜 Pirate Cove</b><span>Pirates with eyepatches and parrots, buccaneers, a captain and a few cursed skeletons. The Treasure Map, the Cannon Deck, Parrot Review, the Kraken, Walk the Plank… (also follows the work)</span></button>
     <button class="theme" data-theme="stone"><b>🦖 Stone Age</b><span>Cave people, hunters, shamans and coworkers in dino and mammoth onesies; real dinosaurs do the heavy lifting. The Stone Tablets, Pterodactyl Airlift, the Wheel (reinvented), the T-Rex Den, Volcano Testing… (also follows the work)</span></button>
+    <button class="theme" data-theme="hero"><b>🦸 Hero HQ</b><span>Eight heroes and eight villains, each with a power: fire, ice, lightning, flight, teleporting, portals, super speed… They squabble and duel on break, use their powers to get around, and call a truce when work comes in. The Gadget Lab, the Portal Gate, the Danger Room, Containment… (also follows the work)</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
 </div></div>
@@ -244,6 +246,7 @@ function drawParticles() {
     else if (p.kind === 'spark') L(p.x, p.y, p.x - p.vx * 0.03, p.y - p.vy * 0.03, p.color, 1.6);
     else if (p.kind === 'rect') { g.save(); g.translate(p.x, p.y); g.rotate(p.life * 9); R(-p.size / 2, -p.size / 3, p.size, p.size * 0.66, p.color); g.restore(); }
     else if (p.kind === 'text') TXT(p.text, p.x, p.y, p.font || 'bold 12px system-ui', p.color);
+    else if (p.kind === 'ring') { g.beginPath(); g.arc(p.x, p.y, p.size, 0, TAU); g.strokeStyle = p.color; g.lineWidth = 1.5; g.stroke(); }
     else if (p.kind === 'paper') { g.save(); g.translate(p.x, p.y); g.rotate(p.life * 8); RR(-5, -6, 10, 12, 1, '#fffef5', '#999', 0.8); g.restore(); }
   }
   g.globalAlpha = 1;
@@ -585,6 +588,86 @@ const STONE_BANTER = [
   ['Lunch? Mammoth again?', 'It is always mammoth.', 'One mammoth feeds the team for a month.', 'Agile, {a}.'],
   ['Did the pterodactyl drop the deploy?', 'Only half of it.', 'Which half?', 'The important half, {a}.'],
 ];
+// Hero HQ: everyone has a power (POWERS[worker id]); even ids are heroes, odd ids villains.
+// suit/cape/mask are costume colors, fx the color of their power. Nobody's real superhero, on purpose.
+const POWERS = [
+  { power: 'strength', label: 'Super Strength', alias: 'Bulwark', suit: '#2563eb', cape: '#dc2626', mask: '#1e3a8a', fx: '#facc15' },       // Marcus
+  { power: 'heat', label: 'Pyrokinesis', alias: 'Scorch', suit: '#7f1d1d', cape: '#f97316', mask: '#1c1917', fx: '#f97316' },               // Priya
+  { power: 'flight', label: 'Flight', alias: 'Skylark', suit: '#0ea5e9', cape: '#f8fafc', mask: '#0c4a6e', fx: '#bae6fd' },                  // Wei
+  { power: 'cold', label: 'Cryokinesis', alias: 'Frostbite', suit: '#1e3a5f', cape: '#93c5fd', mask: '#0f172a', fx: '#bfdbfe' },              // Haruto
+  { power: 'telepathy', label: 'Telepathy', alias: 'Mindwave', suit: '#a21caf', cape: '#f0abfc', mask: '#581c87', fx: '#e879f9' },            // Maria
+  { power: 'electro', label: 'Electrokinesis', alias: 'Voltage', suit: '#1f2937', cape: '#facc15', mask: '#111827', fx: '#fde047' },          // Jake
+  { power: 'teleport', label: 'Teleportation', alias: 'Blink', suit: '#6d28d9', cape: '#22d3ee', mask: '#2e1065', fx: '#c084fc' },            // Tasha
+  { power: 'psychokinesis', label: 'Psychokinesis', alias: 'Rupture', suit: '#3f0d12', cape: '#be123c', mask: '#18181b', fx: '#fb7185' },     // Raj
+  { power: 'speed', label: 'Super Speed', alias: 'Dash', suit: '#dc2626', cape: '#facc15', mask: '#7f1d1d', fx: '#fde047' },                  // Emily
+  { power: 'time', label: 'Time Manipulation', alias: 'Paradox', suit: '#1e1b4b', cape: '#a16207', mask: '#0f0a2e', fx: '#fcd34d' },          // Kenji
+  { power: 'regen', label: 'Regeneration', alias: 'Mend', suit: '#16a34a', cape: '#f8fafc', mask: '#14532d', fx: '#86efac' },                 // Mei
+  { power: 'changeling', label: 'Shapeshifting', alias: 'Facade', suit: '#365314', cape: '#84cc16', mask: '#1a2e05', fx: '#a3e635' },         // Jamal
+  { power: 'telekinesis', label: 'Telekinesis', alias: 'Levity', suit: '#0f766e', cape: '#5eead4', mask: '#134e4a', fx: '#5eead4' },          // Rosa
+  { power: 'portal', label: 'Portal Creation', alias: 'Rift', suit: '#312e81', cape: '#f97316', mask: '#1e1b4b', fx: '#38bdf8' },             // Sam
+  { power: 'invisible', label: 'Invisibility', alias: 'Veil', suit: '#e2e8f0', cape: '#94a3b8', mask: '#475569', fx: '#e2e8f0' },             // Fatima
+  { power: 'eyerays', label: 'Eye Rays', alias: 'Glare', suit: '#18181b', cape: '#b91c1c', mask: '#450a0a', fx: '#ef4444' },                  // Arjun
+];
+const isVillain = w => w.id % 2 === 1;
+const powerOf = w => POWERS[w.id % POWERS.length];
+// Hero vs. villain banter: "V:" lines are the villain's, "H:" lines the hero's, whoever speaks first.
+const HERO_BANTER = [
+  ["V:You're about to get cold feet!", "H:Good. I'll put them out with your face."],
+  ['V:My intelligence is beyond your comprehension!', "H:You built a doomsday machine with a USB port. I'm not impressed."],
+  ["V:You can't outrun your destiny!", "H:I already did. Destiny's still looking for me."],
+  ['V:Get out of my head!', "H:Gladly. There's nothing interesting in here."],
+  ["V:You're so full of yourself!", "H:And you're so down to earth."],
+  ["V:I've hacked every system in the city!", 'H:Including your own security cameras?', 'V:Why?', "H:Because they're recording you picking your nose."],
+  ["V:Size doesn't matter!", "H:That's what you tell your tailor, too?"],
+  ["V:You'll never catch me!", "H:I don't need to catch you. I just need to close the door."],
+  ['V:Show yourself!', "H:I'm right behind you.", 'V:Where?', 'H:Exactly.'],
+  ["V:You're too late!", 'H:I can fix that.', 'V:How?', "H:First, I'm going to rewind this conversation. It was terrible."],
+  ["V:You're all wet!", "H:And you're all washed up."],
+  ["V:You can't fool me!", 'H:Really?', 'V:Of course not!', 'H:Then why are you arguing with your own reflection?'],
+  ["V:You'll never take me alive!", 'H:I was hoping to take you dead tired. Saves paperwork.'],
+  ["V:You can't hold me!", "H:I'm attracted to your confidence.", 'V:What?', 'H:And repelled by your personality.'],
+  ["V:You can't read my mind!", "H:I don't have to. Your evil plan is written on your whiteboard."],
+  ['V:Prepare to be cut down!', "H:Can you cut my lawn first? I've been meaning to get to that."],
+  ['V:Your powers are a joke!', "H:That's a bit of a stretch."],
+  ['V:Freeze!', "H:I would, but I'm having a heated argument with your boss later."],
+  ["V:You're nothing but a blockhead!", "H:And you're just throwing dirt at the situation."],
+  ["V:You can't stop my army!", 'H:I can stop your army and make your troops turnip their uniforms.'],
+  ["V:You'll never catch me!", "H:You're wanted for grand theft sneakers. This is a running shoe case."],
+  ['V:Behold my ultimate creation!', 'H:Does it come in a smaller size? Your parking is terrible.'],
+  ["V:I'll bring you to your knees!", 'H:You always bring the mood down.'],
+  ["V:I'll dissolve you into nothing!", 'H:That sounds like a corrosive personality.'],
+  ['V:The darkness will consume you!', "H:I've been in darker places. Have you seen my basement?"],
+  ["V:You'll be blown away!", "H:I've heard that one before. It really sucks."],
+  ['V:My sonic scream will shatter your bones!', "H:Could you repeat that? Your argument isn't making any sense."],
+  ['V:One drop of this toxin will end you!', 'H:And one drop of your cologne already did.'],
+  ["V:You'll have to fight all of me!", 'H:I can barely tolerate one of you.'],
+  ["V:I know every move you'll make!", "H:Then you already know I'm about to ask if you've tried turning your future off and on again."],
+  ['V:The beasts will tear you apart!', 'H:Even the rabbits?', 'V:Especially the rabbits!', "H:That's hare-raising."],
+  ["V:You'll never get your hands on me!", 'H:I know. You keep making a vapor trail of bad decisions.'],
+  ["V:I'll shatter your confidence!", 'H:You first. Your plan looks fragile.'],
+  ["V:I've calculated ten thousand ways to defeat you!", 'H:And not one way to get a girlfriend?', "V:That's irrelevant!", "H:That's what I thought."],
+  ["V:Soon, you'll forget who you are!", 'H:Can you make me forget this conversation first?'],
+  ['V:Money makes the world go round!', 'H:Then why are you always going in circles?'],
+  ['V:My swarm will bring you to your knees!', "H:I guess this is going to sting a little.", 'V:A little? THERE ARE FOUR MILLION BEES!', "H:Okay, that's a buzzkill."],
+  ['V:I can make a thousand bombs!', 'H:Can you make a thousand good decisions? Start with one.'],
+  ['V:I will crush you like aluminum foil!', "H:You're really pushing your metal."],
+  ['V:I can erase you from existence!', 'H:Can you erase my browser history instead?'],
+  ['V:Tonight, your nightmares become reality!', 'H:My nightmare is waking up on Monday. Beat that.'],
+  ["V:I'll make you smaller than an ant!", 'H:Finally, a chance to get into affordable housing.'],
+  ["V:I'll unleash a storm unlike anything you've seen!", 'H:You sound like my local weather app. Lots of warnings, no accuracy.'],
+  ['V:I can hear your heartbeat!', 'H:Then you can hear how disappointed I am.'],
+  ["V:I'll make your skeleton dance!", "H:Can you teach it the electric slide? I've got a wedding coming up."],
+  ['V:Luck is on my side!', "H:That's unfortunate. I was hoping for a fair fight."],
+  ['V:Whatever you can do, I can do better!', 'H:Can you do taxes?', 'V:What?', "H:Didn't think so."],
+  ["V:You'll be drawn to your doom!", 'H:I already feel a strong attraction to your defeat.'],
+  ['V:I have all the time in the world!', 'H:And somehow, you still wasted it on this outfit.'],
+  ['V:I am the end of everything! The destroyer of worlds! The terror of all existence!', 'H:Okay, but are you the one who keeps leaving the microwave at 00:01?', 'V:That was me.', "H:I KNEW IT. YOU'RE A MONSTER."],
+];
+// what they say when a break-room duel starts, ends, or gets cut short by work
+const DUEL_START = { hero: ['Not on my watch!', 'Stand down!', 'Have at you!', 'Justice is served. With coffee.'],
+  villain: ['Enough talk!', 'Feel my power!', 'Mwahaha!', 'You and what army?'] };
+const DUEL_END = ['Truce. Break is almost over.', 'Same time tomorrow?', "We'll call it a draw.", 'Nobody tell HR.'];
+const DUEL_CUT = ['Saved by the page!', 'This isn’t over!', 'Truce. For now.', 'Duty calls. Rain check!'];
 // The break room TV flips channels every 40 seconds; TV_CHAT is what the couch says about each.
 const TV_SHOWS = ['sports', 'talk', 'game', 'soap'];
 const TV_NAMES = { sports: 'the match', talk: 'a trashy talk show', game: 'a game show', soap: 'a soap opera' };
@@ -2723,7 +2806,262 @@ const STONE = {
       if (Math.random() < dt * 0.3) popText(x + 160, y + 86, ['📦 loaded', 'Tracking 0001 BC', 'Out for delivery', 'Delivered: Tuesday-ish'], '#14532d');
     } },
 };
-for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE]) STATION_ORDER.forEach(id => {
+
+// ---- Hero HQ theme: the same 12 slots as a superhero headquarters -------------------------
+function heroStar(cx, cy, r, c, rot = 0) {     // five-pointed star
+  const p = [];
+  for (let i = 0; i < 10; i++) { const a = rot - Math.PI / 2 + i * Math.PI / 5, k = i % 2 ? r * 0.45 : r; p.push(cx + Math.cos(a) * k, cy + Math.sin(a) * k); }
+  poly(p, c);
+}
+function heroBolt(x1, y1, x2, y2, c, w, seed) { // a jagged lightning line; the same seed draws the same zigzag
+  const d = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / d, ny = (x2 - x1) / d, n = Math.max(3, Math.round(d / 14));
+  g.beginPath(); g.moveTo(x1, y1);
+  for (let i = 1; i < n; i++) { const k = i / n, o = (hh(seed * 31 + i) % 13) - 6; g.lineTo(lerp(x1, x2, k) + nx * o, lerp(y1, y2, k) + ny * o); }
+  g.lineTo(x2, y2); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke();
+}
+function heroEmblem(power, cx, cy, c) {        // the chest badge: a small glyph for the power on a dark disc
+  C(cx, cy, 4.6, '#111827'); g.save(); g.translate(cx, cy);
+  switch (power) {
+    case 'heat': poly([0, -3.4, 2.4, 0.6, 0, 3.2, -2.4, 0.6], c); break;
+    case 'cold': for (let a = 0; a < 3; a++) L(-Math.cos(a * 1.05) * 3.2, -Math.sin(a * 1.05) * 3.2, Math.cos(a * 1.05) * 3.2, Math.sin(a * 1.05) * 3.2, c, 0.9); break;
+    case 'electro': case 'speed': poly([1, -3.6, -2.2, 0.4, 0, 0.4, -1, 3.6, 2.2, -0.6, 0, -0.6], c); break;
+    case 'flight': poly([-3.6, -1.6, 0, 1.2, 3.6, -1.6, 0, 3], c); break;
+    case 'telepathy': case 'eyerays': E(0, 0, 3.4, 1.9, c); C(0, 0, 1, '#111827'); if (power === 'eyerays') L(1, 0, 4.2, 0, '#fff', 0.7); break;
+    case 'teleport': for (let i = 0; i < 4; i++) C(Math.cos(i * 1.57) * 2.6, Math.sin(i * 1.57) * 2.6, 0.8, c); break;
+    case 'psychokinesis': heroStar(0, 0, 3.6, c, 0.3); break;
+    case 'time': poly([-2.4, -3, 2.4, -3, 0, 0], c); poly([-2.4, 3, 2.4, 3, 0, 0], c); break;
+    case 'regen': R(-0.9, -3, 1.8, 6, c); R(-3, -0.9, 6, 1.8, c); break;
+    case 'changeling': g.beginPath(); g.arc(0, 0, 3, -Math.PI / 2, Math.PI / 2); g.fillStyle = c; g.fill(); break;
+    case 'telekinesis': case 'portal': case 'invisible':
+      g.beginPath(); if (power === 'portal') g.ellipse(0, 0, 2, 3.2, 0, 0, TAU); else g.arc(0, 0, 2.8, 0, TAU);
+      if (power === 'invisible') g.setLineDash([1.2, 1.2]); g.strokeStyle = c; g.lineWidth = 1; g.stroke(); g.setLineDash([]); break;
+    default: heroStar(0, 0, 3.6, c);         // strength
+  }
+  g.restore();
+}
+function heroPow(x, y, text, c) { puff(x, y, { kind: 'text', text, vy: -18, life: 1.1, color: c, font: 'bold 13px Impact, system-ui' }); }
+const HERO = {
+  workbench: { label: 'GADGET LAB', name: 'the Gadget Lab', tint: '#dbe4f0', anim: 'fix',
+    lines: ['Case AB#1234: build a better grapple.', 'Moving this gadget to DONE.', 'Sprint goal: a belt with more pockets.', 'Who keeps borrowing the boomerang?'],
+    draw(x, y, t, on) {
+      RR(x + 100, y + 30, 132, 72, 3, '#cbd5e1', '#64748b', 1.5);                 // pegboard with hanging gadgets
+      for (let i = 0; i < 10; i++) for (let j = 0; j < 5; j++) C(x + 108 + i * 12.6, y + 38 + j * 13, 0.9, '#94a3b8');
+      L(x + 116, y + 40, x + 116, y + 62, '#334155', 1.2); g.beginPath(); g.arc(x + 116, y + 66, 5, 0, Math.PI); g.strokeStyle = '#334155'; g.lineWidth = 2; g.stroke();   // grapple hook
+      poly([x + 136, y + 44, x + 152, y + 52, x + 136, y + 60, x + 141, y + 52], '#f59e0b');                                                // boomerang
+      RR(x + 160, y + 46, 26, 10, 4, '#1f2937'); C(x + 166, y + 51, 3.6, '#38bdf8'); C(x + 180, y + 51, 3.6, '#38bdf8');                    // goggles
+      RR(x + 196, y + 38, 30, 22, 2, '#fffef5', '#94a3b8', 1); TXT('CASE', x + 211, y + 44, 'bold 6px monospace', '#b91c1c'); TXT('AB#' + (1200 + (Math.floor(t / 9) % 90)), x + 211, y + 53, 'bold 6px monospace', '#334155');
+      R(x + 104, y + 84, 124, 4, '#475569'); for (let i = 0; i < 4; i++) RR(x + 110 + i * 30, y + 76, 18, 8, 2, ['#ef4444', '#facc15', '#22c55e', '#3b82f6'][i]);   // utility belt pouches
+      R(x + 98, y + 118, 136, 8, '#475569'); R(x + 104, y + 126, 5, 50, '#334155'); R(x + 222, y + 126, 5, 50, '#334155');                  // workbench
+      RR(x + 140, y + 104, 46, 14, 4, '#94a3b8', '#475569', 1); C(x + 150, y + 111, 3, on && Math.sin(t * 8) > 0 ? '#22c55e' : '#14532d');    // the gadget being built
+      for (const k of [-1, 1]) { const a = on ? t * 14 : 0; L(x + 163 + k * 18, y + 104, x + 163 + k * 18 + Math.cos(a) * 6, y + 104 + Math.sin(a) * 2, '#1f2937', 1.4); }
+      RR(x + 200, y + 106, 22, 12, 2, '#b91c1c'); R(x + 207, y + 103, 8, 3, '#7f1d1d');                                                    // toolbox
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 5) puff(x + rand(150, 176), y + 104, { kind: 'spark', vx: rand(-50, 50), vy: rand(-70, -20), ay: 160, life: 0.4, color: '#fde047' });
+      if (Math.random() < dt * 0.3) popText(x + 164, y + 96, ['AB#' + (1000 + Math.floor(Math.random() * 9000)) + ' ✓', 'gadget assembled', 'grapple v2 ✓', '+1 belt pocket'], '#1e3a8a');
+    } },
+  forge: { label: 'SUIT FORGE', name: 'the Suit Forge', tint: '#f3d9c4', anim: 'hammer',
+    lines: ['Deploying a new suit to the cloud.', 'Scaling out: one more cape.', 'Resource group: capes-prod.', 'Who has Owner on the armor?'],
+    draw(x, y, t, on) {
+      L(x + 120, y + 70, x + 120, y + 170, '#64748b', 3); E(x + 120, y + 172, 12, 3, '#475569');                                          // mannequin with a suit
+      poly([x + 106, y + 64, x + 134, y + 64, x + 142, y + 132, x + 98, y + 132], '#b91c1c');                                               // cape
+      RR(x + 108, y + 60, 24, 40, 6, '#2563eb', '#1e3a8a', 1); heroStar(x + 120, y + 76, 7, '#facc15'); R(x + 108, y + 94, 24, 4, '#facc15');
+      C(x + 120, y + 52, 8, '#cbd5e1');
+      RR(x + 176, y + 34, 54, 72, 6, '#57534e', '#292524', 1.5); RR(x + 184, y + 54, 38, 30, 14, '#1c1917');                               // furnace
+      const glow = on ? 0.6 + Math.sin(t * 9) * 0.25 : 0.3; g.globalAlpha = glow; RR(x + 186, y + 58, 34, 24, 12, '#f97316'); g.globalAlpha = 1;
+      if (on) { flame(x + 196, y + 82, 0.9, t); flame(x + 210, y + 82, 0.7, t + 1); }
+      R(x + 196, y + 26, 14, 10, '#44403c');
+      poly([x + 150, y + 132, x + 206, y + 132, x + 196, y + 142, x + 160, y + 142], '#374151');                                            // anvil
+      R(x + 166, y + 142, 24, 18, '#4b5563'); R(x + 158, y + 160, 40, 8, '#374151');
+      RR(x + 162, y + 124, 30, 8, 3, on ? mix('#94a3b8', '#f97316', 0.5 + Math.sin(t * 6) * 0.5) : '#94a3b8');                              // glowing armor plate
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 4) puff(x + rand(166, 188), y + 124, { kind: 'spark', vx: rand(-70, 70), vy: rand(-90, -30), ay: 200, life: 0.45, color: '#fb923c' });
+      if (Math.random() < dt * 0.3) popText(x + 176, y + 116, ['suit deployed ☁', 'scaled to 2 capes', 'armor +1', 'clang!'], '#9a3412');
+    } },
+  dairy: { label: 'PORTAL GATE', name: 'the Portal Gate', tint: '#d4d4f7', anim: 'dial',
+    lines: ['Opening a portal to the feature branch.', 'Merging timelines... no conflicts.', 'PR #42 stepped through the gate.', 'Rebasing reality onto main.'],
+    draw(x, y, t, on) {
+      const cx = x + 180, cy = y + 96;
+      C(cx, cy, 50, '#475569'); C(cx, cy, 44, '#1e1b4b');
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; R(cx + Math.cos(a) * 47 - 2, cy + Math.sin(a) * 47 - 2, 4, 4, on && (Math.floor(t * 4) % 12) === i ? '#38bdf8' : '#94a3b8'); }
+      g.save(); g.beginPath(); g.arc(cx, cy, 43, 0, TAU); g.clip();
+      for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(cx, cy, 8 + k * 8, (on ? t * (2 - k * 0.3) : 0) + k, (on ? t * (2 - k * 0.3) : 0) + k + 3.6);
+        g.strokeStyle = k % 2 ? '#38bdf8' : '#a78bfa'; g.globalAlpha = on ? 0.8 : 0.35; g.lineWidth = 4; g.stroke(); }
+      g.globalAlpha = 1; g.restore();
+      R(x + 128, y + 146, 104, 10, '#334155'); R(x + 136, y + 156, 8, 20, '#1f2937'); R(x + 216, y + 156, 8, 20, '#1f2937');
+      RR(x + 98, y + 112, 30, 38, 3, '#334155', '#0f172a', 1);                                                                              // dial console
+      gear(x + 113, y + 126, 7, 8, on ? t * 2 : 0, '#94a3b8'); C(x + 106, y + 143, 2, '#22c55e'); C(x + 120, y + 143, 2, on ? '#f59e0b' : '#78350f');
+      TXT('main', x + 113, y + 106, 'bold 7px monospace', '#6366f1');
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 3) { const a = rand(0, TAU); puff(x + 180 + Math.cos(a) * 40, y + 96 + Math.sin(a) * 40, { vx: -Math.cos(a) * 30, vy: -Math.sin(a) * 30, life: 0.9, size: 1.6, color: '#c4b5fd' }); }
+      if (Math.random() < dt * 0.3) popText(x + 180, y + 40, ['git push ⇢ portal', 'branch opened', 'PR merged ✓', 'timelines synced'], '#4338ca');
+    } },
+  valet: { label: 'HERO HOTLINE', name: 'the Hero Hotline', tint: '#f5d0d0', anim: 'type', sit: true, dx: 80,
+    lines: ['Hero Hotline, what is your emergency?', 'Have you tried turning the villain off and on?', 'Ticket #4411: cat in a tree. Again.', 'Escalating to the strong one.'],
+    draw(x, y, t, on) {
+      const ring = on && (t % 6) < 1.2;
+      RR(x + 160, y + 30, 70, 66, 4, '#0f172a');                                                                                             // night window with the hero signal
+      g.save(); g.beginPath(); g.rect(x + 162, y + 32, 66, 62); g.clip();
+      for (let i = 0; i < 6; i++) R(x + 164 + i * 11, y + 74 - (hh(i) % 18), 9, 30, '#1e293b');
+      g.globalAlpha = 0.25; poly([x + 214, y + 94, x + 176, y + 32, x + 204, y + 32], '#fef08a'); g.globalAlpha = 1;
+      C(x + 190, y + 46, 10, 'rgba(254,240,138,.55)'); heroStar(x + 190, y + 46, 7, '#1e293b');
+      g.restore(); RR(x + 160, y + 30, 70, 66, 4, null, '#475569', 2);
+      deskSit(x, y); monitor(x, y, '#1e3a8a');
+      for (let i = 0; i < 3; i++) R(x + 107, y + 90 + i * 6, 18 + (hh(i + Math.floor(t)) % 10), 2, '#93c5fd');
+      RR(x + 150, y + 104, 24, 12, 4, '#dc2626', '#7f1d1d', 1); g.save(); g.translate(x + 162, y + (ring ? 101 + Math.sin(t * 40) : 102)); RR(-12, -4, 24, 6, 3, '#ef4444'); g.restore();   // red hotline phone
+      R(x + 150, y + 118, 80, 5, '#64748b'); R(x + 156, y + 123, 3, 50, '#475569'); R(x + 222, y + 123, 3, 50, '#475569');
+      RR(x + 196, y + 108, 26, 10, 2, '#fffef5', '#94a3b8', 0.8); TXT('#4411', x + 209, y + 113, 'bold 5px monospace', '#b91c1c');
+    },
+    tick(x, y, w, dt, t) {
+      if ((t % 6) < 1.2 && Math.random() < dt * 4) popText(x + 162, y + 92, ['☎ RING!', 'ring ring!'], '#dc2626');
+      if (Math.random() < dt * 0.25) popText(x + 190, y + 26, ['ticket closed ✓', 'cat rescued 🐈', 'caller calmed', 'escalated'], '#991b1b');
+    } },
+  bakery: { label: 'DATA VAULT', name: 'the Data Vault', tint: '#dfe3e8', anim: 'keys',
+    lines: ['SELECT * FROM villains WHERE caught = 0;', 'Vault indexed. Nobody gets in.', 'Backing up the secret identities.', 'Deadlock! Who left the vault open?'],
+    draw(x, y, t, on) {
+      const cx = x + 186, cy = y + 98;
+      RR(x + 132, y + 44, 102, 112, 6, '#475569', '#1f2937', 1.5);
+      C(cx, cy, 44, '#94a3b8'); C(cx, cy, 38, '#cbd5e1'); C(cx, cy, 34, '#9ca3af');
+      for (let i = 0; i < 16; i++) { const a = i * TAU / 16; C(cx + Math.cos(a) * 41, cy + Math.sin(a) * 41, 1.6, '#64748b'); }
+      g.save(); g.translate(cx, cy); g.rotate(on ? t * 0.8 : 0);
+      for (let i = 0; i < 3; i++) { g.rotate(TAU / 3); L(0, 0, 0, -24, '#374151', 4); C(0, -24, 3.5, '#374151'); }
+      g.restore(); C(cx, cy, 7, '#374151'); C(cx, cy, 3, '#facc15');
+      TXT('VAULT', cx, y + 150, 'bold 8px monospace', '#e2e8f0');
+      for (let i = 0; i < 3; i++) cyl(x + 98, y + 150 - i * 24, 28, 22, ['#6b7280', '#4b5563', '#6b7280'][i], '#9ca3af');                  // database drums
+      R(x + 101, y + 158, 22, 2, on && Math.sin(t * 9) > 0 ? '#22c55e' : '#14532d');
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.35) popText(x + 186, y + 40, ['42 rows, all evil', 'index rebuilt', 'backup ✓', 'query: 3 ms'], '#334155');
+    } },
+  garden: { label: 'BIO LAB', name: 'the Bio Lab', tint: '#d5f0dc', anim: 'stir',
+    lines: ['Migrating the schema. And the serum.', 'Specimen 7 is... growing.', 'Schema compare: one extra tentacle.', 'Do NOT drink the blue one.'],
+    draw(x, y, t, on) {
+      RR(x + 182, y + 30, 46, 136, 18, '#94a3b8');                                                                                         // specimen tube
+      g.globalAlpha = 0.75; RR(x + 186, y + 38, 38, 120, 16, '#4ade80'); g.globalAlpha = 1;
+      const bob = Math.sin(t * 1.5) * 4;
+      E(x + 205, y + 92 + bob, 9, 12, '#166534'); C(x + 201, y + 89 + bob, 1.6, '#fef08a'); C(x + 209, y + 89 + bob, 1.6, '#fef08a');
+      for (let i = 0; i < 3; i++) L(x + 199 + i * 6, y + 102 + bob, x + 197 + i * 6 + Math.sin(t * 3 + i) * 3, y + 114 + bob, '#166534', 2);
+      g.globalAlpha = 0.25; R(x + 190, y + 42, 6, 108, '#fff'); g.globalAlpha = 1;
+      R(x + 180, y + 160, 50, 12, '#475569'); R(x + 180, y + 26, 50, 8, '#475569');
+      R(x + 98, y + 124, 78, 6, '#e2e8f0'); R(x + 104, y + 130, 4, 44, '#94a3b8'); R(x + 166, y + 130, 4, 44, '#94a3b8');                 // lab bench
+      poly([x + 110, y + 104, x + 118, y + 104, x + 126, y + 124, x + 102, y + 124], '#60a5fa');                                            // flasks
+      RR(x + 134, y + 100, 10, 24, 3, '#c084fc'); RR(x + 150, y + 108, 14, 16, 4, '#f472b6');
+      L(x + 156, y + 100, x + 160, y + 122, '#94a3b8', 1.5);
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 6) puff(x + rand(190, 220), y + 150, { vy: rand(-40, -20), life: 2, size: rand(1, 2.5), color: 'rgba(220,252,231,.8)' });
+      if (Math.random() < dt * 0.3) popText(x + 140, y + 96, ['migration ✓', 'serum v2', 'specimen stable', 'schema synced'], '#166534');
+    } },
+  pizza: { label: 'DANGER ROOM', name: 'the Danger Room', tint: '#f0d6d6', anim: 'point',
+    lines: ['Implementing the plan. Dodge left!', 'Training sim level 9: spec complete.', 'The dummy hits back now. Feature, not bug.', 'Step 3 of 5: survive.'],
+    draw(x, y, t, on) {
+      R(x + 96, y + 28, 138, 150, '#1f2937');
+      for (let i = 0; i < 7; i++) { L(x + 96, y + 28 + i * 25, x + 234, y + 28 + i * 25, '#334155', 1); L(x + 96 + i * 23, y + 28, x + 96 + i * 23, y + 178, '#334155', 1); }
+      for (let r = 3; r > 0; r--) C(x + 210, y + 64, r * 7, r % 2 ? '#ef4444' : '#f8fafc');                                                // target
+      const sw = on ? Math.sin(t * 3) * 0.25 : 0;                                                                                            // training dummy
+      g.save(); g.translate(x + 150, y + 168); g.rotate(sw);
+      R(-3, -44, 6, 44, '#78716c'); RR(-12, -78, 24, 36, 8, '#a8a29e'); C(0, -86, 9, '#a8a29e'); L(-12, -66, -22, -58, '#a8a29e', 4); L(12, -66, 22, -58, '#a8a29e', 4);
+      L(-4, -88, 4, -84, '#44403c', 1.2); L(4, -88, -4, -84, '#44403c', 1.2);
+      g.restore(); E(x + 150, y + 170, 14, 4, '#111827');
+      RR(x + 198, y + 140, 30, 18, 4, '#475569'); R(x + 186, y + 146, 14, 5, '#94a3b8');                                                  // laser turret
+      if (on && (t % 2) < 0.15) L(x + 186, y + 148, x + 210, y + 64, '#f43f5e', 2);
+      g.globalAlpha = on ? 0.6 + Math.sin(t * 8) * 0.4 : 0.3; R(x + 96, y + 28, 138, 3, '#ef4444'); g.globalAlpha = 1;
+    },
+    tick(x, y, w, dt, t) {
+      if ((t % 2) < 0.15 && Math.random() < dt * 8) heroPow(x + 210, y + 50, pick(['ZAP!', 'BLAM!', 'PEW!']), '#f43f5e');
+      if (Math.random() < dt * 0.25) popText(x + 160, y + 26, ['step done ✓', 'sim passed', 'level up', 'spec met'], '#991b1b');
+    } },
+  easel: { label: 'COMIC PRESS', name: 'the Comic Press', tint: '#fbf3c8', anim: 'paint',
+    lines: ['Inking issue #3.12.', 'This panel needs more POW.', 'Indentation counts. Even in comics.', 'The snake is the hero of this issue.'],
+    draw(x, y, t, on) {
+      L(x + 110, y + 40, x + 104, y + 176, '#8a5a36', 3); L(x + 196, y + 40, x + 202, y + 176, '#8a5a36', 3); L(x + 153, y + 50, x + 153, y + 176, '#8a5a36', 3);
+      RR(x + 104, y + 36, 98, 104, 2, '#fffef5', '#1f2937', 2);                                                                             // the page: four panels
+      const P4 = [[108, 40], [155, 40], [108, 90], [155, 90]];
+      P4.forEach(([px, py], i) => { RR(x + px, y + py, 43, 46, 1, ['#fde68a', '#bfdbfe', '#fecaca', '#d9f99d'][i], '#1f2937', 1.2); });
+      heroStar(x + 130, y + 62, 13, '#ef4444', on ? t : 0); TXT('POW!', x + 130, y + 62, 'bold 9px Impact, system-ui', '#fde047');
+      g.beginPath(); g.moveTo(x + 160, y + 72); for (let i = 0; i < 6; i++) g.quadraticCurveTo(x + 164 + i * 6, y + (i % 2 ? 60 : 78), x + 166 + i * 6, y + 68);
+      g.strokeStyle = '#3776ab'; g.lineWidth = 4; g.stroke(); C(x + 196, y + 68, 3, '#ffd43b');                                             // the python, issue hero
+      RR(x + 116, y + 98, 28, 14, 6, '#fff', '#1f2937', 1); TXT('Hss!', x + 130, y + 105, 'bold 7px system-ui', '#111');
+      for (let i = 0; i < 4; i++) R(x + 162, y + 100 + i * 8, 26 - i * 4, 2, '#1f2937');
+      R(x + 206, y + 150, 26, 24, '#334155'); for (let i = 0; i < 4; i++) RR(x + 208, y + 132 - i * 4, 22, 5, 1, ['#ef4444', '#3b82f6', '#facc15', '#22c55e'][i]);   // printed stack
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.3) popText(x + 150, y + 30, ['issue #3.12 inked', 'POW! added', 'pep8: approved', 'to the press!'], '#92400e');
+    } },
+  lumber: { label: 'CAPE CLEANERS', name: 'the Cape Cleaners', tint: '#dbeafe', anim: 'pack',
+    lines: ['Restarting the service. And the spin cycle.', 'Cape #7: scorch marks. Again.', 'No capes in the dryer!', 'Service is up. Capes are crisp.'],
+    draw(x, y, t, on) {
+      L(x + 98, y + 36, x + 232, y + 36, '#64748b', 3);                                                                                     // the rail of capes
+      const CC = ['#dc2626', '#2563eb', '#16a34a', '#a21caf', '#f97316', '#0ea5e9'];
+      for (let i = 0; i < 6; i++) {
+        const cx = x + 104 + ((i * 24 + (on ? t * 14 : 0)) % 132);
+        L(cx, y + 36, cx, y + 42, '#475569', 1); poly([cx - 8, y + 42, cx + 8, y + 42, cx + 11, y + 84, cx - 11, y + 84], CC[i]);
+        R(cx - 8, y + 42, 16, 3, shade(CC[i], -0.25));
+      }
+      RR(x + 168, y + 102, 60, 72, 6, '#e2e8f0', '#94a3b8', 1.5); C(x + 198, y + 140, 22, '#94a3b8'); C(x + 198, y + 140, 18, '#1e3a8a');   // washer
+      g.save(); g.beginPath(); g.arc(x + 198, y + 140, 17, 0, TAU); g.clip();
+      g.translate(x + 198, y + 140); g.rotate(on ? t * 6 : 0); R(-17, -2, 34, 20, '#dc2626'); R(-6, -17, 12, 10, '#facc15'); g.restore();
+      R(x + 174, y + 106, 30, 6, '#cbd5e1'); C(x + 216, y + 109, 2.5, on ? '#22c55e' : '#64748b');
+      RR(x + 100, y + 132, 56, 36, 4, '#a16207', '#713f12', 1); for (let i = 0; i < 3; i++) poly([x + 108 + i * 15, y + 132, x + 120 + i * 15, y + 132, x + 116 + i * 15, y + 120], CC[i + 2]);   // basket
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 3) puff(x + rand(180, 216), y + 104, { vy: -16, vx: rand(-6, 6), grow: 2, life: 1.2, size: 2, color: 'rgba(255,255,255,.7)' });
+      if (Math.random() < dt * 0.3) popText(x + 160, y + 92, ['service restarted ✓', 'cape pressed', 'stain removed', 'spin cycle: 1400 rpm'], '#1e40af');
+    } },
+  lab: { label: 'CONTAINMENT', name: 'Containment', tint: '#e5e7c8', anim: 'review',
+    lines: ['Testing the containment. Gently.', 'Test 41 passed. Test 42 is growling.', 'Found a bug. It has six legs.', 'Regression: it escaped once already.'],
+    draw(x, y, t, on) {
+      R(x + 128, y + 160, 104, 14, '#facc15'); for (let i = 0; i < 9; i++) poly([x + 130 + i * 12, y + 174, x + 136 + i * 12, y + 160, x + 142 + i * 12, y + 160, x + 136 + i * 12, y + 174], '#111827');
+      R(x + 128, y + 32, 104, 10, '#374151');
+      const mx = x + 180 + (on ? Math.sin(t * 1.3) * 22 : 0), squash = 1 + Math.sin(t * 4) * 0.12;                                     // the thing in the cell
+      E(mx, y + 146, 20 * squash, 14 / squash, '#7c3aed'); C(mx - 7, y + 140, 3, '#fef08a'); C(mx + 7, y + 140, 3, '#fef08a'); C(mx - 7, y + 140, 1.2, '#111'); C(mx + 7, y + 140, 1.2, '#111');
+      for (let i = 0; i < 3; i++) L(mx - 12 + i * 12, y + 156, mx - 14 + i * 12 + Math.sin(t * 6 + i) * 3, y + 160, '#7c3aed', 2);
+      g.globalAlpha = 0.22; R(x + 130, y + 42, 100, 118, '#a5f3fc'); g.globalAlpha = 1;
+      for (let i = 0; i < 6; i++) L(x + 134 + i * 19, y + 42, x + 134 + i * 19, y + 160, 'rgba(148,163,184,.6)', 1);
+      RR(x + 98, y + 60, 26, 40, 3, '#1f2937'); TXT('TESTS', x + 111, y + 68, 'bold 6px monospace', '#94a3b8');
+      TXT(on ? (36 + Math.floor(t) % 7) + '/42' : '42/42', x + 111, y + 80, 'bold 7px monospace', '#4ade80');
+      C(x + 111, y + 92, 3, on && Math.sin(t * 5) > 0 ? '#ef4444' : '#7f1d1d');
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.3) popText(x + 180, y + 26, ['test passed ✓', 'still contained', 'bug found 🐛', 'growl level: low'], '#4d7c0f');
+    } },
+  servers: { label: 'HERO SUPERCOMPUTER', name: 'the Hero Supercomputer', tint: '#cfe7f5', anim: 'type', sit: true, dx: 80,
+    lines: ['Running diagnostics on the supercomputer.', 'Fan speed: supersonic.', 'Scanning the city for trouble.', 'Swapping a drive. The 9000 TB one.'],
+    draw(x, y, t, on) {
+      RR(x + 98, y + 28, 134, 58, 4, '#0b1220', '#334155', 2);                                                                            // big city map screen
+      for (let i = 0; i < 9; i++) R(x + 104 + i * 14, y + 66 - (hh(i * 5) % 26), 10, 16 + (hh(i * 5) % 26), '#1e3a5f');
+      for (let i = 0; i < 4; i++) { const on2 = on && (Math.floor(t * 2) + i) % 4 === 0; C(x + 110 + hh(i * 9) % 116, y + 36 + hh(i * 11) % 34, on2 ? 3.5 : 2, on2 ? '#ef4444' : '#f59e0b'); }
+      L(x + 98, y + 34 + ((t * 20) % 50), x + 232, y + 34 + ((t * 20) % 50), 'rgba(34,211,238,.35)', 2);
+      deskSit(x, y); monitor(x, y, '#0b3b5c'); for (let i = 0; i < 3; i++) R(x + 107, y + 91 + i * 5, 10 + hh(i + Math.floor(t * 2)) % 20, 2, '#67e8f9');
+      for (let k = 0; k < 2; k++) { RR(x + 168 + k * 32, y + 92, 28, 82, 2, '#1f2937', '#475569', 1);                                     // racks
+        for (let i = 0; i < 8; i++) { R(x + 172 + k * 32, y + 97 + i * 9, 20, 5, '#334155'); C(x + 194 + k * 32, y + 99.5 + i * 9, 1.2, on && (hh(i + k * 8 + Math.floor(t * 6)) % 3) ? '#22c55e' : '#14532d'); } }
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.3) popText(x + 165, y + 24, ['diagnostics ✓', 'city scan clear', 'drive swapped', 'CPU: 99%'], '#0e7490');
+    } },
+  packing: { label: 'EVIDENCE LOCKER', name: 'the Evidence Locker', tint: '#e7dccb', anim: 'pack',
+    lines: ['Tagging evidence #A-1138.', 'Tracking a shipment of henchmen.', 'Chain of custody: intact.', 'Box 42: one very evil sock.'],
+    draw(x, y, t, on) {
+      for (let s = 0; s < 3; s++) {                                                                                                         // shelves of boxes and bags
+        R(x + 100, y + 70 + s * 40, 132, 4, '#78716c');
+        for (let i = 0; i < 4; i++) { const k = hh(s * 4 + i);
+          if (k % 3) { RR(x + 104 + i * 32, y + 44 + s * 40, 26, 26, 1, '#c8a575', '#8a6a4f', 1); R(x + 110 + i * 32, y + 52 + s * 40, 14, 6, '#fffef5'); TXT(String(k % 900 + 100), x + 117 + i * 32, y + 55 + s * 40, 'bold 4.5px monospace', '#7f1d1d'); }
+          else { RR(x + 106 + i * 32, y + 48 + s * 40, 22, 22, 3, 'rgba(226,232,240,.8)', '#94a3b8', 1); R(x + 106 + i * 32, y + 48 + s * 40, 22, 4, '#ef4444'); }
+        }
+      }
+      L(x + 100, y + 40, x + 100, y + 176, '#57534e', 3); L(x + 232, y + 40, x + 232, y + 176, '#57534e', 3);
+      R(x + 100, y + 160, 132, 8, '#374151');                                                                                               // conveyor
+      for (let i = 0; i < 9; i++) C(x + 106 + i * 15, y + 168, 3, '#6b7280');
+      const bx = x + 100 + ((on ? t * 24 : 40) % 120); RR(bx, y + 146, 18, 14, 1, '#c8a575', '#8a6a4f', 1); R(bx + 5, y + 150, 8, 4, '#ef4444');
+      RR(x + 206, y + 26, 22, 14, 2, '#facc15', '#a16207', 1); TXT('#A-1138', x + 217, y + 33, 'bold 4.5px monospace', '#422006');
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 0.3) popText(x + 165, y + 26, ['evidence tagged ✓', 'tracked: in transit', 'custody signed', 'sock logged 🧦'], '#78350f');
+    } },
+};
+for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE, HERO]) STATION_ORDER.forEach(id => {
   const c = STA[id], d = set[id];
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
@@ -2756,6 +3094,8 @@ const THEMES = {
     swaps: { 9: 'shaman', 4: 'mammoth', 12: 'mammoth' },
     costumes: ['caveman', 'cavewoman', 'dino', 'hunter', 'caveman', 'cavewoman', 'dino', 'shaman'],
     wash: ['#b45309', 0.05], decor: () => decorStone() },
+  hero: { name: 'Hero HQ', stations: HERO, routed: true,           // costumes alternate hero / villain; POWERS has who can do what
+    costumes: ['hero', 'villain'], wash: ['#312e81', 0.08], decor: () => decorHero() },
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -2888,7 +3228,7 @@ function drawPerson(Lk, x, y, st) {
   const pose = mob === 'wheelchair' ? 'chair' : (st.pose || 'stand');
   g.save(); g.translate(x, y);
   if (pose === 'lie') { E(0, 1, 26, 5, 'rgba(0,0,0,.15)'); g.translate(26, -5); g.rotate(-Math.PI / 2); }
-  else E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
+  else if (!st.noShadow) E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
   if (f === 'left') g.scale(-1, 1);
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
@@ -2899,7 +3239,7 @@ function drawPerson(Lk, x, y, st) {
   const walking = st.moving && pose === 'stand';
   if (walking) g.translate(0, -Math.abs(Math.sin(st.walk)) * 1.6);
   const bo = pose === 'sit' ? 6 : pose === 'chair' ? 4 : 0;
-  const pants = Lk.pants, shoe = '#2a2522';
+  const pants = Lk.pants, shoe = Lk.boots || '#2a2522';
   const chair = '#30343c';
 
   // wheelchair parts behind the body
@@ -3125,6 +3465,8 @@ function drawPerson(Lk, x, y, st) {
     g.globalAlpha = pulse; C(nx, ty + 8, 4.2, Lk.pendant); g.globalAlpha = 1;
     poly([nx, ty + 5.4, nx + 2.2, ty + 8, nx, ty + 10.6, nx - 2.2, ty + 8], Lk.pendant); L(nx - 0.8, ty + 6.6, nx - 0.2, ty + 7.6, '#fff', 0.7);
   }
+  if (Lk.heroBelt) { R(side ? -6 : -8, ty + 16, side ? 12 : 16, 2.5, Lk.heroBelt); if (!back && !side) R(-2, ty + 15.5, 4, 3.5, shade(Lk.heroBelt, -0.3)); }
+  if (Lk.emblem && !back) heroEmblem(Lk.emblem, side ? 1.5 : 0, ty + 8, Lk.emblemC);
 
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
   if (Lk.tie && !back) { if (side) L(3, ty + 2, 4, ty + 12, Lk.tie, 1.6); else poly([-1.6, ty + 3, 1.6, ty + 3, 2.2, ty + 14, 0, ty + 17, -2.2, ty + 14], Lk.tie); }
@@ -3220,6 +3562,21 @@ function stoneHood(view, hy, hc) {
   if (view !== 'side') { g.beginPath(); g.arc(0, hy, 9.6, Math.PI * 0.9, Math.PI * 2.1); g.strokeStyle = hc; g.lineWidth = 2.6; g.stroke(); }
 }
 function costumeTop(Lk, view, hy, side) {
+  if (Lk.cowl) {                           // villain cowl over the head (face left open), with two little horns
+    const c = Lk.cowl;
+    if (view === 'back') C(0, hy, 9.4, c);
+    else if (side) { g.beginPath(); g.arc(0, hy, 9.4, Math.PI * 0.8, Math.PI * 2); g.fillStyle = c; g.fill(); R(-9.4, hy - 1, 7, 8, c); }
+    else { g.beginPath(); g.arc(0, hy, 9.4, Math.PI, TAU); g.fillStyle = c; g.fill(); R(-9.4, hy - 0.5, 3, 7, c); R(6.4, hy - 0.5, 3, 7, c); }
+    for (const d of side ? [-1] : [-1, 1]) poly([d * 7.5, hy - 5, d * 6, hy - 14, d * 3.5, hy - 7.5], c);
+  }
+  if (Lk.heroMask) {                       // domino mask across the eyes
+    const m = Lk.heroMask;
+    if (view === 'back') { R(-8.6, hy - 1.6, 17.2, 2.6, m); L(-2, hy, -5, hy + 7, m, 1.4); L(2, hy, 5, hy + 7, m, 1.4); }
+    else {
+      if (side) RR(1, hy - 2.8, 8, 5.4, 2.6, m); else RR(-7.8, hy - 2.8, 15.6, 5.4, 2.6, m);
+      for (const e of side ? [4.5] : [-3, 3]) { E(e, hy, 1.9, 1.3, '#f8fafc'); C(e + (side ? 0.5 : 0), hy, 0.7, '#111'); }
+    }
+  }
   if (Lk.robot) {                          // boxy robot head with a scanning visor and antenna
     const m = Lk.robot;
     L(0, hy - 9, 0, hy - 15, shade(m, -0.3), 1.2); C(0, hy - 16, 1.8, Math.floor(T * 2 + (Lk.id || 0)) % 2 ? '#f43f5e' : '#7f1d1d');
@@ -3649,6 +4006,12 @@ function dress(L0, kind, id) {
       Object.assign(o, { shirt: c, pants: shade(c, -0.12), plaid: false, skirt: false, glasses: false, dinoBelly: '#fef3c7', dinoTail: c, dinoHood: covered ? null : c }); break; }
     case 'mammoth': { const c = ['#7c4a2d', '#8a6a4f'][id % 2];
       Object.assign(o, { shirt: c, pants: shade(c, -0.2), plaid: false, skirt: false, glasses: false, woolly: c, mammothHood: covered ? null : c }); break; }
+    case 'hero': case 'villain': {         // Hero HQ: a suit in their power's colors, cape, boots, emblem and mask; villains get a cowl
+      const p = POWERS[id % POWERS.length], cowl = kind === 'villain' && !covered;
+      Object.assign(o, { shirt: p.suit, pants: shade(p.suit, -0.22), plaid: false, skirt: false, glasses: false,
+        cape: p.cape, capeLining: shade(p.cape, -0.22), boots: kind === 'hero' ? shade(p.cape, -0.15) : '#111827',
+        emblem: p.power, emblemC: p.fx, heroBelt: kind === 'hero' ? '#facc15' : '#3f3f46', heroMask: p.mask,
+        cowl: cowl ? p.mask : null, hairStyle: cowl ? 'none' : L0.hairStyle, beard: cowl ? false : L0.beard }); break; }
   }
   return o;
 }
@@ -4137,7 +4500,9 @@ function arrive(w) {
   }
 }
 function stepMove(w, dt) {
-  let budget = w.speed * dt;
+  if (THEME === 'hero' && heroTravel(w)) return;
+  const boost = THEME === 'hero' && powerOf(w).power === 'speed' ? 2.5 : 1;   // Hero HQ speedster
+  let budget = w.speed * dt * boost;
   while (budget > 0 && w.path.length) {
     const tgt = w.path[0], dx = tgt.x - w.x, dy = tgt.y - w.y, d = Math.hypot(dx, dy);
     if (d > 0.5) w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
@@ -4146,7 +4511,7 @@ function stepMove(w, dt) {
       if (tgt.final) { arrive(w); break; }
     } else { w.x += dx / d * budget; w.y += dy / d * budget; budget = 0; }
   }
-  w.walk += dt * w.speed / 8.5;
+  w.walk += dt * w.speed * boost / 8.5;
 }
 function serverNow() { return Date.now() / 1000 + skew; }
 function dozing(w) { return w.job && w.job.status === 'working' && serverNow() - w.job.updated > 300; }
@@ -4156,7 +4521,7 @@ function updateWorker(w, dt) {
   const t = T + w.seed;
   if (w.mode === 'idle') {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
-    else if (w.arrived && T > w.nextChat && !w.talk) {
+    else if (w.arrived && T > w.nextChat && !w.talk && !w.duel) {
       const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : CHAT[w.spot.act]);
       if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
@@ -4209,19 +4574,21 @@ function updateWorker(w, dt) {
 // Banter: pairs on break within earshot (and not asleep) talk through one BANTER script.
 const TALKS = [], recentTalks = [];
 let nextTalk = 10, tvWasBig = false;
-function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && w.spot && w.spot.act !== 'nap'; }
+function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && !w.duel && w.spot && w.spot.act !== 'nap'; }
 function startTalk() {
   const free = workers.filter(canTalk), pairs = [];
   for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++)
     if (Math.hypot(free[i].x - free[j].x, free[i].y - free[j].y) < 170) pairs.push(Math.random() < 0.5 ? [free[i], free[j]] : [free[j], free[i]]);
   if (!pairs.length) return;
   const [a, b] = pick(pairs);
-  const list = THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : THEME === 'pirate' ? BANTER.concat(PIRATE_BANTER, PIRATE_BANTER)
+  const rival = THEME === 'hero' && isVillain(a) !== isVillain(b);      // a hero and a villain: they bicker (and may duel)
+  const list = rival && Math.random() < 0.85 ? HERO_BANTER : THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : THEME === 'pirate' ? BANTER.concat(PIRATE_BANTER, PIRATE_BANTER)
     : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER) : BANTER;
   let lines = pick(list);
   for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(list);
   recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
-  const talk = { a, b, lines, i: 0, next: T + 0.3 };
+  const talk = { a, b, lines, i: 0, next: T + 0.3, rival };
+  if (rival) { talk.villain = isVillain(a) ? a : b; talk.hero = talk.villain === a ? b : a; }
   TALKS.push(talk);
   for (const w of [a, b]) {
     w.talk = talk; w.actUntil = Math.max(w.actUntil, T + lines.length * 4 + 3);
@@ -4240,9 +4607,11 @@ function updTalks() {
   for (const k of [...TALKS]) {
     if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length) { endTalk(k); continue; }
     if (T < k.next) continue;
-    if (k.i >= k.lines.length) { endTalk(k); continue; }
-    const text = k.lines[k.i].replace('{a}', k.a.L.name).replace('{b}', k.b.L.name);
-    say(k.i % 2 ? k.b : k.a, text, 3.6); k.i++; k.next = T + 2.8 + text.length * 0.035;
+    if (k.i >= k.lines.length) { endTalk(k); if (k.rival && THEME === 'hero' && Math.random() < 0.35) startDuel(k.hero, k.villain); continue; }
+    let line = k.lines[k.i], who = k.i % 2 ? k.b : k.a;
+    if (k.rival && /^[VH]:/.test(line)) { who = line[0] === 'V' ? k.villain : k.hero; line = line.slice(2); }
+    const text = line.replace('{a}', k.a.L.name).replace('{b}', k.b.L.name);
+    say(who, text, 3.6); k.i++; k.next = T + 2.8 + text.length * 0.035;
   }
   // the couch reacts when something big happens on TV
   const big = tvBig();
@@ -4250,6 +4619,167 @@ function updTalks() {
     if (w.mode === 'idle' && w.arrived && !w.talk && w.spot && w.spot.act === 'tv' && Math.random() < 0.6) say(w, pick(TV_REACT[tvShow()]), 2.5);
   tvWasBig = big;
 }
+// ---- Hero HQ powers ------------------------------------------------------------------------
+// Duels: after a hero/villain exchange, now and then the two square off where they stand for a
+// few seconds, taking turns with their powers. Purely visual: nobody moves off their spot, and the
+// duel ends the moment either one is paged (they drop it and go to work) or leaves.
+// Travel: teleporters and portal makers blink to the end of long trips, the speedster runs 2.5x,
+// fliers float along the path and the invisible one fades out while walking.
+const DUELS = [], BEAMS = [];
+function faceTo(w, o) { const dx = o.x - w.x, dy = o.y - w.y; w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); }
+function startDuel(hero, villain) {
+  if (!canTalk(hero) || !canTalk(villain)) return;
+  const d = { a: hero, b: villain, until: T + rand(4.5, 6), next: T + 0.9 };
+  DUELS.push(d);
+  for (const w of [hero, villain]) {
+    w.duel = d; w.actUntil = Math.max(w.actUntil, d.until + 2); faceTo(w, w === hero ? villain : hero);
+    say(w, pick(DUEL_START[isVillain(w) ? 'villain' : 'hero']), 2);
+  }
+}
+function endDuel(d, cut) {
+  DUELS.splice(DUELS.indexOf(d), 1);
+  for (const w of [d.a, d.b]) {
+    w.duel = null; w.mimic = null; w.frozenUntil = 0; w.jxUntil = 0; w.dashUntil = 0;
+    if (w.mode === 'idle' && w.arrived && w.spot) { w.facing = w.spot.face || 'down'; w.nextChat = T + rand(10, 25); }
+  }
+  const stay = [d.a, d.b].filter(w => w.mode === 'idle');                // who's still on break gets the last word
+  if (THEME === 'hero' && stay.length) say(pick(stay), pick(cut ? DUEL_CUT : DUEL_END), 2.5);
+}
+function usePower(w, o) {
+  const p = powerOf(w), c = p.fx, dir = o.x >= w.x ? 1 : -1;
+  const x0 = w.x + (w.jx || 0) + dir * 11, y0 = w.y - 40 - (w.lift || 0), x1 = o.x + (o.jx || 0), y1 = o.y - 32 - (o.lift || 0);
+  const d = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / d, uy = (y1 - y0) / d;
+  const stream = (n, sp, look) => { for (let i = 0; i < n; i++) { const v = rand(sp * 0.8, sp * 1.2); puff(x0, y0, Object.assign({ vx: ux * v + rand(-18, 18), vy: uy * v + rand(-18, 18), life: d / sp }, look(i))); } };
+  w.zapUntil = T + 0.55;
+  switch (p.power) {
+    case 'heat': stream(16, 170, () => ({ size: rand(2, 3.4), grow: 2.5, color: pick(['#f97316', '#fbbf24', '#ef4444']) })); heroPow(x1, y1 - 16, 'FWOOSH!', c); break;
+    case 'cold': stream(12, 190, i => i % 2 ? { kind: 'spark', color: '#e0f2fe' } : { size: 1.6, color: '#bfdbfe' });
+      o.frozenUntil = T + 1; o.frozenKind = 'ice'; heroPow(x1, y1 - 16, 'CHILL!', c); break;
+    case 'electro': BEAMS.push({ kind: 'bolt', x0, y0, x1, y1, c, life: 0.4, max: 0.4 }); heroPow(x1, y1 - 16, 'ZZZAP!', c); break;
+    case 'eyerays': { const ey = w.y - 47 - (w.lift || 0), ex = w.x + (w.jx || 0) + dir * 4;
+      BEAMS.push({ kind: 'laser', x0: ex, y0: ey, x1, y1, c, life: 0.45, max: 0.45 }); heroPow(x1, y1 - 16, 'ZWEEE!', c); break; }
+    case 'telepathy': for (let i = 0; i < 4; i++) puff(x0, y0 - 10, { kind: 'ring', vx: ux * (70 + i * 12), vy: uy * (70 + i * 12), life: d / 75, size: 2 + i, grow: 4, color: c });
+      heroPow(x1, y1 - 16, 'MIND BLAST!', c); break;
+    case 'telekinesis': o.liftUntil = T + 1.1; BEAMS.push({ kind: 'aura', who: o, c, life: 1.1, max: 1.1 }); heroPow(x1, y1 - 20, 'UP YOU GO!', c); break;
+    case 'psychokinesis': BEAMS.push({ kind: 'shock', x0: x1, y0: o.y, c, life: 0.5, max: 0.5 });
+      for (let i = 0; i < 8; i++) puff(x1, o.y, { vx: rand(-60, 60), vy: rand(-50, -10), ay: 120, life: 0.6, size: 1.8, color: '#a8a29e' });
+      heroPow(x1, y1 - 16, 'KRAKOOM!', c); break;
+    case 'strength': BEAMS.push({ kind: 'shock', x0: w.x, y0: w.y, c: '#d6d3d1', life: 0.5, max: 0.5 }); o.shakeUntil = T + 0.5;
+      for (let i = 0; i < 10; i++) puff(w.x + rand(-10, 10), w.y, { vx: rand(-70, 70), vy: rand(-40, -5), ay: 100, life: 0.7, size: 2.2, color: 'rgba(168,162,158,.8)' });
+      heroPow(x1, y1 - 16, 'POW!', c); break;
+    case 'speed': w.dashUntil = T + 0.7; heroPow(x1, y1 - 16, pick(['WHOOSH!', 'BAP BAP BAP!']), c); break;
+    case 'regen': for (let i = 0; i < 7; i++) puff(w.x + rand(-12, 12), w.y - rand(10, 50), { kind: 'text', text: '+', vy: -20, life: 1, color: c, font: 'bold 12px system-ui' });
+      heroPow(w.x, w.y - 70, 'GOOD AS NEW!', c); break;
+    case 'changeling': w.mimic = o; w.mimicUntil = T + 1.8;
+      for (let i = 0; i < 12; i++) puff(w.x, w.y - 30, { vx: rand(-40, 40), vy: rand(-40, 20), grow: 3, life: 0.7, size: 2, color: 'rgba(163,230,53,.7)' });
+      heroPow(w.x, w.y - 70, "WHO'S WHO?", c); break;
+    case 'teleport': for (let i = 0; i < 10; i++) puff(w.x + (w.jx || 0), w.y - 30, { vx: rand(-40, 40), vy: rand(-40, 40), life: 0.5, size: 2, color: c });
+      w.jxTo = o.x + dir * 26 - w.x; w.jxUntil = T + 1.1; heroPow(x1, y1 - 16, 'BLINK!', c); break;
+    case 'portal': { const px = x0 + dir * 12, qx = o.x - dir * 22;
+      BEAMS.push({ kind: 'portal', x0: px, y0: w.y - 26, c: '#38bdf8', life: 1, max: 1 }, { kind: 'portal', x0: qx, y0: o.y - 26, c: '#f97316', life: 1, max: 1 });
+      for (let i = 0; i < 6; i++) puff(qx, o.y - 30, { vx: dir * rand(40, 80), vy: rand(-20, 20), life: 0.5, size: 2, color: '#fdba74' });
+      heroPow(x1, y1 - 16, 'VWOOM!', c); break; }
+    case 'invisible': w.fadeUntil = T + 1.3; puff(x1, y1 - 4, { kind: 'text', text: '?!', vy: -10, life: 1, color: '#fff', font: 'bold 12px system-ui' });
+      heroPow(x1, y1 - 18, 'BONK!', '#cbd5e1'); break;
+    case 'time': o.frozenUntil = T + 1.3; o.frozenKind = 'time'; BEAMS.push({ kind: 'clock', who: o, c, life: 1.3, max: 1.3 }); heroPow(x1, y1 - 20, 'TIME OUT!', c); break;
+    case 'flight': for (let i = 0; i < 6; i++) puff(w.x + rand(-14, 14), w.y - 20 - (w.lift || 0), { kind: 'spark', vx: -dir * rand(60, 100), vy: rand(-6, 6), life: 0.35, color: '#e0f2fe' });
+      w.dashUntil = T + 0.5; heroPow(x1, y1 - 16, 'SWOOSH!', c); break;
+  }
+}
+// Teleport / portal travel: vanish, then appear at the end of the trip (long trips only).
+function heroTravel(w) {
+  const p = powerOf(w).power;
+  if (p !== 'teleport' && p !== 'portal') return false;
+  if (w.blink && w.blink.path !== w.path) heroCancelBlink(w);           // sent somewhere else meanwhile
+  if (!w.blink) {
+    const end = w.path[w.path.length - 1];
+    if (Math.hypot(end.x - w.x, end.y - w.y) < 250) return false;
+    w.blink = { t0: T, path: w.path, to: end };
+    heroBlinkFx(w, w.x, w.y, '#38bdf8'); heroBlinkFx(w, end.x, end.y, '#f97316');
+    return true;
+  }
+  if (T - w.blink.t0 < 0.45) return true;
+  const end = w.blink.to; w.blink = null;
+  w.x = end.x; w.y = end.y; w.path = []; arrive(w);
+  return true;
+}
+function heroCancelBlink(w) {                  // drop the trip's portals too
+  for (let i = BEAMS.length - 1; i >= 0; i--) if (BEAMS[i].owner === w) BEAMS.splice(i, 1);
+  w.blink = null;
+}
+function heroBlinkFx(w, x, y, portalC) {
+  if (powerOf(w).power === 'portal') BEAMS.push({ kind: 'portal', x0: x, y0: y - 26, c: portalC, life: 0.9, max: 0.9, owner: w });
+  for (let i = 0; i < 12; i++) puff(x, y - 28, { vx: rand(-50, 50), vy: rand(-50, 40), life: 0.6, size: 2, color: powerOf(w).fx });
+}
+function updHero(dt) {
+  for (let i = BEAMS.length - 1; i >= 0; i--) if ((BEAMS[i].life -= dt) <= 0) BEAMS.splice(i, 1);
+  for (const d of [...DUELS]) {
+    if (THEME !== 'hero' || [d.a, d.b].some(w => w.mode !== 'idle' || w.path.length)) { endDuel(d, true); continue; }
+    if (T > d.until) { endDuel(d, false); continue; }
+    if (T >= d.next) { const w = d.turn ? d.b : d.a; d.turn = !d.turn; usePower(w, w === d.a ? d.b : d.a); d.next = T + rand(0.7, 1.1); }
+  }
+  for (const w of workers) {
+    if (THEME !== 'hero') { w.lift = 0; w.fade = 1; w.jx = 0; w.trail = null; w.blink = null; continue; }
+    const p = powerOf(w).power, moving = w.path.length > 0, flier = p === 'flight' || p === 'telekinesis';
+    let lift = 0;
+    if (flier && (moving || w.duel)) lift = (w.duel ? 22 : 16) + Math.sin(T * 3 + w.seed) * 2.5;
+    if (T < (w.liftUntil || 0)) lift = Math.max(lift, 20);
+    w.lift = lerp(w.lift || 0, lift, Math.min(1, dt * 5));
+    if (w.blink && w.blink.path !== w.path) heroCancelBlink(w);         // teleported or paged mid-blink: don't stay invisible
+    let fade = 1;
+    if ((p === 'invisible' && moving) || T < (w.fadeUntil || 0)) fade = 0.18;
+    if (w.blink) fade = 0;
+    w.fade = lerp(w.fade ?? 1, fade, Math.min(1, dt * (w.blink ? 9 : 5)));
+    w.jx = T < (w.jxUntil || 0) ? w.jxTo : T < (w.dashUntil || 0) ? Math.sin((w.dashUntil - T) * 28) * 12 : 0;
+    if (w.mimic && T > w.mimicUntil) w.mimic = null;
+    if (p === 'speed' && (moving || T < (w.dashUntil || 0))) {             // afterimages behind the speedster
+      if (T > (w.trailT || 0)) { (w.trail = w.trail || []).unshift({ x: w.x + w.jx, y: w.y, f: w.facing }); if (w.trail.length > 4) w.trail.length = 4; w.trailT = T + 0.035; }
+    } else w.trail = null;
+  }
+}
+function drawHeroWorker(w) {
+  const st = poseFor(w), lift = w.lift || 0, x = w.x + (w.jx || 0), look = w.mimic ? lookOf(w.mimic) : lookOf(w);
+  const frozen = T < (w.frozenUntil || 0);
+  if (w.duel) {                                                         // battle stance: on their feet, arms out when using the power
+    if (st.pose === 'sit') st.pose = 'stand';
+    st.item = null; st.busyHands = true;
+    if (T < (w.zapUntil || 0)) { st.ra = 1.6; st.la = 1.35; st.open = true; } else { st.ra = 0.8; st.la = 0.8; }
+  }
+  if (frozen) { st.moving = false; st.open = true; }
+  if (T < (w.shakeUntil || 0)) st.shake = true;
+  if (lift > 1) { E(x, w.y, Math.max(6, 12 - lift * 0.15), 3, 'rgba(0,0,0,.14)'); st.noShadow = true; }
+  if (w.trail) w.trail.forEach((p, i) => { g.globalAlpha = 0.25 * (1 - i / 4) * (w.fade ?? 1); drawPerson(look, p.x, p.y - lift, { ...st, facing: p.f, noShadow: true }); });
+  g.globalAlpha = w.fade ?? 1;
+  drawPerson(look, x, w.y - lift, st);
+  g.globalAlpha = 1;
+  if (frozen) {                                                         // an ice block, or a golden time-stop glow
+    const top = w.y + headTop(w) - 4, h = w.y - lift + 2 - top;
+    g.globalAlpha = w.frozenKind === 'ice' ? 0.4 : 0.25;
+    RR(x - 14, top, 28, h, 4, w.frozenKind === 'ice' ? '#bae6fd' : '#fde68a', w.frozenKind === 'ice' ? '#e0f2fe' : null, 1.5);
+    g.globalAlpha = 1;
+  }
+}
+function drawBeams() {
+  for (const b of BEAMS) {
+    const k = b.life / b.max, a = Math.min(1, k * 2);
+    g.globalAlpha = a;
+    if (b.kind === 'bolt') { const seed = Math.floor(T * 16); heroBolt(b.x0, b.y0, b.x1, b.y1, b.c, 4, seed); heroBolt(b.x0, b.y0, b.x1, b.y1, '#fff', 1.4, seed); }
+    else if (b.kind === 'laser') { g.globalAlpha = a * 0.45; L(b.x0, b.y0, b.x1, b.y1, b.c, 5); g.globalAlpha = a; L(b.x0, b.y0, b.x1, b.y1, '#fff', 1.4); C(b.x1, b.y1, 4, '#fde68a'); }
+    else if (b.kind === 'shock') { g.beginPath(); g.ellipse(b.x0, b.y0, 6 + (1 - k) * 34, 2 + (1 - k) * 10, 0, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 2.5; g.stroke(); }
+    else if (b.kind === 'aura') { const w = b.who, cx = w.x + (w.jx || 0), cy = w.y - 30 - (w.lift || 0);
+      g.beginPath(); g.arc(cx, cy, 22 + Math.sin(T * 10) * 2, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 2; g.stroke();
+      g.globalAlpha = a * 0.15; C(cx, cy, 22, b.c); }
+    else if (b.kind === 'portal') { const r = Math.min(1, (1 - k) * 6, k * 4) + 0.01;
+      g.globalAlpha = 0.35; E(b.x0, b.y0, 10 * r, 22 * r, b.c); g.globalAlpha = 1;
+      g.beginPath(); g.ellipse(b.x0, b.y0, 10 * r, 22 * r, 0, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 3; g.stroke(); }
+    else if (b.kind === 'clock') { const w = b.who, cx = w.x + (w.jx || 0), cy = w.y - 32 - (w.lift || 0);
+      g.beginPath(); g.arc(cx, cy, 24, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 2; g.stroke();
+      for (let i = 0; i < 12; i++) { const an = i * Math.PI / 6; L(cx + Math.cos(an) * 20, cy + Math.sin(an) * 20, cx + Math.cos(an) * 24, cy + Math.sin(an) * 24, b.c, 1.4); }
+      L(cx, cy, cx + Math.cos(-T * 4) * 18, cy + Math.sin(-T * 4) * 18, b.c, 1.6); }
+  }
+  g.globalAlpha = 1;
+}
+
 // idle side effects (smoke, steam, Zzz, pool strikes)
 function idleTick(w, dt, t) {
   const a = w.spot.act;
@@ -4340,15 +4870,17 @@ function poseFor(w) {
   return st;
 }
 function headTop(w) {
-  if (w.path.length) return -58;
+  const lift = w.lift || 0;                // Hero HQ fliers float above their feet
+  if (w.path.length) return -58 - lift;
   const pose = w.L.mobility === 'wheelchair' ? 'chair' : (w.spot && w.spot.pose) || 'stand';
-  return pose === 'lie' ? -22 : pose === 'sit' ? -52 : pose === 'chair' ? -54 : -58;
+  return (pose === 'lie' ? -22 : pose === 'sit' ? -52 : pose === 'chair' ? -54 : -58) - lift;
 }
 function drawWorker(w) {
   if (selected === w || hovered === w) {
     g.globalAlpha = 0.6 + Math.sin(T * 6) * 0.3; g.beginPath(); g.ellipse(w.x, w.y, 17, 6, 0, 0, TAU);
     g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
   }
+  if (THEME === 'hero') return drawHeroWorker(w);
   drawPerson(lookOf(w), w.x, w.y, poseFor(w));
 }
 
@@ -4398,6 +4930,9 @@ function drawBoss() {
     L(x - 20, hy - 9, x + 20, hy - 9, '#d4af37', 1.4);
     C(x, hy - 15, 3, '#f8fafc'); C(x - 1, hy - 15.5, 0.7, '#111'); C(x + 1, hy - 15.5, 0.7, '#111');
     L(x - 4, hy - 10.5, x + 4, hy - 12.5, '#f8fafc', 1); L(x - 4, hy - 12.5, x + 4, hy - 10.5, '#f8fafc', 1);
+  } else if (THEME === 'hero') {     // a domino mask at Hero HQ
+    RR(x - 10, hy - 4.5, 20, 6, 3, '#1e3a8a'); C(x - 3, hy - 1.5, 1.6, '#fff'); C(x + 3, hy - 1.5, 1.6, '#fff');
+    C(x - 3, hy - 1.5, 0.8, '#2b1a12'); C(x + 3, hy - 1.5, 0.8, '#2b1a12'); L(x + 10, hy - 2, x + 15, hy + 3, '#1e3a8a', 1.4);
   } else if (THEME === 'stone') {    // a chief's bone crown in the Stone Age
     R(x - 12, hy - 13, 24, 4, '#7c4a2d');
     for (let i = -2; i <= 2; i++) { const bx = x + i * 5, top = hy - 22 + Math.abs(i) * 3;
@@ -5023,6 +5558,91 @@ THEMES.stone.rooms = {
     },
   },
 };
+// ---- Hero HQ: med bay, team-up room, distress signals ------------------------------------
+THEMES.hero.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#dbeafe', '#e2e8f0', fGrid('rgba(30,58,138,.08)', 22));
+      R(980, 84, 306, 4, '#dc2626');
+      roomSign(1110, 44, 150, 17, ['+ HERO MED BAY +'], '#f8fafc', '#b91c1c', '#dc2626', 11);
+      RR(1168, 52, 114, 38, 3, '#0f172a', '#334155', 1.5);                 // vitals monitor
+      RR(988, 52, 66, 36, 3, '#fffef5', '#94a3b8', 1); TXT('POWERS', 1021, 61, 'bold 7px system-ui', '#1e3a8a'); TXT('MAY CAUSE', 1021, 71, '6px system-ui', '#475569'); TXT('SIDE EFFECTS', 1021, 80, '6px system-ui', '#475569');
+      RR(1252, 206, 22, 40, 3, '#c0392b'); R(1256, 214, 14, 6, '#fff');
+    },
+    fx() {
+      g.beginPath(); g.moveTo(1174, 72);                                  // heartbeat line
+      for (let i = 0; i <= 26; i++) { const k = (i + Math.floor(T * 14)) % 26; g.lineTo(1174 + i * 4, 72 - (k === 8 ? 12 : k === 9 ? -6 : k === 10 ? 4 : 0)); }
+      g.strokeStyle = '#4ade80'; g.lineWidth = 1.5; g.stroke();
+      TXT('♥ ' + (68 + Math.floor(Math.sin(T * 0.7) * 6)), 1262, 60, 'bold 8px monospace', '#f87171');
+    },
+    counter() {
+      counterBase('#f8fafc', '#cbd5e1', '#dc2626', '#1e3a8a', 'TRIAGE', '#f8fafc', '+', '#dc2626');
+      RR(1012, 152, 36, 26, 3, '#fff', '#94a3b8', 1); R(1026, 156, 8, 18, '#dc2626'); R(1021, 161, 18, 8, '#dc2626');   // first aid kit
+      for (let i = 0; i < 4; i++) RR(1196 + i * 12, 162, 8, 18, 3, ['#60a5fa', '#f472b6', '#a3e635', '#facc15'][i]);       // potion bottles
+    },
+    duck(x, y) {                                                       // a tiny cape and a domino mask on the duck
+      poly([x - 10, y - 8, x + 10, y - 8, x + 16, y + 22, x - 16, y + 22], 'rgba(220,38,38,.85)');
+      RR(x - 9, y - 25, 18, 6, 3, '#1e3a8a'); C(x - 5, y - 22, 1.8, '#fff'); C(x + 5, y - 22, 1.8, '#fff'); C(x - 5, y - 22, 1, '#111'); C(x + 5, y - 22, 1, '#111');
+    },
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#1e1b4b', '#312e81', fGrid('rgba(255,255,255,.05)', 22));
+      R(322, 680, 289, 10, '#4338ca');
+      roomSign(347, 659, 34, 34, ['TEAM', 'UP'], '#facc15', '#1e1b4b', '#a16207', 8);
+      RR(576, 640, 32, 44, 3, '#0f172a', '#6366f1', 1.5);                // the truce scoreboard
+      TXT('TRUCE', 592, 648, 'bold 6px system-ui', '#facc15'); TXT('H 8', 592, 660, 'bold 8px monospace', '#60a5fa'); TXT('V 8', 592, 672, 'bold 8px monospace', '#f87171');
+      seatsOf(chairOf('#1d4ed8', '#1e3a8a'));
+      cornersOf((x, y, i) => heroStar(x, y - 8, 8, i ? '#f87171' : '#60a5fa'));
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#475569'); RR(381, 768, 178, 52, 9, '#94a3b8', '#cbd5e1', 1);
+      g.globalAlpha = 0.3 + Math.sin(T * 3) * 0.1; E(470, 795, 30, 12, '#38bdf8'); g.globalAlpha = 1;   // hologram of the HQ star
+      heroStar(470, 784, 12, 'rgba(56,189,248,.8)', T * 0.6); E(470, 796, 14, 4, '#0ea5e9');
+      for (const [x, y] of [[404, 780], [536, 780], [410, 810], [530, 810]]) { RR(x - 8, y - 4, 16, 9, 2, '#1e293b'); R(x - 6, y - 2, 12, 5, '#60a5fa'); }
+      R(380, 826, 6, 12, '#334155'); R(554, 826, 6, 12, '#334155');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#0f172a', '#1e293b', fGrid('rgba(250,204,21,.06)', 30));
+      roomSign(1450, 44, 228, 18, ['DISTRESS SIGNALS · WAITING ON YOU'], '#facc15', '#0f172a', '#a16207', 10);
+      RR(1330, 52, 240, 98, 3, '#111827');
+      mailCells('#1f2937', (x, y, h) => { RR(x + 2, y + 6, 16, 11, 1, '#fef3c7'); heroStar(x + 10, y + 11.5, 4, ['#dc2626', '#2563eb', '#16a34a'][h % 3]); });   // starred calls for help
+      RR(1299, 56, 22, 44, 4, '#0b1220', '#475569', 1);                  // signal lamp housing
+      R(1320, 150, 260, 10, '#475569'); R(1322, 160, 256, 22, '#1e293b'); TXT('HELP IS ON THE WAY', 1450, 172, 'bold 9px system-ui', '#facc15');
+      RR(1540, 250, 44, 34, 4, '#334155'); RR(1544, 244, 36, 10, 2, '#fef3c7'); TXT('SOS', 1562, 270, 'bold 8px system-ui', '#f87171');
+    },
+    fx() {                                                              // the signal lamp sweeps
+      const on = Math.sin(T * 4) > 0;
+      if (on) { g.globalAlpha = 0.35; C(1310, 78, 14, '#facc15'); g.globalAlpha = 1; }
+      C(1310, 78, 6, on ? '#fde047' : '#713f12'); heroStar(1310, 78, 3.5, on ? '#a16207' : '#422006');
+    },
+  },
+};
+// window: a night skyline with a searchlight and a caped flier crossing; star bunting; a break-room rule
+function decorHero() {
+  windowScene('#0f172a', '#334155', () => {
+    const sky = g.createLinearGradient(0, 30, 0, 84); sky.addColorStop(0, '#0b1026'); sky.addColorStop(1, '#3b2a6b');
+    g.fillStyle = sky; g.fillRect(670, 30, 116, 54);
+    for (let i = 0; i < 8; i++) C(672 + hh(i * 3) % 112, 32 + hh(i * 7) % 20, 0.7, '#f8fafc');
+    const sw = Math.sin(T * 0.6) * 0.35;
+    g.globalAlpha = 0.22; poly([740, 84, 740 + Math.sin(sw - 0.12) * 70, 84 - Math.cos(sw - 0.12) * 70, 740 + Math.sin(sw + 0.12) * 70, 84 - Math.cos(sw + 0.12) * 70], '#fef08a'); g.globalAlpha = 1;
+    for (let i = 0; i < 9; i++) { const bh = 12 + hh(i * 13) % 24; R(670 + i * 13, 84 - bh, 12, bh, '#111827');
+      for (let j = 0; j < bh / 6 - 1; j++) if (hh(i * 31 + j) % 3) R(673 + i * 13, 87 - bh + j * 6, 2, 2, '#fde68a'); }
+    const fx = 650 + (T * 22) % 170, fy = 44 + Math.sin(T * 1.4) * 3;
+    poly([fx - 2, fy - 1, fx - 12, fy + 3 + Math.sin(T * 9), fx - 2, fy + 2], '#dc2626'); E(fx, fy, 5, 1.6, '#2563eb'); C(fx + 5, fy - 0.5, 1.6, '#f2d4b8');
+  });
+  for (const [a, b] of [[26, 610], [646, 970], [986, 1286], [1306, 1590]]) {     // star bunting along the top walls
+    g.beginPath(); g.moveTo(a, 24);
+    for (let x = a; x < b; x += 24) g.quadraticCurveTo(x + 12, 34, Math.min(x + 24, b), 24);
+    g.strokeStyle = '#94a3b8'; g.lineWidth = 1; g.stroke();
+    for (let x = a + 12, i = 0; x < b; x += 24, i++) heroStar(x, 33 + Math.sin(T * 1.6 + x * 0.05), 4, ['#dc2626', '#2563eb', '#facc15'][i % 3]);
+  }
+  RR(410, 50, 34, 26, 2, '#fffef5', '#dc2626', 1.2);                          // break-room rule between the arcade and the TV
+  TXT('NO', 427, 57, 'bold 6px system-ui', '#dc2626'); TXT('POWERS AT', 427, 64, 'bold 4.5px system-ui', '#1f2937'); TXT('THE COFFEE', 427, 70, 'bold 4.5px system-ui', '#1f2937');
+  C(606, 293, 10, '#1e3a8a'); heroStar(606, 293, 8, '#facc15', Math.sin(T) * 0.2);     // HQ badge on the break room door frame
+}
 
 // ============================================================================================
 // Static background (cached to an offscreen canvas)
@@ -5322,13 +5942,14 @@ function drawSlip(w) {
 }
 function drawTooltip(w) {
   const lines = [w.L.name + (w.L.mobility ? '' : '')];
+  if (THEME === 'hero') { const p = powerOf(w); lines.push(p.alias + ' · ' + (isVillain(w) ? 'villain' : 'hero') + ' · ' + p.label); }
   if (w.job) {
     lines.push(STATUS_LABEL[w.job.status] || w.job.status);
     if (w.job.activity && w.job.status === 'working') lines.push(w.job.activity);
     if (w.job.message && w.job.status !== 'working') lines.push(w.job.message);
     if (w.locKind === 'meet') lines.push('Leading a team of ' + helpersOf(w.job.id).length);
     const lead = leaderOf(w.job); if (lead) lines.push('Reports to ' + lead.L.name);
-  } else lines.push(w.mode === 'returning' ? 'Heading back to the break room' : 'On break — ' + (w.talk ? 'chatting with ' + (w.talk.a === w ? w.talk.b : w.talk.a).L.name
+  } else lines.push(w.mode === 'returning' ? 'Heading back to the break room' : 'On break — ' + (w.duel ? 'dueling ' + (w.duel.a === w ? w.duel.b : w.duel.a).L.name : w.talk ? 'chatting with ' + (w.talk.a === w ? w.talk.b : w.talk.a).L.name
     : w.spot && w.spot.act === 'tv' ? 'watching ' + TV_NAMES[tvShow()] : ACT_NAMES[w.spot && w.spot.act] || 'wandering'));
   g.font = '12px system-ui';
   const ls = lines.map((l, i) => i === 0 ? l : fitText(l, 240));
@@ -5345,7 +5966,7 @@ let hovered = null, selected = null, selectUntil = 0, online = false;
 function update(dt) {
   T += dt;
   for (const w of workers) updateWorker(w, dt);
-  updParticles(dt); updPool(dt); updTalks();
+  updParticles(dt); updPool(dt); updTalks(); updHero(dt);
   if (T > BOSS.nextQuip) { if (!BOSS.visitor) bossSay(pick(activeCount() ? BOSS_BUSY : BOSS_IDLE), 3); BOSS.nextQuip = T + rand(35, 70); }
   const atDesk = workers.some(w => w.mode === 'job' && w.locKind === 'trouble' && w.arrived);
   if (atDesk && T > DUCK.next) { DUCK.bubble = pick(DUCK_LINES); DUCK.bubbleUntil = T + 3.5; DUCK.next = T + rand(7, 11); }
@@ -5370,6 +5991,7 @@ function render() {
   drawPingPongBall();
   drawPager();
   drawParticles();
+  if (THEME === 'hero') drawBeams();
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
   const bubs = [];
