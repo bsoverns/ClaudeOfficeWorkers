@@ -105,7 +105,8 @@
         <option value="classic">Classic Office</option><option value="dev">Dev Shop</option>
         <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option>
         <option value="cyber">Neon City (cyberpunk)</option><option value="xmas">North Pole (Christmas)</option>
-        <option value="pirate">Pirate Cove</option><option value="stone">Stone Age</option></select></label>
+        <option value="pirate">Pirate Cove</option><option value="stone">Stone Age</option>
+        <option value="superhq">Super HQ (heroes and villains)</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
@@ -147,6 +148,7 @@ py src\office.py demo</pre>
     <button class="theme" data-theme="cyber"><b>🌃 Neon City</b><span>Cyberpunk: netrunners, street samurai with neon katanas, LED-mask punks, holo-idols, corpos, ripperdocs, drone couriers and androids. The Gig Board, Fork Alley, the Blackwall… (also follows the work)</span></button>
     <button class="theme" data-theme="pirate"><b>🦜 Pirate Cove</b><span>Pirates with eyepatches and parrots, buccaneers, a captain and a few cursed skeletons. The Treasure Map, the Cannon Deck, Parrot Review, the Kraken, Walk the Plank… (also follows the work)</span></button>
     <button class="theme" data-theme="stone"><b>🦖 Stone Age</b><span>Cave people, hunters, shamans and coworkers in dino and mammoth onesies; real dinosaurs do the heavy lifting. The Stone Tablets, Pterodactyl Airlift, the Wheel (reinvented), the T-Rex Den, Volcano Testing… (also follows the work)</span></button>
+    <button class="theme" data-theme="superhq"><b>🦸 Super HQ</b><span>Eight heroes and eight villains, each with a super power. They trade corny one-liners and power blasts in the break room, then call a truce when work comes in. The Gadget Lab, Armor Forge, Hero Hotline, Containment Lab, Training Gym… (also follows the work)</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
 </div></div>
@@ -2723,7 +2725,211 @@ const STONE = {
       if (Math.random() < dt * 0.3) popText(x + 160, y + 86, ['📦 loaded', 'Tracking 0001 BC', 'Out for delivery', 'Delivered: Tuesday-ish'], '#14532d');
     } },
 };
-for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE]) STATION_ORDER.forEach(id => {
+// Super HQ theme: the same 12 slots as a superhero headquarters.
+function superPanel(x, y, w, h, c) {      // steel wall panel with rivets, top-left at x, y
+  RR(x, y, w, h, 3, c || '#334155', '#1e293b', 1.2);
+  for (const [px, py] of [[x + 3, y + 3], [x + w - 3, y + 3], [x + 3, y + h - 3], [x + w - 3, y + h - 3]]) C(px, py, 1, '#94a3b8');
+}
+function superStar(cx, cy, r, c) {        // five-point star
+  const pts = [];
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; pts.push(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+  poly(pts, c);
+}
+function superBolt(x, y, s, c) { poly([x + 2 * s, y, x - 3 * s, y + 7 * s, x, y + 7 * s, x - 2 * s, y + 13 * s, x + 4 * s, y + 5 * s, x + 1 * s, y + 5 * s], c); }
+const SUPER = {
+  workbench: { label: 'GADGET LAB', name: 'the Gadget Lab', tint: '#dbe3ee', anim: 'fix',
+    lines: ['Work item AB#1234: grappling hook.', 'Moving the jetpack to DONE.', 'Who filed a bug on my utility belt?', 'Sprint goal: fewer explosions.'],
+    draw(x, y, t, on) {
+      superPanel(x + 100, y + 30, 132, 70, '#475569');
+      TXT('GADGETS', x + 166, y + 38, 'bold 6px system-ui', '#facc15');
+      [[112, 48, 'hook'], [146, 48, 'belt'], [180, 48, 'boom'], [214, 48, 'disc']].forEach(([gx, gy, k], i) => {
+        RR(x + gx - 12, y + gy, 24, 40, 2, '#1e293b');
+        const cx = x + gx, cy = y + gy + 20;
+        if (k === 'hook') { L(cx, cy - 12, cx, cy + 8, '#cbd5e1', 1.4); poly([cx - 6, cy + 8, cx, cy + 3, cx + 6, cy + 8, cx, cy + 13], '#94a3b8'); }
+        else if (k === 'belt') { R(cx - 9, cy - 3, 18, 6, '#facc15'); RR(cx - 3, cy - 4, 6, 8, 1, '#a16207'); }
+        else if (k === 'boom') { C(cx, cy + 2, 7, '#111827'); L(cx + 4, cy - 4, cx + 8, cy - 10, '#a16207', 1.4); if (on && Math.sin(t * 9 + i) > 0) C(cx + 8, cy - 11, 1.6, '#f97316'); }
+        else { C(cx, cy, 8, '#e11d48'); C(cx, cy, 3, '#fecdd3'); }
+        TXT(['AB#11', 'AB#12', 'AB#13', 'AB#14'][i], cx, y + gy + 36, 'bold 4.5px monospace', '#cbd5e1');
+      });
+      R(x + 100, y + 136, 132, 8, '#64748b'); R(x + 100, y + 136, 132, 2, '#94a3b8');
+      R(x + 106, y + 144, 5, 38, '#475569'); R(x + 220, y + 144, 5, 38, '#475569');
+      const sp = on ? Math.sin(t * 3) * 3 : 0;
+      RR(x + 150, y + 118 + sp * 0.3, 40, 18, 4, '#334155', '#0f172a', 1); C(x + 170, y + 127 + sp * 0.3, 5, '#38bdf8');
+      L(x + 150, y + 124, x + 140, y + 120 + sp, '#94a3b8', 2); L(x + 190, y + 124, x + 200, y + 120 - sp, '#94a3b8', 2);
+      RR(x + 108, y + 112, 26, 22, 2, '#f8fafc', '#94a3b8', 0.8); TXT('BLUEPRINT', x + 121, y + 117, 'bold 3.5px monospace', '#1d4ed8');
+      L(x + 112, y + 124, x + 130, y + 124, '#93c5fd', 0.8); L(x + 112, y + 128, x + 124, y + 128, '#93c5fd', 0.8);
+    },
+    tick(x, y, w, dt, t) {
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 170, y + 128, { kind: 'spark', vx: rand(-60, 60), vy: rand(-90, -20), ay: 260, life: 0.4, color: pick(['#38bdf8', '#facc15', '#fff']) });
+      if (Math.random() < dt * 0.3) popText(x + 166, y + 24, ['AB#' + (1000 + Math.floor(Math.random() * 9000)) + ' built', 'gadget ✓', 'moved to DONE', 'beep boop'], '#1d4ed8');
+    } },
+  forge: { label: 'ARMOR FORGE', name: 'the Armor Forge', tint: '#e5dfd8', anim: 'hammer',
+    lines: ['Deploying armor to the cloud.', 'Scaling out the jet boots.', 'Resource group: Suits.', 'Who has Owner on the arc reactor?'],
+    draw(x, y, t, on) {
+      superPanel(x + 100, y + 30, 60, 46, '#1e293b');
+      E(x + 130, y + 52, 16, 8, '#e0f2fe'); C(x + 122, y + 48, 7, '#f8fafc'); C(x + 134, y + 45, 9, '#fff');
+      TXT('ARMOR.CLOUD', x + 130, y + 68, 'bold 5px monospace', '#38bdf8');
+      const glow = on ? 0.6 + Math.sin(t * 5) * 0.3 : 0.4;
+      R(x + 196, y + 160, 4, 22, '#475569'); R(x + 184, y + 180, 28, 3, '#475569');
+      RR(x + 184, y + 86, 28, 34, 6, '#b91c1c', '#7f1d1d', 1); RR(x + 188, y + 120, 20, 18, 3, '#facc15');
+      R(x + 188, y + 138, 8, 22, '#b91c1c'); R(x + 200, y + 138, 8, 22, '#b91c1c');
+      RR(x + 189, y + 66, 18, 20, 6, '#b91c1c'); RR(x + 192, y + 72, 12, 6, 2, '#facc15');
+      g.globalAlpha = glow; C(x + 198, y + 98, 6, '#7dd3fc'); g.globalAlpha = 1; C(x + 198, y + 98, 3, '#e0f2fe');
+      poly([x + 110, y + 150, x + 160, y + 150, x + 154, y + 160, x + 116, y + 160], '#374151'); R(x + 124, y + 160, 22, 16, '#1f2937'); R(x + 116, y + 176, 38, 6, '#374151');
+      E(x + 135, y + 146, 14, 5, on ? '#fb923c' : '#9a3412'); RR(x + 125, y + 138, 20, 10, 4, on ? '#fdba74' : '#78716c');
+      if (on) { g.globalAlpha = 0.3; C(x + 135, y + 143, 14, '#f97316'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt, t) {
+      if (hitCross(w, Math.sin(t * 6))) for (let i = 0; i < 6; i++) puff(x + 135, y + 140, { kind: 'spark', vx: rand(-70, 70), vy: rand(-110, -30), ay: 300, life: 0.45, color: pick(['#f97316', '#facc15', '#fde68a']) });
+      if (Math.random() < dt * 0.3) popText(x + 160, y + 24, ['deployed ☁', 'armor v2 live', '200 OK', 'scaled out'], '#b91c1c');
+    } },
+  dairy: { label: 'MAINFRAME UPLINK', name: 'the Mainframe Uplink', tint: '#d6e2ef', anim: 'type', sit: true, dx: 80,
+    lines: ['Pushing to the hero branch.', 'Merge conflict with my arch-nemesis.', 'PR approved by the League.', 'git push --force-field'],
+    draw(x, y, t, on) {
+      superPanel(x + 154, y + 30, 80, 80, '#1e293b');
+      const a = on ? Math.sin(t * 0.8) * 0.3 : 0;
+      g.save(); g.translate(x + 194, y + 82); g.rotate(-0.6 + a);
+      E(0, 0, 18, 9, '#cbd5e1'); E(0, -1, 14, 6, '#e2e8f0'); L(0, 0, 0, -16, '#94a3b8', 1.6); C(0, -17, 2.2, '#ef4444'); g.restore();
+      R(x + 192, y + 86, 4, 20, '#64748b');
+      if (on) for (let i = 0; i < 3; i++) { const k = (t * 0.8 + i / 3) % 1; g.globalAlpha = 1 - k; g.beginPath(); g.arc(x + 186, y + 64, 6 + k * 22, -2.2, -1.1); g.strokeStyle = '#38bdf8'; g.lineWidth = 1.4; g.stroke(); g.globalAlpha = 1; }
+      deskSit(x, y); monitor(x, y, '#0b1220');
+      L(x + 108, y + 92, x + 134, y + 92, '#22c55e', 1); L(x + 114, y + 92, x + 120, y + 100, '#a855f7', 1); L(x + 120, y + 100, x + 130, y + 92, '#a855f7', 1);
+      for (const px of [108, 114, 124, 134]) C(x + px, y + 92, 1.4, '#22c55e');
+      C(x + 120, y + 100, 1.4, '#a855f7');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['pushed ↑', 'PR merged', 'branch: justice', 'uplink OK'], '#0369a1'); } },
+  valet: { label: 'HERO HOTLINE', name: 'the Hero Hotline', tint: '#efdede', anim: 'point',
+    lines: ['Hero Hotline, what is your emergency?', 'Ticket #12: cat stuck in a tree. Again.', 'Have you tried turning the signal off and on?', 'Incident closed. Citizen saved.'],
+    draw(x, y, t, on) {
+      superPanel(x + 100, y + 30, 70, 50, '#1e293b');
+      TXT('TICKETS', x + 135, y + 38, 'bold 5px system-ui', '#facc15');
+      ['#12 cat in tree', '#13 bank alarm', '#14 wifi down'].forEach((s, i) => { R(x + 106, y + 44 + i * 11, 58, 9, i === (on ? Math.floor(t * 0.5) % 3 : 0) ? '#7f1d1d' : '#334155'); TXT(s, x + 109, y + 49 + i * 11, '4.5px monospace', '#e2e8f0', 'left'); });
+      R(x + 196, y + 120, 18, 60, '#475569'); RR(x + 188, y + 108, 34, 14, 3, '#64748b');
+      const ring = on && Math.sin(t * 3) > 0.3, sh = ring ? Math.sin(t * 50) * 1.2 : 0;
+      RR(x + 192 + sh, y + 98, 26, 10, 4, '#dc2626', '#7f1d1d', 1); RR(x + 190 + sh, y + 94, 30, 6, 3, '#ef4444');
+      if (ring) TXT('RING!', x + 205, y + 86, 'bold 7px system-ui', '#dc2626');
+      R(x + 130, y + 146, 8, 34, '#475569'); poly([x + 126, y + 150, x + 142, y + 150, x + 146, y + 132, x + 122, y + 132], '#64748b');
+      if (on) { g.globalAlpha = 0.25; poly([x + 124, y + 132, x + 144, y + 132, x + 170, y + 40, x + 98, y + 40], '#fde68a'); g.globalAlpha = 1; }
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 160, y + 24, ['ticket closed ✓', 'citizen saved', 'hold music 🎵', 'on my way!'], '#b91c1c'); } },
+  bakery: { label: 'DATA VAULT', name: 'the Data Vault', tint: '#dde4ea', anim: 'type', sit: true, dx: 80,
+    lines: ['SELECT * FROM villains WHERE at_large = 1;', 'Missing index on the secret lair.', 'Stored procedure: usp_SaveTheDay.', 'Query returned 0 heroes. Rude.'],
+    draw(x, y, t, on) {
+      superPanel(x + 152, y + 28, 82, 86, '#475569');
+      C(x + 193, y + 71, 36, '#94a3b8'); C(x + 193, y + 71, 31, '#64748b'); C(x + 193, y + 71, 12, '#cbd5e1');
+      g.save(); g.translate(x + 193, y + 71); g.rotate(on ? t * 1.4 : 0);
+      for (let i = 0; i < 6; i++) { g.rotate(TAU / 6); L(0, 0, 0, -26, '#cbd5e1', 2.2); C(0, -26, 2.4, '#e2e8f0'); }
+      g.restore(); C(x + 193, y + 71, 4, '#334155');
+      deskSit(x, y); monitor(x, y, '#0b1220');
+      ['SELECT *', 'FROM villains', 'WHERE lair=1'].forEach((s, i) => TXT(s, x + 106, y + 91 + i * 6, '4.5px monospace', '#38bdf8', 'left'));
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['3 rows', 'vault locked 🔒', 'query OK', 'index added'], '#334155'); } },
+  garden: { label: 'BIO LAB', name: 'the Bio Lab', tint: '#dcefe4', anim: 'stir',
+    lines: ['Publishing the dacpac serum.', 'Schema compare: mutant vs normal.', 'Pre-deployment script: put on goggles.', 'Database project grew an extra arm.'],
+    draw(x, y, t, on) {
+      [[112, '#22c55e'], [148, '#a855f7'], [184, '#38bdf8']].forEach(([tx, c], i) => {
+        RR(x + tx - 2, y + 40, 28, 8, 2, '#64748b'); RR(x + tx, y + 48, 24, 70, 4, 'rgba(203,213,225,.35)', '#94a3b8', 1);
+        const lv = 22 + Math.sin(t * (on ? 2 : 0.3) + i) * 4; R(x + tx + 2, y + 116 - lv * 2, 20, lv * 2, c);
+        for (let b = 0; b < 3; b++) { const k = (t * 0.7 + b / 3 + i * 0.2) % 1; C(x + tx + 6 + b * 6, y + 114 - k * lv * 2, 1.4, 'rgba(255,255,255,.7)'); }
+        RR(x + tx - 2, y + 118, 28, 8, 2, '#64748b');
+      });
+      R(x + 100, y + 140, 132, 8, '#94a3b8'); R(x + 106, y + 148, 5, 34, '#64748b'); R(x + 220, y + 148, 5, 34, '#64748b');
+      poly([x + 126, y + 140, x + 140, y + 140, x + 146, y + 122, x + 120, y + 122], 'rgba(203,213,225,.6)'); R(x + 127, y + 116, 12, 6, 'rgba(203,213,225,.7)');
+      R(x + 122, y + 130, 22, 10, on ? '#4ade80' : '#16a34a');
+      TXT('SERUM v2.dacpac', x + 190, y + 136, 'bold 4.5px monospace', '#14532d');
+    },
+    tick(x, y, w, dt) {
+      if (Math.random() < dt * 2) puff(x + rand(124, 142), y + 120, { vy: rand(-20, -10), grow: 2, life: 0.9, size: 1.5, color: 'rgba(134,239,172,.6)' });
+      if (Math.random() < dt * 0.3) popText(x + 166, y + 30, ['published ✓', 'mutation applied', 'schema OK', 'bloop'], '#15803d');
+    } },
+  pizza: { label: 'MISSION CONTROL', name: 'Mission Control', tint: '#d8e0ec', anim: 'type', sit: true, dx: 80,
+    lines: ['Updating appsettings.json for the Batcave.', 'Feature flag: CAPES_ENABLED = true.', 'Config change: more lasers.', 'Client config deployed to the satellite.'],
+    draw(x, y, t, on) {
+      superPanel(x + 150, y + 28, 84, 80, '#0f172a');
+      for (let i = 0; i < 6; i++) R(x + 156 + i * 13, y + 50 + hh(i * 5) % 40, 9, 60 - hh(i * 5) % 40, '#1e3a5f');
+      L(x + 154, y + 104, x + 230, y + 104, '#38bdf8', 1);
+      for (let i = 0; i < 4; i++) { const bx = x + 160 + hh(i * 9) % 66, by = y + 40 + hh(i * 3 + 2) % 56, p = on ? 1 + Math.sin(t * 4 + i) * 0.6 : 1; g.globalAlpha = 0.5; C(bx, by, 3 * p, i === 1 ? '#ef4444' : '#22c55e'); g.globalAlpha = 1; C(bx, by, 1.4, i === 1 ? '#ef4444' : '#22c55e'); }
+      TXT('CITY MAP', x + 192, y + 35, 'bold 5px system-ui', '#38bdf8');
+      deskSit(x, y); monitor(x, y, '#0b1220');
+      TXT('flags:', x + 106, y + 91, '4.5px monospace', '#facc15', 'left'); TXT('capes=on', x + 106, y + 97, '4.5px monospace', '#22c55e', 'left'); TXT('lasers=11', x + 106, y + 103, '4.5px monospace', '#22c55e', 'left');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['config saved', 'flag flipped', 'satellite synced', 'roger that'], '#1d4ed8'); } },
+  easel: { label: 'COSTUME DESIGN', name: 'Costume Design', tint: '#efe0ec', anim: 'paint',
+    lines: ['pip install spandex', 'def cape(): return dramatic', 'Indentation error in my cape.', 'import justice'],
+    draw(x, y, t, on) {
+      L(x + 116, y + 70, x + 108, y + 180, '#8a5a36', 3); L(x + 136, y + 70, x + 144, y + 180, '#8a5a36', 3); L(x + 126, y + 70, x + 126, y + 176, '#6b4423', 2);
+      RR(x + 104, y + 58, 44, 54, 2, '#fffef5', '#a8a29e', 1);
+      superStar(x + 126, y + 76, 9, '#3b82f6'); L(x + 112, y + 96, x + 140, y + 96, '#a8a29e', 0.8); TXT('cape.py', x + 126, y + 104, 'bold 4.5px monospace', '#3776ab');
+      R(x + 196, y + 160, 4, 20, '#64748b'); E(x + 198, y + 181, 12, 3, '#475569');
+      const fl = on ? Math.sin(t * 2) * 3 : 0;
+      poly([x + 186, y + 92, x + 210, y + 92, x + 222 + fl, y + 158, x + 174 - fl, y + 158], '#dc2626');
+      RR(x + 186, y + 90, 24, 40, 6, '#2563eb'); RR(x + 188, y + 130, 20, 30, 3, '#1e3a8a'); C(x + 198, y + 82, 9, '#e7d3bd');
+      superStar(x + 198, y + 104, 6, '#facc15');
+      for (let i = 0; i < 3; i++) C(x + 172 + i * 12, y + 44, 5, ['#ef4444', '#facc15', '#3b82f6'][i]);
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 166, y + 30, ['>>> import cape', 'PEP 8 compliant', 'very dramatic', 'swoosh'], '#3776ab'); } },
+  lumber: { label: 'TRAINING GYM', name: 'the Training Gym', tint: '#e6e2d8', anim: 'toss',
+    lines: ['Refactoring the legacy service. With my fists.', 'This Windows service needs more reps.', 'One more set on the worker service.', 'Legacy code: heavier than a truck.'],
+    draw(x, y, t, on) {
+      R(x + 98, y + 170, 136, 12, '#57534e'); R(x + 98, y + 170, 136, 2, '#78716c');
+      const lift = on ? Math.max(0, Math.sin(t * 2)) * 30 : 0;
+      L(x + 106, y + 150 - lift, x + 166, y + 150 - lift, '#9ca3af', 3);
+      for (const px of [108, 116, 156, 164]) RR(x + px - 4, y + 136 - lift, 8, 28, 2, '#1f2937');
+      TXT('10 TONS', x + 136, y + 143 - lift, 'bold 5px system-ui', '#facc15');
+      L(x + 206, y + 36, x + 206, y + 60, '#78716c', 1.5); R(x + 186, y + 34, 40, 3, '#475569');
+      const sw = on ? Math.sin(t * 4) * 0.25 : 0;
+      g.save(); g.translate(x + 206, y + 60); g.rotate(sw); RR(-11, 0, 22, 46, 8, '#b91c1c', '#7f1d1d', 1); R(-11, 10, 22, 3, '#1f2937'); R(-11, 34, 22, 3, '#1f2937'); g.restore();
+      superPanel(x + 100, y + 30, 70, 40, '#334155'); TXT('SERVICE', x + 135, y + 42, 'bold 5px system-ui', '#cbd5e1'); TXT('REPS: ' + (on ? Math.floor(t) % 100 : 0), x + 135, y + 56, 'bold 6px monospace', '#22c55e');
+    },
+    tick(x, y, w, dt, t) {
+      if (Math.sin(t * 2) > 0.98 && Math.random() < dt * 20) popText(x + 136, y + 100, ['HNNG!', 'one more!', 'refactored', 'PR: -500 lines'], '#b91c1c');
+    } },
+  lab: { label: 'CONTAINMENT LAB', name: 'the Containment Lab', tint: '#e0e6dc', anim: 'review',
+    lines: ['Running the regression tests on the blob.', 'Unit test: does it escape? FAIL.', 'QA found a bug. It bit me.', 'All tests green. Like the specimen.'],
+    draw(x, y, t, on) {
+      RR(x + 150, y + 40, 80, 130, 4, 'rgba(186,230,253,.25)', '#94a3b8', 2);
+      R(x + 146, y + 34, 88, 8, '#475569'); R(x + 146, y + 168, 88, 12, '#475569');
+      const bob = Math.abs(Math.sin(t * (on ? 4 : 1.5))) * 26, sq = 1 + (bob < 3 ? 0.25 : 0);
+      E(x + 190, y + 160 - bob, 13 * sq, 11 / sq, '#84cc16'); C(x + 185, y + 156 - bob, 2.4, '#fff'); C(x + 195, y + 156 - bob, 2.4, '#fff');
+      C(x + 185, y + 156 - bob, 1.1, '#111'); C(x + 195, y + 156 - bob, 1.1, '#111');
+      for (let i = 0; i < 6; i++) L(x + 160 + i * 13, y + 44, x + 160 + i * 13, y + 166, 'rgba(255,255,255,.18)', 1);
+      superPanel(x + 100, y + 40, 44, 60, '#1e293b');
+      ['PASS', 'PASS', on && Math.floor(t) % 4 === 0 ? 'FAIL' : 'PASS', 'PASS'].forEach((s, i) => TXT(s, x + 122, y + 50 + i * 12, 'bold 6px monospace', s === 'FAIL' ? '#ef4444' : '#22c55e'));
+      g.globalAlpha = on ? 0.5 + Math.sin(t * 6) * 0.4 : 0.3; C(x + 190, y + 30, 4, '#ef4444'); g.globalAlpha = 1;
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 190, y + 26, ['42 passed', 'blob contained', 'test green ✓', 'it blinked'], '#4d7c0f'); } },
+  servers: { label: 'SUPERCOMPUTER', name: 'the Supercomputer', tint: '#d6dcea', anim: 'type', sit: true, dx: 80,
+    lines: ['The supercomputer needs more RAM.', 'Firmware update for the robot butler.', 'Who unplugged the AI?', 'Rack 3 is overheating. Call the ice guy.'],
+    draw(x, y, t, on) {
+      for (let r = 0; r < 3; r++) {
+        const rx = x + 156 + r * 26; RR(rx, y + 30, 22, 120, 2, '#111827', '#374151', 1);
+        for (let k = 0; k < 10; k++) { R(rx + 3, y + 36 + k * 11, 16, 7, '#1f2937'); C(rx + 16, y + 39.5 + k * 11, 1.2, (hh(k * 7 + r * 13 + Math.floor(on ? t * 4 : 0)) % 3) ? '#22c55e' : '#f59e0b'); }
+      }
+      RR(x + 160, y + 152, 68, 24, 3, '#0f172a', '#38bdf8', 1);
+      const ey = on ? Math.sin(t * 0.7) * 3 : 0; C(x + 184 + ey, y + 162, 3, '#38bdf8'); C(x + 204 + ey, y + 162, 3, '#38bdf8');
+      L(x + 186, y + 170, x + 202, y + 170, '#38bdf8', 1);
+      deskSit(x, y); monitor(x, y, '#0b1220');
+      for (let i = 0; i < 3; i++) R(x + 106, y + 90 + i * 5, 8 + (hh(i + Math.floor(on ? t * 3 : 0)) % 22), 2, '#22c55e');
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.35) popText(x + 130, y + 78, ['RAM +1 PB', 'firmware OK', 'AI: hello', 'fans: whirr'], '#0369a1'); } },
+  packing: { label: 'HERO DISPATCH', name: 'Hero Dispatch', tint: '#e4e0d6', anim: 'pack',
+    lines: ['Tracking number HERO-0042.', 'Package flying out by drone.', 'Delivered faster than a speeding bullet.', 'Status: in orbit.'],
+    draw(x, y, t, on) {
+      superPanel(x + 100, y + 30, 64, 48, '#1e293b');
+      TXT('TRACKING', x + 132, y + 38, 'bold 5px system-ui', '#facc15');
+      ['HERO-0042 ✈', 'HERO-0043 ✓', 'HERO-0044 …'].forEach((s, i) => TXT(s, x + 105, y + 48 + i * 9, '4.5px monospace', '#e2e8f0', 'left'));
+      R(x + 100, y + 150, 60, 6, '#64748b'); R(x + 104, y + 156, 4, 26, '#475569'); R(x + 152, y + 156, 4, 26, '#475569');
+      RR(x + 108, y + 132, 20, 18, 2, '#c8a46e', '#8a6a3e', 1); RR(x + 130, y + 136, 18, 14, 2, '#d4b483', '#8a6a3e', 1); superStar(x + 118, y + 141, 4, '#dc2626');
+      E(x + 200, y + 172, 26, 7, '#475569'); E(x + 200, y + 170, 22, 5, '#facc15'); TXT('H', x + 200, y + 170, 'bold 7px system-ui', '#1e293b');
+      const k = on ? (t * 0.25) % 1 : 0, dx = x + 200 + Math.sin(k * 7) * 4, dy = y + 156 - k * 120;
+      g.globalAlpha = k > 0.85 ? (1 - k) / 0.15 : 1;
+      RR(dx - 8, dy - 4, 16, 6, 2, '#334155'); for (const d of [-1, 1]) { L(dx + d * 8, dy - 4, dx + d * 13, dy - 7, '#334155', 1.4); E(dx + d * 13, dy - 8, on ? 5 : 4, 1, '#94a3b8'); }
+      L(dx, dy + 2, dx, dy + 6, '#94a3b8', 1); RR(dx - 6, dy + 6, 12, 10, 2, '#c8a46e', '#8a6a3e', 1);
+      g.globalAlpha = 1;
+    },
+    tick(x, y, w, dt) { if (Math.random() < dt * 0.3) popText(x + 160, y + 86, ['📦 dispatched', 'HERO-0042 delivered', 'in orbit', 'signed: Hero'], '#1e40af'); } },
+};
+for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE, SUPER]) STATION_ORDER.forEach(id => {
   const c = STA[id], d = set[id];
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
@@ -2756,6 +2962,7 @@ const THEMES = {
     swaps: { 9: 'shaman', 4: 'mammoth', 12: 'mammoth' },
     costumes: ['caveman', 'cavewoman', 'dino', 'hunter', 'caveman', 'cavewoman', 'dino', 'shaman'],
     wash: ['#b45309', 0.05], decor: () => decorStone() },
+  superhq: { name: 'Super HQ', stations: SUPER, routed: true, costumes: ['super'] },
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -2888,7 +3095,8 @@ function drawPerson(Lk, x, y, st) {
   const pose = mob === 'wheelchair' ? 'chair' : (st.pose || 'stand');
   g.save(); g.translate(x, y);
   if (pose === 'lie') { E(0, 1, 26, 5, 'rgba(0,0,0,.15)'); g.translate(26, -5); g.rotate(-Math.PI / 2); }
-  else E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
+  else if (!st.hover) E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
+  if (st.hover) g.translate(0, -st.hover);
   if (f === 'left') g.scale(-1, 1);
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
@@ -2899,7 +3107,7 @@ function drawPerson(Lk, x, y, st) {
   const walking = st.moving && pose === 'stand';
   if (walking) g.translate(0, -Math.abs(Math.sin(st.walk)) * 1.6);
   const bo = pose === 'sit' ? 6 : pose === 'chair' ? 4 : 0;
-  const pants = Lk.pants, shoe = '#2a2522';
+  const pants = Lk.pants, shoe = Lk.boots || '#2a2522';
   const chair = '#30343c';
 
   // wheelchair parts behind the body
@@ -3125,6 +3333,7 @@ function drawPerson(Lk, x, y, st) {
     g.globalAlpha = pulse; C(nx, ty + 8, 4.2, Lk.pendant); g.globalAlpha = 1;
     poly([nx, ty + 5.4, nx + 2.2, ty + 8, nx, ty + 10.6, nx - 2.2, ty + 8], Lk.pendant); L(nx - 0.8, ty + 6.6, nx - 0.2, ty + 7.6, '#fff', 0.7);
   }
+  if (Lk.suit) superTorso(Lk, ty, side, back);
 
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
   if (Lk.tie && !back) { if (side) L(3, ty + 2, 4, ty + 12, Lk.tie, 1.6); else poly([-1.6, ty + 3, 1.6, ty + 3, 2.2, ty + 14, 0, ty + 17, -2.2, ty + 14], Lk.tie); }
@@ -3145,7 +3354,13 @@ function drawPerson(Lk, x, y, st) {
     if (side) L(3, sh + 1, 5 + sw, 0, '#9aa3ad', 2);
     else { L(-11, sh + 1, -12 - sw, 0, '#9aa3ad', 2); L(11, sh + 1, 12 + sw, 0, '#9aa3ad', 2); }
   }
-  if (mob === 'cane' && pose === 'stand' && !st.item) { L(hand[0], hand[1], hand[0] + 1.5, 0, '#6b4423', 2); }
+  if (mob === 'cane' && pose === 'stand' && !st.item) {
+    L(hand[0], hand[1], hand[0] + 1.5, 0, Lk.clockStaff ? '#3f2a14' : '#6b4423', 2);
+    if (Lk.clockStaff) {                   // the cane is a time staff topped with a clock
+      const cx = hand[0] - 0.5, cy = hand[1] - 5; C(cx, cy, 3.6, Lk.clockStaff); C(cx, cy, 2.6, '#fffbeb');
+      L(cx, cy, cx, cy - 2, '#3f2a14', 0.7); L(cx, cy, cx + Math.cos(T * 2) * 2, cy + Math.sin(T * 2) * 2, '#3f2a14', 0.6);
+    }
+  }
   if (pose === 'chair' && back) { RR(-10, -36, 20, 22, 3, chair); E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); }
   // head
   const hy = ty - 9;
@@ -3198,6 +3413,7 @@ function drawPerson(Lk, x, y, st) {
   }
   hairFront(Lk, view, hy);
   costumeTop(Lk, view, hy, side);
+  if (Lk.gear) superHead(Lk, view, hy, side);
   // signature props when the hands are free: laser sword, neon katana, glowing syringe; a corpo always has the briefcase
   const idle = mob === 'cane' ? null : Lk.saber ? 'saber' : Lk.katana ? 'katana' : Lk.syringe ? 'syringe' : null;   // a cane takes the hand
   const item = st.item || (!st.moving ? idle : null) || (Lk.briefcase ? 'briefcase' : null);
@@ -3218,6 +3434,82 @@ function stoneHood(view, hy, hc) {
   else { g.arc(0, hy, 10, Math.PI * 0.9, Math.PI * 2.1); g.quadraticCurveTo(0, hy - 10, -9.5, hy + 3.1); }
   g.closePath(); g.fillStyle = hc; g.fill(); g.strokeStyle = hd; g.lineWidth = 0.8; g.stroke();
   if (view !== 'side') { g.beginPath(); g.arc(0, hy, 9.6, Math.PI * 0.9, Math.PI * 2.1); g.strokeStyle = hc; g.lineWidth = 2.6; g.stroke(); }
+}
+// Super HQ: belt, villain collar and chest emblem over the bodysuit.
+function superTorso(Lk, ty, side, back) {
+  const c = Lk.suit, x0 = side ? -6 : -8, wd = side ? 12 : 16;
+  R(x0, ty + 15, wd, 2.6, shade(c.accent, -0.15));
+  if (!back && !side) RR(-2.5, ty + 14.5, 5, 3.6, 1, c.accent);
+  if (Lk.villain) for (const d of side ? [-1] : [-1, 1]) poly([d * 3, ty + 1, d * 4.5, ty - 4, d * 6.5, ty + 1, d * 8, ty - 3, d * 9, ty + 2], shade(c.suit, -0.35));
+  if (!back) superEmblem(c.emblem, side ? 1.5 : 0, ty + 8, c.accent, shade(c.suit, -0.3));
+}
+function superEmblem(k, cx, cy, bg, fg) {
+  C(cx, cy, 4.6, bg);
+  const ln = (a, b, c2, d) => L(cx + a, cy + b, cx + c2, cy + d, fg, 0.9);
+  switch (k) {
+    case 'flame': poly([cx - 2.5, cy + 3, cx - 2.5, cy - 0.5, cx - 1, cy + 0.5, cx, cy - 3.5, cx + 1.2, cy, cx + 2.5, cy - 1.5, cx + 2.5, cy + 3], fg); break;
+    case 'snow': for (let a = 0; a < 3; a++) ln(-Math.cos(a * 1.05) * 3.3, -Math.sin(a * 1.05) * 3.3, Math.cos(a * 1.05) * 3.3, Math.sin(a * 1.05) * 3.3); break;
+    case 'blink': ln(-3, -2.5, -0.5, 0); ln(-0.5, 0, -3, 2.5); ln(0.5, -2.5, 3, 0); ln(3, 0, 0.5, 2.5); break;
+    case 'speed': superBolt(cx + 0.5, cy - 3.5, 0.55, fg); ln(-3.5, -1, -2, -1); ln(-3.5, 1, -2, 1); break;
+    case 'wing': poly([cx - 3.5, cy + 1, cx + 3.5, cy - 3, cx + 2, cy, cx + 3, cy + 0.5, cx + 0.5, cy + 2.5], fg); break;
+    case 'eye': E(cx, cy, 3.6, 2, fg); C(cx, cy, 1.2, bg); break;
+    case 'brain': C(cx - 1.3, cy - 0.3, 2.1, fg); C(cx + 1.3, cy - 0.3, 2.1, fg); L(cx, cy - 2.4, cx, cy + 1.8, bg, 0.6); break;
+    case 'burst': for (let a = 0; a < 8; a++) ln(Math.cos(a * 0.785) * 1, Math.sin(a * 0.785) * 1, Math.cos(a * 0.785) * 3.6, Math.sin(a * 0.785) * 3.6); break;
+    case 'bolt': superBolt(cx + 0.5, cy - 3.5, 0.55, fg); break;
+    case 'clock': g.beginPath(); g.arc(cx, cy, 3, 0, TAU); g.strokeStyle = fg; g.lineWidth = 0.9; g.stroke(); ln(0, 0, 0, -2.2); ln(0, 0, 1.6, 0.6); break;
+    case 'fist': RR(cx - 2.6, cy - 2, 5.2, 4.4, 1.2, fg); for (let i = 0; i < 3; i++) L(cx - 1.3 + i * 1.3, cy - 2, cx - 1.3 + i * 1.3, cy - 0.3, bg, 0.5); break;
+    case 'ring': g.beginPath(); g.arc(cx, cy, 2.8, 0, TAU); g.strokeStyle = fg; g.lineWidth = 1.4; g.stroke(); break;
+    case 'heart': C(cx - 1.3, cy - 0.8, 1.6, fg); C(cx + 1.3, cy - 0.8, 1.6, fg); poly([cx - 2.8, cy - 0.3, cx + 2.8, cy - 0.3, cx, cy + 3], fg); break;
+    case 'hand': RR(cx - 1.8, cy - 0.5, 3.6, 3.5, 1, fg); for (let i = 0; i < 4; i++) L(cx - 1.4 + i * 0.95, cy - 0.5, cx - 1.6 + i * 1.05, cy - 3.2, fg, 0.7); break;
+    case 'ghost': for (let a = 0; a < 8; a++) C(cx + Math.cos(a * 0.785) * 2.9, cy + Math.sin(a * 0.785) * 2.9, 0.6, fg); break;
+    case 'paw': E(cx, cy + 1.2, 1.9, 1.5, fg); for (const d of [-1.8, 0, 1.8]) C(cx + d, cy - 1.6 - (d ? 0 : 0.5), 0.9, fg); break;
+  }
+}
+// Super HQ headgear (gear: domino, cowl, ears, hood, fins, visor, horns, goggles, icecrown, gem; band and dome reuse headband and helmet).
+function superHead(Lk, view, hy, side) {
+  const c = Lk.suit, k = Lk.gear, dk = shade(c.suit, -0.28), back = view === 'back';
+  const slits = col => { if (back) return; for (const e of side ? [4.5] : [-3, 3]) E(e, hy - 0.3, 1.5, 1, col); };
+  const domino = col => {
+    if (back) { if (Lk.hairStyle === 'turban' || Lk.hairStyle === 'hijab') return; R(-8.6, hy - 2.4, 17.2, 2.4, col); L(0, hy - 1.2, -2.5, hy + 3, col, 1.2); L(0, hy - 1.2, 2.5, hy + 3, col, 1.2); return; }
+    if (side) { RR(0, hy - 2.6, 8.6, 4.4, 2, col); L(-7.5, hy - 1.2, -11, hy + 2, col, 1.2); }
+    else RR(-7.6, hy - 2.6, 15.2, 4.4, 2, col);
+    slits('#fff');
+  };
+  const dome = () => { g.beginPath(); g.arc(0, hy, 9.4, Math.PI, TAU); g.lineTo(9.4, hy - 1); g.lineTo(-9.4, hy - 1); g.closePath(); g.fillStyle = dk; g.fill(); R(-9.4, hy - 2, 18.8, 1.4, c.accent); };
+  if (k === 'domino') domino(dk);
+  else if (k === 'cowl' || k === 'ears') {
+    stoneHood(view, hy, dk);
+    if (k === 'ears') for (const d of side ? [-1] : [-1, 1]) poly([d * 3, hy - 8, d * 8, hy - 16, d * 8.5, hy - 6], dk);
+    else if (!back) superBolt(side ? 1.5 : 0.5, hy - 9, 0.4, c.accent);
+    if (!back) { if (side) RR(1, hy - 2.6, 7.8, 4, 2, dk); else RR(-7.4, hy - 2.6, 14.8, 4, 2, dk); slits(k === 'ears' ? '#bef264' : '#fff'); }
+  }
+  else if (k === 'hood') {
+    stoneHood(view, hy, dk);
+    poly(side ? [-6, hy - 6, -14, hy - 2, -8, hy + 1] : [-4, hy - 8, 0, hy - 15, 4, hy - 8], dk);
+  }
+  else if (k === 'fins' || k === 'visor' || k === 'horns') {
+    dome();
+    if (k === 'fins') for (const d of side ? [-1] : [-1, 1]) poly([d * 8, hy - 3, d * 17, hy - 11, d * 14, hy - 5, d * 17, hy - 6, d * 9, hy], c.accent);
+    if (k === 'horns') for (const d of side ? [1] : [-1, 1]) poly([d * 4, hy - 7, d * 7.5, hy - 6, d * 11, hy - 14, d * 10, hy - 18, d * 7.5, hy - 12], c.accent);
+    if (k === 'visor' && !back) {
+      const glow = 0.5 + Math.sin(T * 4 + (Lk.id || 0)) * 0.25;
+      g.globalAlpha = glow; if (side) R(0, hy - 3.5, 9, 5.5, c.accent); else R(-9, hy - 3.5, 18, 5.5, c.accent); g.globalAlpha = 1;
+      if (side) R(0.5, hy - 2.5, 8, 3, c.accent); else R(-8, hy - 2.5, 16, 3, c.accent);
+    }
+    else if (!back) { if (side) RR(1, hy - 2.6, 7.8, 4, 2, dk); else RR(-7.4, hy - 2.6, 14.8, 4, 2, dk); slits('#fff'); }
+  }
+  else if (k === 'goggles') {
+    R(-8.6, hy - 2.6, 17.2, 2.4, '#1f2937');
+    if (!back) for (const e of side ? [4.5] : [-3, 3]) { C(e, hy - 1.2, 2.9, c.accent); C(e, hy - 1.2, 2, '#4c1d95'); C(e - 0.6, hy - 1.8, 0.6, '#fff'); }
+  }
+  else if (k === 'icecrown') {
+    for (let i = -2; i <= 2; i++) { if (side && i < -1) continue; const h = 7 - Math.abs(i) * 1.6; poly([i * 3.2 - 1.6, hy - 7, i * 3.2 + 1.6, hy - 7, i * 3.4, hy - 7 - h], i % 2 ? '#e0f2fe' : c.accent); }
+    R(-6.5, hy - 8, 13, 1.6, '#bae6fd');
+  }
+  else if (k === 'gem') {
+    R(-8.6, hy - 6, 17.2, 2.2, c.accent);
+    if (!back) { const gx = side ? 4 : 0, p = 0.4 + Math.sin(T * 3 + (Lk.id || 0)) * 0.25; g.globalAlpha = p; C(gx, hy - 5, 3.4, '#f0abfc'); g.globalAlpha = 1; poly([gx, hy - 7.4, gx + 1.8, hy - 5, gx, hy - 2.6, gx - 1.8, hy - 5], '#c026d3'); }
+  }
 }
 function costumeTop(Lk, view, hy, side) {
   if (Lk.robot) {                          // boxy robot head with a scanning visor and antenna
@@ -3549,11 +3841,40 @@ function mix(a, b, k) {           // blend two #rrggbb colors
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join('');
 }
 const XENO_IDS = [4, 7, 10];   // Maria, Raj, Mei: xenomorph-style aliens in the Sci-Fi theme
+// Super HQ cast, by worker id: even ids are heroes, odd ids villains. head: the headgear drawn in superHead().
+const SUPER_CAST = [
+  { power: 'heat',      suit: '#d6452b', accent: '#facc15', cape: '#f97316', head: 'domino', emblem: 'flame' },   // Marcus
+  { power: 'cold',      suit: '#1e3a8a', accent: '#a5f3fc', cape: '#0ea5e9', head: 'icecrown', emblem: 'snow' },  // Priya
+  { power: 'teleport',  suit: '#7c3aed', accent: '#e9d5ff', cape: null, head: 'goggles', emblem: 'blink' },        // Wei
+  { power: 'speed',     suit: '#3f3f46', accent: '#facc15', cape: null, head: 'fins', emblem: 'speed' },           // Haruto (crutches)
+  { power: 'flight',    suit: '#2563eb', accent: '#f8fafc', cape: '#dc2626', head: null, emblem: 'wing' },         // Maria
+  { power: 'eyes',      suit: '#111827', accent: '#ef4444', cape: null, head: 'visor', emblem: 'eye' },            // Jake
+  { power: 'telepathy', suit: '#0d9488', accent: '#f0abfc', cape: '#a21caf', head: 'gem', emblem: 'brain' },       // Tasha (wheelchair)
+  { power: 'psycho',    suit: '#4c1d95', accent: '#f472b6', cape: '#1f1033', head: 'domino', emblem: 'burst' },    // Raj (turban)
+  { power: 'electro',   suit: '#eab308', accent: '#1e40af', cape: null, head: 'cowl', emblem: 'bolt' },            // Emily
+  { power: 'time',      suit: '#78350f', accent: '#fbbf24', cape: '#422006', head: 'hood', emblem: 'clock' },      // Kenji (cane)
+  { power: 'strength',  suit: '#16a34a', accent: '#fef08a', cape: null, head: 'band', emblem: 'fist' },            // Mei
+  { power: 'portal',    suit: '#1f2937', accent: '#22d3ee', cape: '#0e7490', head: 'horns', emblem: 'ring' },      // Jamal
+  { power: 'regen',     suit: '#f1f5f9', accent: '#16a34a', cape: '#15803d', head: 'domino', emblem: 'heart' },    // Rosa
+  { power: 'telekinesis', suit: '#581c87', accent: '#a3e635', cape: null, head: 'dome', emblem: 'hand' },          // Sam (wheelchair)
+  { power: 'invisible', suit: '#cbd5e1', accent: '#6366f1', cape: null, head: 'domino', emblem: 'ghost' },         // Fatima (hijab)
+  { power: 'changeling', suit: '#365314', accent: '#bef264', cape: null, head: 'ears', emblem: 'paw' },            // Arjun
+];
+const isHero = w => w.id % 2 === 0;
+const powerOf = w => SUPER_CAST[w.id % 16].power;
 function dress(L0, kind, id) {
   const o = { ...L0, costume: kind };
   const plain = { beard: false, mustache: false, glasses: false, plaid: false, skirt: false };
   const covered = L0.hairStyle === 'turban' || L0.hairStyle === 'hijab';
   switch (kind) {
+    case 'super': {      // bodysuit, gloves, boots, belt, emblem and headgear from SUPER_CAST; no mask over a turban or hijab
+      const c = SUPER_CAST[id % 16], helm = ['cowl', 'hood', 'fins', 'visor', 'horns', 'ears'].includes(c.head);
+      Object.assign(o, { shirt: c.suit, pants: shade(c.suit, -0.15), plaid: false, skirt: false, suit: c, villain: id % 2 === 1,
+        chromeHands: c.accent, boots: shade(c.accent, -0.35), cape: c.cape, capeLining: c.cape && shade(c.cape, -0.25),
+        gear: covered && c.head !== 'domino' ? 'domino' : c.head, glasses: L0.glasses && !['goggles', 'visor', 'domino'].includes(c.head),
+        clockStaff: c.power === 'time' ? c.accent : null, headband: c.head === 'band' ? c.accent : null, helmet: c.head === 'dome' });
+      if (helm && !covered) o.hairStyle = 'none';
+      break; }
     case 'astronaut': Object.assign(o, { shirt: '#eef1f5', pants: '#dfe3ea', plaid: false, skirt: false, helmet: true, patch: L0.shirt }); break;
     case 'alien':
       if (XENO_IDS.includes(id)) {           // a few of the aliens are the scary movie kind
@@ -4153,6 +4474,7 @@ function dozing(w) { return w.job && w.job.status === 'working' && serverNow() -
 
 function updateWorker(w, dt) {
   if (w.path.length) stepMove(w, dt);
+  if (THEME === 'superhq' || w.hov) { w.hov = lerp(w.hov || 0, hoverTarget(w), Math.min(1, dt * 4)); if (w.hov < 0.05) w.hov = 0; }
   const t = T + w.seed;
   if (w.mode === 'idle') {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
@@ -4339,17 +4661,35 @@ function poseFor(w) {
   if (w.spot && w.spot.act && IDLE_ANIM[w.spot.act]) Object.assign(st, IDLE_ANIM[w.spot.act](t, w, st));
   return st;
 }
+// Super HQ: flyers float while they travel (and while w.liftUntil lasts); Sam's chair hovers on a force field.
+function hoverTarget(w) {
+  if (THEME !== 'superhq') return 0;
+  if (w.liftUntil && T < w.liftUntil) return w.lift || 10;
+  const p = powerOf(w);
+  if (!w.path.length) return 0;
+  return p === 'flight' ? 13 : p === 'telekinesis' ? 7 : 0;
+}
+function hoverOf(w) { return (w.hov || 0) > 0.5 ? w.hov + Math.sin(T * 3 + w.seed) * Math.min(1.5, w.hov * 0.2) : 0; }
 function headTop(w) {
-  if (w.path.length) return -58;
+  if (w.path.length) return -58 - hoverOf(w);
   const pose = w.L.mobility === 'wheelchair' ? 'chair' : (w.spot && w.spot.pose) || 'stand';
-  return pose === 'lie' ? -22 : pose === 'sit' ? -52 : pose === 'chair' ? -54 : -58;
+  return (pose === 'lie' ? -22 : pose === 'sit' ? -52 : pose === 'chair' ? -54 : -58) - hoverOf(w);
 }
 function drawWorker(w) {
   if (selected === w || hovered === w) {
     g.globalAlpha = 0.6 + Math.sin(T * 6) * 0.3; g.beginPath(); g.ellipse(w.x, w.y, 17, 6, 0, 0, TAU);
     g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
   }
-  drawPerson(lookOf(w), w.x, w.y, poseFor(w));
+  const st = poseFor(w), h = hoverOf(w);
+  if (h) {
+    st.hover = h;
+    E(w.x, w.y, 12 - Math.min(5, h * 0.3), 3.5 - Math.min(1.5, h * 0.08), 'rgba(0,0,0,.14)');
+    if (w.L.mobility === 'wheelchair') { g.globalAlpha = 0.3 + Math.sin(T * 5) * 0.1; E(w.x, w.y - 1, 13, 4, SUPER_CAST[w.id % 16].accent); g.globalAlpha = 1; }
+    else if (st.moving && powerOf(w) === 'flight') {                    // flying pose: fist forward, no walking legs
+      st.moving = false; st.ra = w.facing === 'left' || w.facing === 'right' ? 1.9 : 2.7; st.la = 0.35;
+    }
+  }
+  drawPerson(lookOf(w), w.x, w.y, st);
 }
 
 // ============================================================================================

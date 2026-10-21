@@ -96,6 +96,17 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   Testing, Dino Power and Dino Express. A smoking volcano out the window, and the patio becomes a
   jungle with a dino egg nest; the boss wears a bone crown, and the break room talk turns to
   mammoth for lunch and who invented the wheel this time.
+- **Super HQ**: eight heroes (even roster ids) and eight villains (odd ids), each with one of 16
+  powers and a matching bodysuit, gloves, boots, belt, chest emblem and headgear (mask, cowl,
+  finned or horned helmet, visor, goggles, ice crown, psychic gem, glass dome). Nobody's turban or
+  hijab gets more than an eye mask. Mobility aids stay and fit the power: Haruto is a speedster on
+  crutches, Tasha a telepath and Sam a telekinetic whose wheelchair hovers, and Kenji's cane is
+  a time staff topped with a clock. The cast is `SUPER_CAST` in `index.html`:
+  Marcus heat, Priya cold, Wei teleport, Haruto speed, Maria flight, Jake eye rays, Tasha
+  telepathy, Raj psychokinesis, Emily electricity, Kenji time, Mei strength, Jamal portals, Rosa
+  regeneration, Sam telekinesis, Fatima invisibility, Arjun shapeshifting. Stations are the
+  Gadget Lab, Armor Forge, Mainframe Uplink, Hero Hotline, Data Vault, Bio Lab, Mission Control,
+  Costume Design, the Training Gym, the Containment Lab, the Supercomputer and Hero Dispatch.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
 Every theme also re-skins the three rooms that used to stay a plain office, with the same furniture
@@ -114,7 +125,7 @@ footprints so nobody walks differently. Troubleshooting room / meeting room / ma
 
 The rubber duck stays in every theme, usually in a matching hat.
 
-Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove and Stone Age all send workers to the station that matches what Claude
+Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove, Stone Age and Super HQ all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |
