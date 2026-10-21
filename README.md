@@ -96,6 +96,22 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   Testing, Dino Power and Dino Express. A smoking volcano out the window, and the patio becomes a
   jungle with a dino egg nest; the boss wears a bone crown, and the break room talk turns to
   mammoth for lunch and who invented the wheel this time.
+- **Hero HQ** (superheroes): eight heroes and eight villains (even roster ids are heroes, odd ones
+  villains), each with a suit, cape, emblem and mask in their power's colors; villains wear a
+  horned cowl (nobody's turban or hijab gets one). Powers, one each: super strength, heat, flight,
+  cold, telepathy, electricity, teleportation, psychokinesis, super speed, time, regeneration,
+  shapeshifting, telekinesis, portals, invisibility and eye rays (`POWERS` in `index.html`; hover
+  a worker to see their alias and power). Most of the break is the usual break-room stuff, but a
+  hero and a villain who end up chatting usually trade corny superhero insults, and about a third
+  of their chats end in a short duel on the spot: fire, ice, lightning, eye beams, portals, a time
+  stop, a shapeshifter turning into their rival, fliers floating overhead. Heroes never fight
+  heroes and villains never fight villains. When either one is paged the duel ends on the spot
+  and they head to work. Powers also get them around: the teleporter and the portal maker
+  blink to the end of long trips, the speedster runs 2.5x with afterimages, fliers float along
+  their path and the invisible one fades out while walking. Stations are the Gadget Lab, Suit
+  Forge, Portal Gate, Hero Hotline, Data Vault, Bio Lab, Danger Room, Comic Press, Cape
+  Cleaners, Containment, Hero Supercomputer and Evidence Locker. A night skyline with a
+  searchlight out the window and star bunting on the walls; the boss wears a domino mask.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
 Every theme also re-skins the three rooms that used to stay a plain office, with the same furniture
@@ -111,10 +127,11 @@ footprints so nobody walks differently. Troubleshooting room / meeting room / ma
 | North Pole | toy repair workbench | "Naughty or Nice" list table | letters to Santa and sacks of mail |
 | Pirate Cove | ship's surgeon corner with bottles | captain's chart table with a treasure map | bottle post with a parrot |
 | Stone Age | shaman's cave fire | stone circle round a flat rock table | carved tablets and a pterodactyl perch |
+| Hero HQ | med bay with a heartbeat monitor and triage desk | team-up room with a hologram table and a truce scoreboard | distress signals and a signal lamp |
 
 The rubber duck stays in every theme, usually in a matching hat.
 
-Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove and Stone Age all send workers to the station that matches what Claude
+Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove, Stone Age and Hero HQ all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |
