@@ -3031,7 +3031,9 @@ const THEMES = {
     swaps: { 9: 'shaman', 4: 'mammoth', 12: 'mammoth' },
     costumes: ['caveman', 'cavewoman', 'dino', 'hunter', 'caveman', 'cavewoman', 'dino', 'shaman'],
     wash: ['#b45309', 0.05], decor: () => decorStone() },
-  superhq: { name: 'Super HQ', stations: SUPER, routed: true, costumes: ['super'] },
+  superhq: { name: 'Super HQ', stations: SUPER, routed: true, costumes: ['super'],
+    wash: ['#0b1e4a', 0.12], decor: () => decorSuper(),
+    blocks: [[30, 822, 28, 24]] },                          // the phone booth's top half (its base sits on a patio bush)
 };
 let THEME = 'classic';
 try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
@@ -3163,9 +3165,9 @@ function drawPerson(Lk, x, y, st) {
   const mob = Lk.mobility || '';
   const pose = mob === 'wheelchair' ? 'chair' : (st.pose || 'stand');
   g.save(); g.translate(x, y);
-  if (pose === 'lie') { E(0, 1, 26, 5, 'rgba(0,0,0,.15)'); g.translate(26, -5); g.rotate(-Math.PI / 2); }
+  if (st.hover) g.translate(0, -st.hover);          // floating (Super HQ): lift first, so a lying pose still rotates in place
+  if (pose === 'lie') { if (!st.hover) E(0, 1, 26, 5, 'rgba(0,0,0,.15)'); g.translate(26, -5); g.rotate(-Math.PI / 2); }
   else if (!st.hover) E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
-  if (st.hover) g.translate(0, -st.hover);
   if (f === 'left') g.scale(-1, 1);
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
@@ -4360,6 +4362,43 @@ function decorStone() {
   g.restore();
   stoneCycad(72, 700);
 }
+// Super HQ decor: a night skyline with the hero signal in the window, comic pennants, a signal lamp, posters
+// and a phone booth on the patio (it stands on the bush at [30,846,28,26], so nobody walks through it).
+function decorSuper() {
+  windowScene('#0f1d3d', '#94a3b8', () => {
+    for (let i = 0; i < 12; i++) C(670 + hh(i + 9) % 116, 31 + hh(i + 30) % 20, 0.6, '#e2e8f0');
+    const sx = 708 + Math.sin(T * 0.4) * 10;                                 // the signal on the clouds
+    g.globalAlpha = 0.18; poly([744, 84, 750, 84, sx + 12, 36, sx - 12, 36], '#fde68a'); g.globalAlpha = 0.85;
+    E(sx, 40, 11, 7, '#fde68a'); superStar(sx, 40, 5, '#0f1d3d'); g.globalAlpha = 1;
+    for (let i = 0; i < 9; i++) {                                          // skyline with lit windows
+      const bx = 670 + i * 13, bh = 14 + hh(i * 5) % 24;
+      R(bx, 84 - bh, 12, bh, i % 2 ? '#1e293b' : '#273449');
+      for (let k = 0; k < 4; k++) if (hh(i * 7 + k + Math.floor(T / 6)) % 3) R(bx + 2 + (k % 2) * 5, 84 - bh + 3 + Math.floor(k / 2) * 6, 2.5, 2.5, '#fde68a');
+    }
+  });
+  // comic pennants along the top walls (the same spans as the other themes' garlands)
+  const pc = ['#dc2626', '#2563eb', '#facc15'];
+  for (const [a, b] of [[26, 610], [646, 970], [986, 1286], [1306, 1590]]) {
+    g.beginPath(); g.moveTo(a, 24); for (let x = a; x < b; x += 24) g.quadraticCurveTo(x + 12, 30, Math.min(x + 24, b), 24);
+    g.strokeStyle = '#334155'; g.lineWidth = 1.2; g.stroke();
+    for (let x = a + 12, i = 0; x < b; x += 24, i++) { const sw = Math.sin(T * 1.5 + x * 0.05) * 1; poly([x - 5, 27, x + 5, 27, x + sw, 38], pc[i % 3]); if (i % 3 === 1) superStar(x + sw * 0.3, 31, 2, '#fff'); }
+  }
+  // the signal lamp in the gap between the arcade and the TV, beaming a star onto the wall
+  { const on = Math.sin(T * 0.7) > -0.3, x = 427, y = 92;
+    if (on) { g.globalAlpha = 0.15; poly([x - 3, y - 6, x + 3, y - 6, x + 14, y - 40, x - 14, y - 40], '#fde68a'); g.globalAlpha = 0.8; C(x, y - 46, 9, '#fde68a'); superStar(x, y - 46, 5, '#1e293b'); g.globalAlpha = 1; }
+    RR(x - 6, y - 8, 12, 8, 2, '#475569'); C(x, y - 7, 3.5, on ? '#fef9c3' : '#94a3b8'); R(x - 1, y, 2, 6, '#475569'); }
+  // a WANTED poster on the fridge, and the MVP board becomes Hero of the Month
+  RR(36, 48, 26, 32, 1, '#fef3c7', '#a16207', 1); TXT('WANTED', 49, 53, 'bold 4.5px system-ui', '#7f1d1d'); C(49, 64, 6, '#4c1d95'); RR(43, 62, 12, 3, 1, '#111'); TXT('$1M', 49, 75, 'bold 5px system-ui', '#7f1d1d');
+  RR(245, 30, 26, 32, 2, '#1e3a8a'); R(249, 34, 18, 18, '#dbeafe'); superStar(258, 43, 7, '#facc15'); TXT('HERO', 258, 57, 'bold 6px system-ui', '#facc15');
+  // patio: a hero landing crater and the phone booth
+  g.globalAlpha = 0.25; E(210, 820, 26, 8, '#1e293b'); g.globalAlpha = 0.35;
+  for (let i = 0; i < 8; i++) { const an = i * TAU / 8; L(210 + Math.cos(an) * 16, 820 + Math.sin(an) * 5, 210 + Math.cos(an) * 30, 820 + Math.sin(an) * 9, '#1e293b', 1.2); }
+  g.globalAlpha = 1;
+  E(44, 873, 16, 3, 'rgba(0,0,0,.25)');
+  RR(31, 822, 26, 50, 2, '#b91c1c', '#7f1d1d', 1); R(31, 822, 26, 7, '#7f1d1d'); TXT('PHONE', 44, 825.5, 'bold 4.5px system-ui', '#fde68a');
+  for (const yy of [832, 846, 858]) R(35, yy, 18, 10, 'rgba(186,230,253,.75)');
+  if (T % 11 < 0.5) { g.globalAlpha = 1 - (T % 11) * 2; C(44, 846, 18, '#fde68a'); g.globalAlpha = 1; }   // someone just changed inside
+}
 function decorHorror() {
   windowScene('#1b1033', '#8a7f99', () => {
     C(760, 48, 10, '#f5f0c8'); C(765, 45, 9, '#1b1033');
@@ -4666,7 +4705,7 @@ let FIGHT = null, nextFight = 40;
 const SFX = [], AFX = [];      // SFX: power shots { k, att, tgt, t0, dur, hit }; AFX: loose effects { k, x, y, t0, dur, text, c }
 const POW_TEXT = { heat: 'FWOOSH!', cold: 'CRACK!', electro: 'ZAP!', eyes: 'ZZAP!', time: 'TICK!', strength: 'SMASH!', changeling: 'SLASH!',
   invisible: 'BOO!', speed: 'WHOOSH!', portal: 'BONK!', telekinesis: 'CLONK!', telepathy: 'BZZT!', psycho: 'KABOOM!', teleport: 'BAMF!', flight: 'POW!', regen: 'WHAM!' };
-function canFight(w) { return canTalk(w) && (w.spot.area === 'break' || w.spot.area === 'patio'); }
+function canFight(w) { return canTalk(w) && (w.spot.area === 'break' || w.spot.area === 'patio') && !['pool', 'pingpong', 'arcade'].includes(w.spot.act); }
 function startFight(v, h) {
   if (FIGHT || THEME !== 'superhq' || isHero(v) === isHero(h) || !canFight(v) || !canFight(h) || v.spot.area !== h.spot.area) return false;
   if (isHero(v)) [v, h] = [h, v];
@@ -4917,18 +4956,36 @@ function drawWorker(w) {
   let h = hoverOf(w), dx = 0;
   if (w.castUntil && T < w.castUntil) { st.ra = w.facing === 'left' || w.facing === 'right' ? 1.7 : 2.4; st.item = null; st.open = true; }   // casting: arm out at the target
   if (w.hitAt && T - w.hitAt < 0.5) { const s = Math.sin((T - w.hitAt) / 0.5 * Math.PI); dx = (w.hitDir || 1) * s * 7; h += s * 6; st.open = true; st.shake = true; }
+  if (w.blink) { st.moving = false; st.ra = st.la = 0.12; }           // blinking: standing still, not walking in place
   const alpha = THEME === 'superhq' ? superAlpha(w) : 1;
-  if (alpha < 1) g.filter = 'opacity(' + Math.round(alpha * 100) + '%)';
-  if (h) {
-    st.hover = h;
-    E(w.x, w.y, 12 - Math.min(5, h * 0.3), 3.5 - Math.min(1.5, h * 0.08), 'rgba(0,0,0,.14)');
-    if (w.L.mobility === 'wheelchair' && w.hov > 0.5) { g.globalAlpha = 0.3 + Math.sin(T * 5) * 0.1; E(w.x, w.y - 1, 13, 4, SUPER_CAST[w.id % 16].accent); g.globalAlpha = 1; }
-    else if (st.moving && powerOf(w) === 'flight') {                    // flying pose: fist forward, no walking legs
-      st.moving = false; st.ra = w.facing === 'left' || w.facing === 'right' ? 1.9 : 2.7; st.la = 0.35;
+  const draw = () => {
+    if (h) {
+      st.hover = h;
+      E(w.x + dx, w.y, 12 - Math.min(5, h * 0.3), 3.5 - Math.min(1.5, h * 0.08), 'rgba(0,0,0,.14)');
+      if (w.L.mobility === 'wheelchair' && w.hov > 0.5) { g.globalAlpha = 0.3 + Math.sin(T * 5) * 0.1; E(w.x, w.y - 1, 13, 4, SUPER_CAST[w.id % 16].accent); g.globalAlpha = 1; }
+      else if (st.moving && powerOf(w) === 'flight') {                  // flying pose: fist forward, no walking legs
+        st.moving = false; st.ra = w.facing === 'left' || w.facing === 'right' ? 1.9 : 2.7; st.la = 0.35;
+      }
     }
-  }
-  drawPerson(lookOf(w), w.x + dx, w.y, st);
-  if (alpha < 1) g.filter = 'none';
+    drawPerson(lookOf(w), w.x + dx, w.y, st);
+  };
+  if (alpha < 1) drawFaded(alpha, w.x, w.y, draw); else draw();
+}
+// Draw fn() (a person around x, y) see-through: drawPerson sets globalAlpha itself, so it goes to a
+// scratch canvas first and is copied over with the alpha. Works in every browser, unlike ctx.filter.
+const fadeCv = document.createElement('canvas'), fadeG = fadeCv.getContext('2d');
+function drawFaded(alpha, x, y, fn) {
+  if (alpha <= 0.01) return;
+  const m = g.getTransform(), s = m.a, pw = Math.ceil(140 * s), ph = Math.ceil(170 * s);
+  if (fadeCv.width < pw || fadeCv.height < ph) { fadeCv.width = Math.max(fadeCv.width, pw); fadeCv.height = Math.max(fadeCv.height, ph); }
+  const rx = Math.round(s * (x - 70) + m.e), ry = Math.round(m.d * (y - 145) + m.f);     // whole device pixels
+  fadeG.setTransform(1, 0, 0, 1, 0, 0); fadeG.clearRect(0, 0, fadeCv.width, fadeCv.height);
+  fadeG.setTransform(s, 0, 0, m.d, m.e - rx, m.f - ry);
+  const old = g; g = fadeG;
+  try { fn(); } finally { g = old; }
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = alpha;
+  g.drawImage(fadeCv, 0, 0, pw, ph, rx, ry, pw, ph);
+  g.restore();
 }
 
 // ============================================================================================
@@ -4946,6 +5003,10 @@ function starburst(cx, cy, r, c, spin) {
 }
 function drawBoss() {
   const x = BOSS.x, y = BOSS.y, busy = activeCount() > 0;
+  if (THEME === 'superhq') {               // the boss's cape, behind the chair
+    const fl = Math.sin(T * 1.8) * 2;
+    poly([x - 16, y - 40, x + 16, y - 40, x + 27 + fl, y + 4, x - 27 - fl, y + 4], '#b91c1c'); poly([x - 12, y - 40, x + 12, y - 40, x + 20, y, x - 20, y], '#7f1d1d');
+  }
   RR(x - 21, y - 62, 42, 54, 10, '#24262b'); R(x - 3, y - 10, 6, 12, '#24262b');
   RR(x - 13, y - 36, 26, 28, 7, '#3a3633', 'rgba(0,0,0,.3)', 0.8);
   poly([x - 5, y - 36, x + 5, y - 36, x, y - 26], '#fff'); poly([x - 1.6, y - 33, x + 1.6, y - 33, x + 2.2, y - 20, x, y - 17, x - 2.2, y - 20], '#d97757');
@@ -4977,6 +5038,9 @@ function drawBoss() {
     L(x - 20, hy - 9, x + 20, hy - 9, '#d4af37', 1.4);
     C(x, hy - 15, 3, '#f8fafc'); C(x - 1, hy - 15.5, 0.7, '#111'); C(x + 1, hy - 15.5, 0.7, '#111');
     L(x - 4, hy - 10.5, x + 4, hy - 12.5, '#f8fafc', 1); L(x - 4, hy - 12.5, x + 4, hy - 10.5, '#f8fafc', 1);
+  } else if (THEME === 'superhq') {  // a domino mask, and a star on the chest in Super HQ
+    RR(x - 10, hy - 4.5, 20, 6, 3, '#1e3a8a'); C(x - 3.5, hy - 1.5, 1.8, '#fff'); C(x + 3.5, hy - 1.5, 1.8, '#fff');
+    C(x - 3.5, hy - 1.5, 0.9, '#2b1a12'); C(x + 3.5, hy - 1.5, 0.9, '#2b1a12'); superStar(x, y - 22, 4, '#facc15');
   } else if (THEME === 'stone') {    // a chief's bone crown in the Stone Age
     R(x - 12, hy - 13, 24, 4, '#7c4a2d');
     for (let i = -2; i <= 2; i++) { const bx = x + i * 5, top = hy - 22 + Math.abs(i) * 3;
@@ -5599,6 +5663,67 @@ THEMES.stone.rooms = {
       R(x - 2, 124, 4, 26, '#d6c7a1'); C(x, 124, 3, '#f5f0e1');
       poly([x - 3, 112, x - 20, 108 - flap, x - 5, 118], '#6b4f3a'); poly([x + 3, 112, x + 18, 108 - flap, x + 5, 118], '#6b4f3a');
       E(x, 116, 8, 6, '#7c5c46'); poly([x + 5, 112, x + 24, 114, x + 5, 118], '#7c5c46'); poly([x - 2, 108, x - 12, 103, x - 1, 112], '#7c5c46'); C(x + 5, 112, 1.2, '#fde047');
+    },
+  },
+};
+
+// ---- Super HQ: Danger Room, Hall of Heroes, Pneumatic Post ------------------------------
+THEMES.superhq.rooms = {
+  trouble: {
+    back() {
+      roomShell('trouble', '#1e293b', '#2b3a52', fGrid('rgba(56,189,248,.14)', 24));
+      for (let x = 980; x < 1286; x += 16) poly([x, 88, x + 8, 88, x + 4, 95, x - 4, 95], '#facc15');      // hazard stripes along the wall
+      roomSign(1130, 45, 200, 20, ['DANGER ROOM'], '#0f172a', '#fca5a5', '#ef4444', 13);
+      RR(988, 54, 60, 30, 3, '#0b1220', '#334155', 1.5); TXT('THREAT', 1018, 63, 'bold 7px monospace', '#fca5a5'); TXT('LEVEL 3', 1018, 75, 'bold 8px monospace', '#ef4444');
+      RR(1252, 206, 22, 40, 3, '#c0392b'); R(1256, 214, 14, 6, '#fff');
+    },
+    fx() {
+      const a = T * 3;                                                      // spinning alarm beacons
+      for (const lx of [1062, 1200]) {
+        g.globalAlpha = 0.25; poly([lx, 70, lx + Math.cos(a) * 40, 70 + Math.sin(a) * 14 + 14, lx + Math.cos(a + 0.5) * 40, 70 + Math.sin(a + 0.5) * 14 + 14], '#ef4444'); g.globalAlpha = 1;
+        RR(lx - 6, 62, 12, 10, 4, Math.sin(a) > 0 ? '#ff3b3b' : '#991b1b');
+      }
+      const dx = 1240 + Math.sin(T * 0.9) * 18, dy = 64 + Math.sin(T * 2.1) * 4;    // a training drone
+      E(dx, dy, 9, 3.5, '#64748b'); C(dx, dy + 1, 2, Math.sin(T * 6) > 0 ? '#ef4444' : '#7f1d1d'); L(dx - 10, dy - 3, dx - 4, dy - 3, '#94a3b8', 1); L(dx + 4, dy - 3, dx + 10, dy - 3, '#94a3b8', 1);
+    },
+    counter() {
+      counterBase('#475569', '#1e293b', '#facc15', '#0f172a', 'HELP', '#facc15', '⚠', '#facc15');
+      for (const mx of [1010, 1186]) { logScreen(mx, 120, 64, 46, '#38bdf8', '#f87171', '#0b1220'); R(mx + 28, 166, 8, 14, '#475569'); R(mx + 18, 178, 28, 4, '#475569'); }
+    },
+    duck(x, y) {                                                            // a domino mask and a little red cape
+      poly([x - 14, y - 6, x - 24, y + 22, x - 6, y + 14], '#dc2626');
+      RR(x - 11, y - 25, 22, 6, 3, '#1e3a8a'); C(x - 5, y - 22, 2.3, '#fff'); C(x + 5, y - 22, 2.3, '#fff'); C(x - 5, y - 22, 1.3, '#1b1b1b'); C(x + 5, y - 22, 1.3, '#1b1b1b');
+    },
+  },
+  meeting: {
+    back() {
+      roomShell('meeting', '#1e3a8a', '#334155', fCheck('rgba(255,255,255,.04)', 22));
+      R(322, 680, 289, 10, '#facc15');
+      roomSign(347, 659, 34, 34, ['HALL OF', 'HEROES'], '#0f172a', '#facc15', '#facc15', 6);
+      RR(580, 642, 24, 34, 2, '#0f172a', '#facc15', 1); C(592, 653, 5, '#e7d3bd'); RR(586, 659, 12, 13, 3, '#dc2626'); superStar(592, 665, 3, '#facc15');   // a founder's portrait beside the whiteboard
+      seatsOf(chairOf('#b91c1c', '#7f1d1d'));
+      cornersOf((x, y) => { R(x - 2, y - 26, 4, 26, '#94a3b8'); superStar(x, y - 28, 6, '#facc15'); });   // trophy stars
+    },
+    table() {
+      E(470, 798, 98, 36, '#1e293b'); E(470, 795, 92, 31, '#334155');
+      superStar(470, 796, 18, '#facc15'); superStar(470, 796, 10, '#1e3a8a');
+      g.globalAlpha = 0.3 + Math.sin(T * 2) * 0.1; C(470, 796, 26, '#38bdf8'); g.globalAlpha = 1;      // the holo-glow over the emblem
+      R(380, 826, 6, 12, '#64748b'); R(554, 826, 6, 12, '#64748b');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#1e293b', '#334155', fGrid('rgba(255,255,255,.05)', 30));
+      roomSign(1450, 44, 228, 18, ['PNEUMATIC POST · WAITING ON YOU'], '#0f172a', '#facc15', '#facc15', 10);
+      RR(1330, 52, 240, 98, 3, '#0f172a');
+      mailCells('#1e3a5f', (x, y, h) => { RR(x + 3, y + 4, 14, 12, 5, 'rgba(186,230,253,.7)'); R(x + 6, y + 7, 8, 6, ['#dc2626', '#2563eb', '#facc15'][h % 3]); });   // message capsules
+      R(1320, 150, 260, 10, '#475569'); R(1322, 160, 256, 22, '#1e293b'); superStar(1450, 171, 6, '#facc15');
+      R(1299, 30, 10, 120, '#64748b'); R(1297, 30, 14, 6, '#94a3b8');                                  // the pneumatic tube
+      RR(1540, 250, 44, 34, 4, '#334155'); RR(1544, 244, 36, 10, 2, '#e2e8f0'); TXT('CLASSIFIED', 1562, 270, 'bold 5px system-ui', '#f87171');
+    },
+    fx() {                                                                  // a capsule whooshing down the tube
+      const k = (T * 0.5) % 1;
+      if (k < 0.6) { const y = 32 + k / 0.6 * 110; RR(1300, y, 8, 12, 3, '#38bdf8'); g.globalAlpha = 0.4; R(1301, y - 10, 6, 10, '#bae6fd'); g.globalAlpha = 1; }
     },
   },
 };

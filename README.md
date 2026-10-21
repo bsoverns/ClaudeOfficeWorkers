@@ -107,6 +107,17 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   regeneration, Sam telekinesis, Fatima invisibility, Arjun shapeshifting. Stations are the
   Gadget Lab, Armor Forge, Mainframe Uplink, Hero Hotline, Data Vault, Bio Lab, Mission Control,
   Costume Design, the Training Gym, the Containment Lab, the Supercomputer and Hero Dispatch.
+  A night skyline with the hero signal out the window, comic pennants, a signal lamp, WANTED and
+  Hero of the Month posters, and a phone booth on the patio; the boss wears a cape and a mask.
+  On break, about half the chats are a villain and a hero trading corny one-liners
+  (`SUPER_DIALOGUES`: the 50 originals plus a few more, matched to their powers when possible).
+  Now and then (every 45-90 seconds, one pair at a time) an idle hero and villain in the same room
+  fight with their powers: fireballs, ice shards, eye beams, lightning, portals, thrown mugs and
+  so on, with POW!/ZAP! bursts and a little knockback. Flyers float up to fight. Heroes never fight
+  heroes, villains never fight villains, nobody gets hurt and nothing breaks. A page, walking off
+  or switching themes ends a fight at once ("Truce. Duty calls."). On long trips the powers
+  help: Wei, Jamal and Kenji blink there (sparks, a portal, a clock), Haruto runs at triple
+  speed, Maria flies, Sam's chair hovers and Fatima goes see-through.
 - **Dev Shop**: the same floor re-skinned as where dev work happens.
 
 Every theme also re-skins the three rooms that used to stay a plain office, with the same furniture
@@ -122,6 +133,7 @@ footprints so nobody walks differently. Troubleshooting room / meeting room / ma
 | North Pole | toy repair workbench | "Naughty or Nice" list table | letters to Santa and sacks of mail |
 | Pirate Cove | ship's surgeon corner with bottles | captain's chart table with a treasure map | bottle post with a parrot |
 | Stone Age | shaman's cave fire | stone circle round a flat rock table | carved tablets and a pterodactyl perch |
+| Super HQ | Danger Room with alarm beacons and a training drone | Hall of Heroes round table with a glowing star | pneumatic post with message capsules |
 
 The rubber duck stays in every theme, usually in a matching hat.
 
