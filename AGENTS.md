@@ -27,6 +27,8 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
   to it, including yours. Test on another port so you don't mix test jobs into the real office.
 - Simulate Claude by piping hook JSON into `src/claude_hook.py` with `CLAUDE_OFFICE_PORT` set.
   Write JSON with Python or a file, not shell echo: shells eat the backslashes in Windows paths.
+- `py tests/sim_hooks.py` does that for session names, team leads waiting on helpers and subagent characters, on port
+  8790 only (it starts a server there if none is running). Run it after changing the hook or `handle_hook`.
 - Don't run `src/install_hooks.py` without `--project <scratch folder>` or `--print` unless asked:
   it changes `~/.claude/settings.json` for every session.
 

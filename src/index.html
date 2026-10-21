@@ -4365,7 +4365,8 @@ function initWorkers(roster) {
 }
 function say(w, text, secs = 3.5) { w.bubble = text; w.bubbleUntil = T + secs; }
 function buildPath(w, spot) {
-  const path = findPath(w.x, w.y, spot.x, spot.y) || [{ x: spot.x, y: spot.y }];
+  const found = findPath(w.x, w.y, spot.x, spot.y);   // [] when already there: still step onto the spot so arrive() runs
+  const path = found && found.length ? found : [{ x: spot.x, y: spot.y }];
   path[path.length - 1] = { x: spot.x, y: spot.y, final: true };
   return path;
 }
@@ -4515,6 +4516,7 @@ function stepMove(w, dt) {
 }
 function serverNow() { return Date.now() / 1000 + skew; }
 function dozing(w) { return w.job && w.job.status === 'working' && serverNow() - w.job.updated > 300; }
+const ROOM_TALK = { mail: 0, trouble: 0 };   // when the mailroom / help desk is free for the next speaker
 
 function updateWorker(w, dt) {
   if (w.path.length) stepMove(w, dt);
@@ -4562,9 +4564,11 @@ function updateWorker(w, dt) {
           say(w, h && Math.random() < 0.5 ? h.L.name + ", how's it going?" : pick(LEAD_TALK), 3);
           w.nextChat = T + rand(8, 14);
         }
-        if ((w.locKind === 'mail' || w.locKind === 'trouble') && T > w.nextChat) {
+        if ((w.locKind === 'mail' || w.locKind === 'trouble') && T > w.nextChat && T > ROOM_TALK[w.locKind]
+            && !workers.some(o => o !== w && o.mode === 'job' && o.jobPhase === 'go' && o.arrived && o.locKind === w.locKind && o.nextChat < w.nextChat)) {   // longest wait speaks first
           say(w, w.job.message || (w.locKind === 'mail' ? 'Your turn!' : 'Hmm...'), 4.5);
           w.nextChat = T + (w.locKind === 'mail' ? 9 : 7);
+          ROOM_TALK[w.locKind] = T + 4.7;   // one speaker at a time per room, so their bubbles don't pile up
         }
       }
     }
@@ -5039,7 +5043,7 @@ function drawWhiteboard() {
   const team = helpersOf(lead.job.id);
   g.font = '7.5px system-ui';
   team.slice(0, 4).forEach((h, i) => {
-    const hw = workers[h.worker], kind = h.title.split(' helper')[0];
+    const hw = workers[h.worker], kind = h.agent || h.agent_type || 'helper';
     TXT(fitText('\u2022 ' + (hw ? hw.L.name : '?') + ': ' + kind, 92), 378 + (i >> 1) * 96, 657 + (i & 1) * 11, '7.5px system-ui', '#333', 'left');
   });
   if (team.length > 4) TXT('+' + (team.length - 4) + ' more', 564, 679, '7px system-ui', '#777', 'right');
@@ -5888,32 +5892,51 @@ function measureBubble(owner, x, bottom, text, opts = {}) {
   return { owner, x, bottom, lines, opts, bw, bh, bx: clamp(x - bw / 2, 4, W - bw - 4), by: bottom - bh - 6 };
 }
 const boxesHit = (a, b, pad) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
-// Lift bubbles that would cover another bubble (or another worker's slip) until they are clear.
-// The lowest bubbles keep their spot; the lift is eased per speaker so bubbles slide, not jump.
+// Place bubbles so none covers another bubble (or another worker's slip). The hovered/selected
+// worker goes first, then the lowest bubbles. Each tries, in order: its own spot, lifted straight up
+// past what is in the way, beside it (nearest first, own height or one step up), below the speaker's
+// feet. A bubble with no clear spot is skipped this frame. Moves are eased per speaker so bubbles
+// slide, but snap when the eased spot would overlap something.
 function layoutBubbles(bubs, obstacles) {
-  const placed = [];
-  for (const b of [...bubs].sort((p, q) => q.by - p.by)) {
-    let y = b.by;
-    for (let n = 0; n < 24; n++) {
-      const me = { x: b.bx, y, w: b.bw, h: b.bh + 6 };
-      const hit = placed.concat(obstacles.filter(o => o.owner !== b.owner)).find(o => boxesHit(me, o, 3));
-      if (!hit) break;
+  const placed = [], first = o => o === hovered || o === selected;
+  for (const b of [...bubs].sort((p, q) => first(q.owner) - first(p.owner) || q.by - p.by)) {
+    const others = obstacles.filter(o => o.owner !== b.owner);
+    const box = (x, y) => ({ x, y, w: b.bw, h: b.bh + 6 });
+    const hitAt = (x, y) => placed.concat(others).find(o => boxesHit(box(x, y), o, 3));
+    const fits = (x, y) => y >= 4 && y + b.bh + 6 <= H - 4 && !hitAt(x, y);
+    let spot = null;
+    for (let y = b.by, n = 0; n < 24 && y >= 4; n++) {
+      const hit = hitAt(b.bx, y);
+      if (!hit) { spot = { x: b.bx, y }; break; }
       y = hit.y - b.bh - 6 - 4;
     }
-    y = Math.max(4, y);
-    const o = b.owner, target = b.by - y;
-    o._lift = o._lift == null || Math.abs(o._lift - target) > 120 ? target : o._lift + (target - o._lift) * 0.25;
-    if (Math.abs(o._lift - target) < 0.5) o._lift = target;
-    b.by -= o._lift;
-    placed.push({ x: b.bx, y, w: b.bw, h: b.bh + 6 });
+    const xs = [];
+    for (const o of placed.concat(others)) xs.push(clamp(o.x - b.bw - 4, 4, W - b.bw - 4), clamp(o.x + o.w + 4, 4, W - b.bw - 4));
+    xs.sort((p, q) => Math.abs(p - b.bx) - Math.abs(q - b.bx));
+    const tryRow = y => { for (const x of [b.bx, ...xs]) if (Math.abs(x - b.bx) < 200 && fits(x, y)) return { x, y }; return null; };
+    spot = spot || tryRow(b.by) || tryRow(b.by - b.bh - 10) || (b.owner.y != null ? tryRow(b.owner.y + 12) : null);
+    const o = b.owner;
+    if (!spot) { b.hide = true; o._lift = null; continue; }
+    const dx = spot.x - b.bx, dy = spot.y - b.by;
+    let l = o._lift;
+    if (!l || Math.hypot(l.dx - dx, l.dy - dy) > 120) l = { dx, dy };
+    else {
+      l = { dx: l.dx + (dx - l.dx) * 0.25, dy: l.dy + (dy - l.dy) * 0.25 };
+      if (Math.hypot(l.dx - dx, l.dy - dy) < 0.5 || !fits(b.bx + l.dx, b.by + l.dy)) l = { dx, dy };
+    }
+    o._lift = l;
+    b.bx += l.dx; b.by += l.dy;
+    placed.push(box(b.bx, b.by));
   }
 }
 function drawBubble(b) {
   const { x, bx, by, bw, bh, lines, opts } = b, bg = opts.bg || '#fff', border = opts.border || 'rgba(0,0,0,.35)';
-  // a lifted bubble keeps a thin leader line down to its speaker
-  if (b.bottom - (by + bh + 6) > 3) { g.strokeStyle = border; g.lineWidth = 1; g.beginPath(); g.moveTo(x, by + bh + 6); g.lineTo(x, b.bottom - 2); g.stroke(); }
+  const tx = clamp(x, bx + 8, bx + bw - 8), below = by > b.bottom;   // the tail stays on the box when it moved aside
+  // a moved bubble keeps a thin leader line to its speaker
+  if (!below && (b.bottom - (by + bh + 6) > 3 || tx !== x)) { g.strokeStyle = border; g.lineWidth = 1; g.beginPath(); g.moveTo(tx, by + bh + 6); g.lineTo(x, b.bottom - 2); g.stroke(); }
   RR(bx, by, bw, bh, 7, bg, border, 1);
-  poly([x - 5, by + bh - 0.5, x + 5, by + bh - 0.5, x, by + bh + 6], bg);
+  if (below) poly([tx - 5, by + 0.5, tx + 5, by + 0.5, tx, by - 6], bg);
+  else poly([tx - 5, by + bh - 0.5, tx + 5, by + bh - 0.5, tx, by + bh + 6], bg);
   lines.forEach((l, i) => TXT(l, bx + 7, by + 11 + i * 14, opts.font || '12px system-ui', opts.color || '#222', 'left'));
 }
 function drawSlip(w) {
@@ -5922,7 +5945,7 @@ function drawSlip(w) {
   const color = STATUS_COLOR[j.status] || '#888';
   g.font = 'bold 11px system-ui';
   const lines = wrap(j.title, 128, 2);
-  const sub = w.L.name + (j.project ? ' · ' + j.project : '') + (j.kind === 'helper' ? ' · helper' : '');
+  const sub = w.L.name + (j.agent ? ' as ' + j.agent : '') + (j.project ? ' · ' + j.project : '') + (j.kind === 'helper' ? ' · helper' : '');
   g.font = '600 9px system-ui'; const subW = Math.min(g.measureText(sub).width, 128);
   g.font = 'bold 11px system-ui'; const tw = Math.max(subW, ...lines.map(l => g.measureText(l).width));
   const cw = clamp(tw + 16, 70, 148), ch = 16 + lines.length * 13 + 3;
@@ -5942,7 +5965,7 @@ function drawSlip(w) {
   return by;
 }
 function drawTooltip(w) {
-  const lines = [w.L.name + (w.L.mobility ? '' : '')];
+  const lines = [w.L.name + (w.job && w.job.agent ? ' as ' + w.job.agent : '')];
   if (THEME === 'hero') { const p = powerOf(w); lines.push(p.alias + ' · ' + (isVillain(w) ? 'villain' : 'hero') + ' · ' + p.label); }
   if (w.job) {
     lines.push(STATUS_LABEL[w.job.status] || w.job.status);
@@ -6006,7 +6029,7 @@ function render() {
   if (DUCK.bubble && T < DUCK.bubbleUntil) bubs.push(measureBubble(DUCK, 1130, 128, DUCK.bubble, { bg: '#fffbe0', border: '#e0b000' }));
   else DUCK._lift = null;
   layoutBubbles(bubs, workers.map(w => w.slipBox).filter(Boolean));
-  for (const b of bubs) drawBubble(b);   // still in `order`, so the hovered/selected one is on top
+  for (const b of bubs) if (!b.hide) drawBubble(b);   // still in `order`, so the hovered/selected one is on top
   const tip = hovered || selected; if (tip) drawTooltip(tip);
   if (!online) {
     RR(W / 2 - 230, 120, 460, 54, 10, 'rgba(20,22,28,.92)', '#ef4444', 2);
@@ -6122,7 +6145,7 @@ function teamLine(j, w) {
 function jobCard(j) {
   const w = j.worker != null ? workers[j.worker] : null;
   return `<div class="job ${esc(j.status)}" data-id="${esc(j.id)}">
-    <div class="jt"><span class="dot" style="background:${w ? w.L.shirt : '#777'}"></span><b>${w ? esc(w.L.name) : 'Waiting for a free worker'}</b>
+    <div class="jt"><span class="dot" style="background:${w ? w.L.shirt : '#777'}"></span><b>${w ? esc(w.L.name + (j.agent ? ' as ' + j.agent : '')) : 'Waiting for a free worker'}</b>
       <span class="pill">${esc(STATUS_LABEL[j.status] || j.status)}</span><span class="age" data-since="${j.created}"></span></div>
     <div class="title">${esc(j.title)}</div>
     ${teamLine(j, w)}

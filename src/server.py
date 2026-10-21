@@ -29,6 +29,10 @@ DEFAULT_PORT = 8777
 EXPIRE_HOURS = 12      # a job with no news for this long is sent home
 RECENT_MAX = 12        # finished jobs kept for the "Recently finished" list
 AFFINITY_MAX = 300     # sessions whose worker we remember
+HELPER_QUIET_MINUTES = 10   # a helper silent this long no longer keeps its lead from waiting on you
+LINKS_MAX = 500        # subagents whose character we remember (dropped when their session ends)
+PENDING_SECONDS = 600  # a lead's Agent call no subagent started from within this long is dropped
+AGENT_NAME_RE = re.compile(r"^([A-Z][\w-]{1,20})\s*[:—–-]\s")   # "Neo: fix three bugs" -> Neo
 LONG_POLL_SECONDS = 25
 
 # The staff. The page draws them from these fields, so this is the only list.
@@ -86,7 +90,7 @@ SESSION_END_DONE = {"clear": "you cleared the session", "logout": "you logged ou
                     "prompt_input_exit": "you closed the session"}
 
 PUBLIC_JOB_KEYS = ("id", "title", "project", "kind", "parent", "status", "message", "activity",
-                   "worker", "station", "created", "updated", "prompt", "area")
+                   "worker", "station", "created", "updated", "prompt", "area", "agent", "agent_type")
 
 # Work areas: what kind of work a job is doing, guessed from the prompt, the project folder
 # and the tools Claude uses. Themes that label their stations by kind of work (Dev Shop) send
@@ -169,6 +173,15 @@ def clip(text: object, n: int) -> str:
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
 
 
+def agent_name(name: object, description: object) -> str:
+    """A subagent's own name: the Agent tool's name, else the "Name: ..." start of its
+    description; "" if it has none."""
+    if isinstance(name, str) and name.strip():
+        return clip(name, 24)
+    m = AGENT_NAME_RE.match(str(description or ""))
+    return m.group(1) if m else ""
+
+
 def describe_tool(name: str, inp: object) -> str:
     """A short, human description of a Claude Code tool call for the speech bubble."""
     inp = inp if isinstance(inp, dict) else {}
@@ -211,6 +224,10 @@ class Office:
         self.seq = 0
         self.used: set[int] = set()            # workers who have had a turn this rotation
         self.recent_stations: deque[str] = deque(maxlen=6)
+        self.helpers_done: dict[str, float] = {}   # "sid:agent_id" -> when it stopped, to ignore late starts
+        # each subagent's character, so it keeps it within the session (freed when the session ends):
+        # "<session>:name:<name>" or "<session>:<agent id>" -> {"w": worker, "sid", "name", "desc"}
+        self.links: dict[str, dict] = {}
         self.recent: list[dict] = []
         self.closed: set[str] = set()          # sessions marked done while their turn finishes
         self.cli_n = 0
@@ -230,7 +247,8 @@ class Office:
         if not self.state_path:
             return
         data = {"jobs": self.jobs, "seq": self.seq, "used": sorted(self.used), "recent": self.recent,
-                "closed": sorted(self.closed), "cli_n": self.cli_n, "affinity": self.affinity}
+                "closed": sorted(self.closed), "cli_n": self.cli_n, "affinity": self.affinity,
+                "links": self.links}
         try:
             tmp = self.state_path + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
@@ -255,6 +273,8 @@ class Office:
             self.closed = set(data.get("closed") or [])
             self.cli_n = int(data.get("cli_n") or 0)
             self.affinity = {k: v for k, v in (data.get("affinity") or {}).items() if isinstance(v, list) and len(v) == 2}
+            self.links = {k: v for k, v in (data.get("links") or {}).items()
+                          if isinstance(v, dict) and isinstance(v.get("w"), int)}
 
     def _busy(self) -> set[int]:
         return {j["worker"] for j in self.jobs.values() if j["worker"] is not None}
@@ -290,6 +310,9 @@ class Office:
         otherwise the next in the rotation."""
         if job["worker"] is not None:
             return
+        if job["kind"] == "helper":
+            self._staff_helper(job)
+            return
         key = job.get("key") or job["id"]
         pref = self.affinity.get(key)
         if pref and pref[0] not in self._busy() and 0 <= pref[0] < len(ROSTER):
@@ -305,8 +328,70 @@ class Office:
         while len(self.affinity) > AFFINITY_MAX:
             self.affinity.pop(next(iter(self.affinity)))
 
+    def _staff_helper(self, job: dict) -> None:
+        """A subagent gets its own character for the whole session: the one linked to its key if
+        free, else a random free one nobody's live session has linked, else one linked to another
+        session's idle agent, else any free one (only then two agents of one session share)."""
+        key, sid = job.get("key") or job["id"], job.get("sid") or ""
+        busy = self._busy()
+        link = self.links.get(key)
+        w = link["w"] if link and 0 <= link["w"] < len(ROSTER) and link["w"] not in busy else None
+        if w is None:
+            free = [r["id"] for r in ROSTER if r["id"] not in busy]
+            own = {l["w"] for l in self.links.values() if l.get("sid") == sid}
+            other = {l["w"] for l in self.links.values() if l.get("sid") != sid and l.get("sid") in self.jobs}
+            for tier in ([r for r in free if r not in own and r not in other], [r for r in free if r not in own], free):
+                if tier:
+                    w = random.choice(tier)
+                    break
+            else:
+                return                         # nobody free: queued until someone goes home
+        job["worker"], job["station"] = w, self._pick_station()
+        self.used.add(w)
+        rec = {"w": w, "sid": sid, "name": job.get("agent") or "", "desc": job.get("desc") or ""}
+        for k in {key, job.get("aid_key") or key}:
+            self.links.pop(k, None)
+            self.links[k] = dict(rec)
+        while len(self.links) > LINKS_MAX:
+            self.links.pop(next(iter(self.links)))
+
+    def _take_call(self, job: dict, tool_use_id: object, kind: str) -> dict | None:
+        """The lead's Agent call that started this subagent: the one with its tool_use_id, else
+        (no id known) the oldest call of its type, marked as a guess. Calls older than
+        PENDING_SECONDS (denied or failed ones) are dropped."""
+        pending = [c for c in job.get("pending_agents") or [] if time.time() - c.get("t", 0) < PENDING_SECONDS]
+        job["pending_agents"] = pending
+        if tool_use_id:
+            call, guess = next((c for c in pending if c.get("id") == tool_use_id), None), False
+        else:
+            call, guess = next((c for c in pending if c["type"] in ("", kind)), None), True
+        if call:
+            pending.remove(call)
+            return dict(call, guess=guess)
+        return None
+
+    def _describe_helper(self, helper: dict, desc: str) -> None:
+        """The subagent's description arrived (from its meta file): it becomes the slip's title.
+        A "Name: ..." in it names the agent, over any other name; without one, a name guessed
+        from the lead's Agent calls is dropped and the agent goes back to its agent-id key. Its
+        character stays the same either way; the new key is linked to it."""
+        desc, sid, old_key = clip(desc, 120), helper.get("sid") or "", helper.get("key")
+        name = agent_name(None, desc) or ("" if helper.get("agent_guess") else helper.get("agent") or "")
+        if helper.get("agent_guess") and old_key != helper.get("aid_key") and name != helper.get("agent"):
+            link = self.links.get(old_key)
+            if link and link["w"] == helper["worker"]:
+                del self.links[old_key]        # the wrong guess's link
+        helper["desc"], helper["title"], helper["agent"], helper["agent_guess"] = desc, desc, name, False
+        helper["key"] = f"{sid}:name:{name.lower()}" if name else helper.get("aid_key") or helper["id"]
+        if helper["worker"] is not None:
+            rec = {"w": helper["worker"], "sid": sid, "name": name, "desc": desc}
+            for k in {helper["key"], helper.get("aid_key") or helper["key"]}:
+                self.links.pop(k, None)
+                self.links[k] = dict(rec)
+
     def _new_job(self, jid: str, title: str, project: str = "", kind: str = "main",
-                 parent: str | None = None, ts: float | None = None, key: str | None = None) -> dict:
+                 parent: str | None = None, ts: float | None = None, key: str | None = None,
+                 extra: dict | None = None) -> dict:
         now = time.time()
         self.seq += 1
         job = {"id": jid, "title": clip(title, 120) or "(untitled task)", "project": clip(project, 40),
@@ -314,6 +399,7 @@ class Office:
                "prompt": "", "worker": None, "station": None, "created": now, "updated": now,
                "status_ts": ts or now, "seq": self.seq, "key": key or jid,
                "area": "", "area_ts": 0.0, "scores": {}}
+        job.update(extra or {})
         self._staff(job)
         self.jobs[jid] = job
         return job
@@ -337,6 +423,11 @@ class Office:
             return
         for child in [j for j in self.jobs.values() if j["parent"] == jid]:
             self._finish(child["id"], reason)
+        if job["kind"] != "helper":            # the session is over: free its subagents' characters
+            for k in [k for k, l in self.links.items() if l.get("sid") == jid]:
+                del self.links[k]
+            for k in [k for k in self.affinity if k.startswith(jid + ":")]:
+                del self.affinity[k]
         self.recent.insert(0, {"id": job["id"], "title": job["title"], "project": job["project"],
                                "worker": job["worker"], "created": job["created"],
                                "finished": time.time(), "reason": reason})
@@ -376,6 +467,43 @@ class Office:
             return self.jobs.get(jid)
         return max(self.jobs.values(), key=lambda j: j["seq"], default=None)
 
+    def _helpers(self, sid: str, fresh: bool = True) -> list[dict]:
+        """The session's helpers; fresh: only those heard from lately (a lost SubagentStop
+        must not keep the lead from ever waiting on you)."""
+        cutoff = time.time() - HELPER_QUIET_MINUTES * 60 if fresh else 0
+        return [j for j in self.jobs.values() if j["parent"] == sid and j["updated"] >= cutoff]
+
+    def _helper_wait(self, sid: str) -> str:
+        n = len(self._helpers(sid))
+        return f"Waiting for {n} helper{'s' if n != 1 else ''}"
+
+    def _release_lead(self, job: dict) -> bool:
+        """A lead whose turn ended (Stop) while helpers were out: once none is left, it waits
+        on you with what it said when it stopped. Returns True if anything changed."""
+        if job.get("stop_ts") != job["status_ts"] or job["status"] == "trouble":
+            return False
+        if self._helpers(job["id"]):
+            if job["status"] != "working" or job["activity"] == self._helper_wait(job["id"]):
+                return False
+            job["activity"] = self._helper_wait(job["id"])
+        elif job["status"] == "working" or job["message"] != job.get("stop_msg"):
+            job["status"], job["message"], job["activity"] = "waiting", job.get("stop_msg") or "", ""
+        else:
+            return False
+        return True
+
+    def _name_session(self, sid: str, name: str) -> None:
+        """Use the session's name from the Claude app (a rename, or its auto title) as the
+        job title, and as the helpers' "... helper for: <name>"."""
+        job = self.jobs.get(sid)
+        if not job:
+            return
+        job["title"] = name
+        for h in self._helpers(sid, fresh=False):
+            if h.get("desc"):
+                continue                       # titled with its own description
+            h["title"] = clip(f"{h.get('agent_type') or 'helper'} helper for: {name}", 120)
+
     # ---- Claude Code hooks ------------------------------------------------------------
     def handle_hook(self, p: dict) -> None:
         ev = str(p.get("hook_event_name") or "")
@@ -388,6 +516,9 @@ class Office:
         agent_id = str(p.get("agent_id") or "")
         with self.lock:
             job = self.jobs.get(sid)
+            desc = clip(plain_text(p.get("agent_description")), 120) if agent_id else ""
+            if desc and f"{sid}:{agent_id}" in self.jobs:
+                self._describe_helper(self.jobs[f"{sid}:{agent_id}"], desc)
             if ev == "UserPromptSubmit":
                 prompt = prompt_title(p.get("prompt"))
                 if DONE_RE.match(prompt):
@@ -401,6 +532,7 @@ class Office:
                     elif job["title"].startswith("(picking up"):
                         job["title"] = clip(prompt, 120)
                     job["prompt"] = clip(prompt, 200)
+                    job["pending_agents"] = []         # Agent calls from an earlier turn that never started
                     job["activity"] = "Reading your message"
                     self._set_status(job, "working", "", ts)
                     self._signal(job, plain_text(p.get("prompt")), 4, fresh=True)
@@ -413,6 +545,13 @@ class Office:
                     if not job:
                         job = self._new_job(sid, "(picking up where we left off)", project, ts=ts)
                     target = job
+                ti = p.get("tool_input") if isinstance(p.get("tool_input"), dict) else {}
+                if not agent_id and p.get("tool_name") in ("Agent", "Task"):   # the lead's own call: who the next helper is
+                    job.setdefault("pending_agents", []).append(
+                        {"name": agent_name(ti.get("name"), ti.get("description")),
+                         "desc": clip(ti.get("description"), 120), "type": str(ti.get("subagent_type") or ""),
+                         "id": str(p.get("tool_use_id") or ""), "t": time.time()})
+                    del job["pending_agents"][:-10]
                 target["activity"] = describe_tool(str(p.get("tool_name") or ""), p.get("tool_input"))
                 self._set_status(target, "working", "", ts)
                 if not target.get("area"):
@@ -430,26 +569,64 @@ class Office:
             elif ev == "Notification":
                 if not job or sid in self.closed:
                     return
-                self._set_status(job, "waiting", plain_text(p.get("message")) or "Waiting on you", ts)
+                msg = plain_text(p.get("message"))
+                ntype = str(p.get("notification_type") or "")
+                idle = ntype == "idle_prompt" or (not ntype and "waiting for your input" in msg.lower())
+                if idle and self._helpers(sid):
+                    return  # the lead is waiting on its helpers, not on you
+                armed = job.get("stop_ts") == job["status_ts"]
+                self._set_status(job, "waiting", msg or "Waiting on you", ts)
+                if armed and job["status_ts"] == ts:
+                    job["stop_ts"] = ts        # its turn is still over: the last SubagentStop can switch it
             elif ev == "Stop":
                 if not job or sid in self.closed:
                     return
-                last = clip(plain_text(p.get("last_assistant_message")), 140)
-                self._set_status(job, "waiting", last or "Finished — your turn!", ts)
-                job["activity"] = ""
+                last = clip(plain_text(p.get("last_assistant_message")), 140) or "Finished — your turn!"
+                out = self._helpers(sid)       # helpers still out: it waits for them in the meeting, not on you
+                self._set_status(job, "working" if out else "waiting", "" if out else last, ts)
+                if job["status_ts"] == ts:     # its turn is over: the last SubagentStop (or a late
+                    job["activity"] = self._helper_wait(sid) if out else ""   # SubagentStart) can switch it
+                    job["stop_ts"], job["stop_msg"] = ts, last
             elif ev == "SubagentStart":
-                if not agent_id or sid in self.closed:
-                    return
+                hk = f"{sid}:{agent_id}"
+                if not agent_id or sid in self.closed or ts < self.helpers_done.get(hk, 0):
+                    return                     # a start that lands after its own stop is ignored
                 kind = str(p.get("agent_type") or "helper")
+                # who it is: a continued agent (SendMessage) keeps its name; a new one is the lead's
+                # Agent call with its tool_use_id (or, with no id yet, a guess: the oldest call of its
+                # type); its meta file's description, once there, wins (see _describe_helper)
+                link = self.links.get(hk) or {}
+                name, about, guess = link.get("name") or "", link.get("desc") or "", False
+                call = self._take_call(job, p.get("agent_tool_use_id"), kind) if job and not link else None
+                if call:
+                    name, about, guess = call["name"], call["desc"], call["guess"]
+                if desc:
+                    name, about, guess = agent_name(None, desc) or ("" if guess else name), desc, False
                 parent_title = job["title"] if job else ""
-                title = f"{kind} helper" + (f" for: {parent_title}" if parent_title else "")
-                if f"{sid}:{agent_id}" not in self.jobs:
-                    helper = self._new_job(f"{sid}:{agent_id}", title, project, kind="helper",
-                                           parent=sid if job else None, ts=ts, key=f"{sid}:{kind}")
+                title = about or f"{kind} helper" + (f" for: {parent_title}" if parent_title else "")
+                if hk not in self.jobs:
+                    helper = self._new_job(hk, title, project, kind="helper", parent=sid if job else None,
+                                           ts=ts, key=f"{sid}:name:{name.lower()}" if name else hk,
+                                           extra={"agent_type": kind, "agent": name, "desc": about,
+                                                  "agent_guess": guess, "sid": sid, "aid_key": hk})
                     if job and job.get("area"):        # helpers start on their lead's kind of work
                         helper["area"], helper["area_ts"] = job["area"], 0.0
+                # Async hooks can land out of order: a Stop that beat this start sent the lead to
+                # the mailroom, but it is really waiting on this helper.
+                if (job and job["status"] == "waiting" and job.get("stop_ts") == job["status_ts"]
+                        and job["message"] == job.get("stop_msg")):
+                    job["status"], job["message"] = "working", ""
+                    job["activity"] = self._helper_wait(sid)
             elif ev == "SubagentStop":
+                if not agent_id:
+                    return
+                self.helpers_done.pop(f"{sid}:{agent_id}", None)
+                self.helpers_done[f"{sid}:{agent_id}"] = ts
+                while len(self.helpers_done) > 200:
+                    self.helpers_done.pop(next(iter(self.helpers_done)))
                 self._finish(f"{sid}:{agent_id}", "helper finished")
+                if job:
+                    self._release_lead(job)
             elif ev == "SessionEnd":
                 # Only an end you chose (/clear, /logout, /exit or Ctrl+C at the prompt) sends the
                 # worker home. Anything else (an app closing or recycling an idle session) keeps
@@ -465,6 +642,9 @@ class Office:
                     return
             else:
                 return
+            name = clip(plain_text(p.get("session_title")), 120) if not agent_id else ""
+            if name:
+                self._name_session(sid, name)
             self._bump()
 
     # ---- manual commands (office.py / the page) ---------------------------------------
@@ -537,7 +717,9 @@ class Office:
             stale = [k for k, j in self.jobs.items() if j["updated"] < cutoff]
             for k in stale:
                 self._finish(k, f"no news for {EXPIRE_HOURS} hours")
-            if stale:
+            # leads waiting on helpers that went quiet (their SubagentStop never came)
+            released = [j for j in list(self.jobs.values()) if j["kind"] != "helper" and self._release_lead(j)]
+            if stale or released:
                 self._bump()
 
 
