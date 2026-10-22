@@ -692,6 +692,21 @@ const BRIEF_LINES = ["Here's your slip!", 'Make it shine.', "You've got this!", 
 const DONE_LINES = ['Done! ✓', 'Nailed it!', 'Clocking out!', 'Break time!', 'Easy.'];
 const DUCK_LINES = ['Quack. Read the error.', 'Tried turning it off and on?', 'Explain it to me, line by line.',
   "Quack. It's always DNS.", 'Check the logs, friend.', 'Did you save the file?'];
+// The patio cat thinks (thought bubbles only) when nobody is on the patio, in every theme. The first
+// line is for right after the last person leaves. In Hero HQ a mind-reading hero on the patio hears it.
+const CAT_LEFT = "I thought they'd never leave. Now I can finally go back to sleep.";
+const CAT_THOUGHTS = ['I smell fish in the microwave..... delicious.', 'No one ever brings lasagna for lunch.',
+  "They're lucky I don't have thumbs or I would rule the world.", 'This bench is warm. My bench.',
+  'Nap number seven. Eleven to go.', 'I knocked a pen off a desk today. Productive.'];
+const CAT_SMUG = "They talk about me like I'm not right here.";
+const CAT_TALKS = [   // Hero HQ: the telepath speaks first, then they alternate
+  ['I swear I heard that cat talk.', 'Meow?', 'No, something about lasagna, sleep, and... microwaved fish?',
+    'Maybe you are just picking up the stray thoughts of a very lazy shape-shifter.'],
+  ['Why am I the only one that can hear this cat talk?', 'Because the rest of us learned to ignore him three weeks ago. Just don\'t look him in the eye.'],
+  ['Is that cat... judging us?', 'Always has been.'],
+  ['He says your cape would make a better bed.', "So that's where the orange fur comes from.", 'He also wants lasagna.'],
+];
+const CAT_SOLO = ['Did that cat just think the word "lasagna"?', 'Somebody out here is dreaming about fish. Loudly.'];
 const MEET_LINES = ['Team meeting!', 'Huddle time!', 'Coming, lead!', "What's the plan?"];
 const LEAD_LINES = ["Here's your piece.", 'You take this one.', 'Report back when done!', 'Divide and conquer!'];
 const LEAD_TALK = ['Status check, team?', 'Keep it moving!', 'Almost there.', 'Ping me if stuck.', 'Great progress!'];
@@ -4544,7 +4559,8 @@ function updateWorker(w, dt) {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
     else if (w.arrived && T > w.nextChat && !w.talk && !w.duel) {
       const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : CHAT[w.spot.act]);
-      if (Math.random() < 0.55 && lines) say(w, pick(lines));
+      if (catHearer(w) && !workers.some(o => o !== w && onPatio(o) && !isVillain(o)) && Math.random() < 0.1) say(w, pick(CAT_SOLO), 4);   // the telepath, alone with the cat
+      else if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
     }
     if (w.arrived && w.spot) idleTick(w, dt, t);
@@ -4609,6 +4625,15 @@ function startTalk() {
   const free = workers.filter(canTalk), pairs = [];
   for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++)
     if (Math.hypot(free[i].x - free[j].x, free[i].y - free[j].y) < 170) pairs.push(Math.random() < 0.5 ? [free[i], free[j]] : [free[j], free[i]]);
+  if (THEME === 'hero' && T > nextCatTalk) {        // Hero HQ, rarely: the telepath and another hero on the patio talk about the cat
+    const hearer = free.find(catHearer), mates = hearer ? free.filter(o => o !== hearer && onPatio(o) && !isVillain(o)) : [];
+    if (mates.length && Math.random() < 0.3) {
+      let lines = pick(CAT_TALKS);
+      for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(CAT_TALKS);
+      recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
+      nextCatTalk = T + 240; beginTalk({ a: hearer, b: pick(mates), lines, i: 0, next: T + 0.3, rival: false, cat: true }); return;
+    }
+  }
   if (!pairs.length) return;
   const [a, b] = pick(pairs);
   const rival = THEME === 'hero' && isVillain(a) !== isVillain(b);      // a hero and a villain: they bicker (and may duel)
@@ -4619,6 +4644,10 @@ function startTalk() {
   recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
   const talk = { a, b, lines, i: 0, next: T + 0.3, rival };
   if (rival) { talk.villain = isVillain(a) ? a : b; talk.hero = talk.villain === a ? b : a; }
+  beginTalk(talk);
+}
+function beginTalk(talk) {
+  const { a, b, lines } = talk;
   TALKS.push(talk);
   for (const w of [a, b]) {
     w.talk = talk; w.actUntil = Math.max(w.actUntil, T + lines.length * 4 + 3);
@@ -4631,11 +4660,31 @@ function startTalk() {
 function endTalk(k) {
   for (const w of [k.a, k.b]) { w.talk = null; if (w.arrived && w.spot && w.mode === 'idle') w.facing = w.spot.face || 'down'; w.nextChat = T + rand(10, 25); }
   TALKS.splice(TALKS.indexOf(k), 1);
+  if (k.cat && k.i >= k.lines.length && Math.random() < 0.5) catThink(CAT_SMUG, true);   // the cat heard that
+}
+// ---- the patio cat's thoughts ----------------------------------------------------------------
+const CAT = { x: 158, y: 778, bubble: null, bubbleUntil: 0, smug: false, next: 0, busy: true, left: false, last: null };
+let nextCatTalk = 0;
+const onPatio = w => (w.x >= 28 && w.x <= 310 && w.y >= 640 && w.y <= 902) || (w.x >= 202 && w.x <= 248 && w.y >= 600 && w.y < 640);   // patio floor + its door (FLOORS)
+const catHearer = w => THEME === 'hero' && !isVillain(w) && powerOf(w).power === 'telepathy' && w.mode === 'idle' && w.spot && onPatio(w);
+function catThink(text, smug = false) { CAT.bubble = text; CAT.bubbleUntil = T + Math.max(4.5, text.length * 0.07); CAT.smug = smug; }
+function updCat() {
+  if (workers.some(onPatio)) {                    // company: the cat keeps its thoughts to itself (except a smug one)
+    if (!CAT.smug) CAT.bubbleUntil = Math.min(CAT.bubbleUntil, T);
+    CAT.busy = true; return;
+  }
+  if (CAT.busy) {                                // the patio just emptied (or the page just loaded)
+    CAT.busy = false; CAT.next = T + rand(6, 15); CAT.left = workers.length > 0 && Math.random() < 0.4; return;
+  }
+  if (T < CAT.next) return;
+  if (CAT.left) catThink(CAT_LEFT);
+  else if (Math.random() < 0.5) { let t = pick(CAT_THOUGHTS); if (t === CAT.last) t = pick(CAT_THOUGHTS); CAT.last = t; catThink(t); }
+  CAT.left = false; CAT.next = T + rand(45, 90);
 }
 function updTalks() {
   if (T > nextTalk) { if (TALKS.length < 3) startTalk(); nextTalk = T + rand(6, 16); }
   for (const k of [...TALKS]) {
-    if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length || (k.rival && THEME !== 'hero')) { endTalk(k); continue; }
+    if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length || ((k.rival || k.cat) && THEME !== 'hero')) { endTalk(k); continue; }
     if (T < k.next) continue;
     if (k.i >= k.lines.length) { endTalk(k); if (k.rival && THEME === 'hero' && Math.random() < 0.35) startDuel(k.hero, k.villain); continue; }
     let line = k.lines[k.i], who = k.i % 2 ? k.b : k.a;
@@ -5975,9 +6024,15 @@ function drawBubble(b) {
   const tx = clamp(x, bx + 8, bx + bw - 8), below = by > b.bottom;   // the tail stays on the box when it moved aside
   // a moved bubble keeps a thin leader line to its speaker
   if (!below && (b.bottom - (by + bh + 6) > 3 || tx !== x)) { g.strokeStyle = border; g.lineWidth = 1; g.beginPath(); g.moveTo(tx, by + bh + 6); g.lineTo(x, b.bottom - 2); g.stroke(); }
-  RR(bx, by, bw, bh, 7, bg, border, 1);
-  if (below) poly([tx - 5, by + 0.5, tx + 5, by + 0.5, tx, by - 6], bg);
-  else poly([tx - 5, by + bh - 0.5, tx + 5, by + bh - 0.5, tx, by + bh + 6], bg);
+  if (opts.thought) {                     // a thought: a puffy box and a trail of little circles instead of a tail
+    RR(bx, by, bw, bh, 12, bg, border, 1);
+    const d = below ? -1 : 1, y0 = below ? by : by + bh;
+    [[0, 4, 2.8], [-3, 9, 2], [-5, 13, 1.3]].forEach(([ox, oy, r]) => { g.beginPath(); g.arc(tx + ox, y0 + d * oy, r, 0, TAU); g.fillStyle = bg; g.fill(); g.strokeStyle = border; g.lineWidth = 1; g.stroke(); });
+  } else {
+    RR(bx, by, bw, bh, 7, bg, border, 1);
+    if (below) poly([tx - 5, by + 0.5, tx + 5, by + 0.5, tx, by - 6], bg);
+    else poly([tx - 5, by + bh - 0.5, tx + 5, by + bh - 0.5, tx, by + bh + 6], bg);
+  }
   lines.forEach((l, i) => TXT(l, bx + 7, by + 11 + i * 14, opts.font || '12px system-ui', opts.color || '#222', 'left'));
 }
 function drawSlip(w) {
@@ -6035,6 +6090,7 @@ function update(dt) {
   if (T > BOSS.nextQuip) { if (!BOSS.visitor) bossSay(pick(activeCount() ? BOSS_BUSY : BOSS_IDLE), 3); BOSS.nextQuip = T + rand(35, 70); }
   const atDesk = workers.some(w => w.mode === 'job' && w.locKind === 'trouble' && w.arrived);
   if (atDesk && T > DUCK.next) { DUCK.bubble = pick(DUCK_LINES); DUCK.bubbleUntil = T + 3.5; DUCK.next = T + rand(7, 11); }
+  updCat();
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
@@ -6069,6 +6125,8 @@ function render() {
   else BOSS._lift = null;
   if (DUCK.bubble && T < DUCK.bubbleUntil) bubs.push(measureBubble(DUCK, 1130, 128, DUCK.bubble, { bg: '#fffbe0', border: '#e0b000' }));
   else DUCK._lift = null;
+  if (CAT.bubble && T < CAT.bubbleUntil) bubs.push(measureBubble(CAT, CAT.x, CAT.y - 26, CAT.bubble, { thought: true, maxW: 150, maxLines: 4, font: 'italic 12px system-ui', bg: '#fff7ed', border: '#f39c4a' }));
+  else CAT._lift = null;
   layoutBubbles(bubs, workers.map(w => w.slipBox).filter(Boolean));
   for (const b of bubs) if (!b.hide) drawBubble(b);   // still in `order`, so the hovered/selected one is on top
   const tip = hovered || selected; if (tip) drawTooltip(tip);
