@@ -143,15 +143,17 @@ footprints so nobody walks differently. Troubleshooting room / meeting room / ma
 
 The rubber duck stays in every theme, usually in a matching hat.
 
-The orange cat on the patio bench stays too, and has opinions. When nobody is on the patio it now and
-then thinks out loud in a thought bubble (puffy box, trail of little circles): lasagna, fish in the
-microwave, world domination if only it had thumbs. Sometimes, right after the last person leaves:
-"I thought they'd never leave." People in other themes never notice. In Hero HQ the telepath
-(whoever has the `telepathy` power in `POWERS`, Maria) can hear it: rarely (a 30% chance when
-the chance comes up, at most once every 4 minutes), when she and another hero are both on break on the
-patio, the two have a short chat about the talking cat, and now and then the cat answers with a smug
-thought. Alone out there, she mutters about it once in a while. Lines: `CAT_THOUGHTS`, `CAT_TALKS`
-and `CAT_SOLO` in `index.html`.
+The orange cat on the patio bench stays too, and has opinions. When nobody is sitting on its bench it now
+and then thinks out loud in a thought bubble (puffy box, trail of little circles): lasagna, fish in the
+microwave, world domination if only it had thumbs. The smokers and the stretcher don't count as company:
+with the whole roster on break the patio is almost never empty, so only the bench matters. Sometimes,
+right after the bench empties: "I thought they'd never leave." People in other themes never notice. In
+Hero HQ the telepath (whoever has the `telepathy` power in `POWERS`, Maria) can hear it. When she is on
+break on the patio with someone else out there (a hero if there is one, else whoever is smoking with her),
+the two have a short chat about the talking cat (checked every 6 to 12 seconds, then at most once every
+2.5 to 4 minutes; it has its own timer, so other chats can't crowd it out), and now and then the cat
+answers with a smug thought. When she is out there while the cat thinks, she often mutters about it.
+Lines: `CAT_THOUGHTS`, `CAT_TALKS` and `CAT_SOLO` in `index.html`.
 
 Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove, Stone Age and Hero HQ all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):

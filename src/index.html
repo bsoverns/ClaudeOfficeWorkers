@@ -692,8 +692,8 @@ const BRIEF_LINES = ["Here's your slip!", 'Make it shine.', "You've got this!", 
 const DONE_LINES = ['Done! ✓', 'Nailed it!', 'Clocking out!', 'Break time!', 'Easy.'];
 const DUCK_LINES = ['Quack. Read the error.', 'Tried turning it off and on?', 'Explain it to me, line by line.',
   "Quack. It's always DNS.", 'Check the logs, friend.', 'Did you save the file?'];
-// The patio cat thinks (thought bubbles only) when nobody is on the patio, in every theme. The first
-// line is for right after the last person leaves. In Hero HQ a mind-reading hero on the patio hears it.
+// The patio cat thinks (thought bubbles only) when nobody is on its bench, in every theme. The first
+// line is for right after the bench empties. In Hero HQ a mind-reading hero on the patio hears it.
 const CAT_LEFT = "I thought they'd never leave. Now I can finally go back to sleep.";
 const CAT_THOUGHTS = ['I smell fish in the microwave..... delicious.', 'No one ever brings lasagna for lunch.',
   "They're lucky I don't have thumbs or I would rule the world.", 'This bench is warm. My bench.',
@@ -4559,8 +4559,7 @@ function updateWorker(w, dt) {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
     else if (w.arrived && T > w.nextChat && !w.talk && !w.duel) {
       const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : CHAT[w.spot.act]);
-      if (catHearer(w) && !workers.some(o => o !== w && onPatio(o) && !isVillain(o)) && Math.random() < 0.1) say(w, pick(CAT_SOLO), 4);   // the telepath, alone with the cat
-      else if (Math.random() < 0.55 && lines) say(w, pick(lines));
+      if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
     }
     if (w.arrived && w.spot) idleTick(w, dt, t);
@@ -4625,15 +4624,6 @@ function startTalk() {
   const free = workers.filter(canTalk), pairs = [];
   for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++)
     if (Math.hypot(free[i].x - free[j].x, free[i].y - free[j].y) < 170) pairs.push(Math.random() < 0.5 ? [free[i], free[j]] : [free[j], free[i]]);
-  if (THEME === 'hero' && T > nextCatTalk) {        // Hero HQ, rarely: the telepath and another hero on the patio talk about the cat
-    const hearer = free.find(catHearer), mates = hearer ? free.filter(o => o !== hearer && onPatio(o) && !isVillain(o)) : [];
-    if (mates.length && Math.random() < 0.3) {
-      let lines = pick(CAT_TALKS);
-      for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(CAT_TALKS);
-      recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
-      nextCatTalk = T + 240; beginTalk({ a: hearer, b: pick(mates), lines, i: 0, next: T + 0.3, rival: false, cat: true }); return;
-    }
-  }
   if (!pairs.length) return;
   const [a, b] = pick(pairs);
   const rival = THEME === 'hero' && isVillain(a) !== isVillain(b);      // a hero and a villain: they bicker (and may duel)
@@ -4663,26 +4653,49 @@ function endTalk(k) {
   if (k.cat && k.i >= k.lines.length && Math.random() < 0.5) catThink(CAT_SMUG, true);   // the cat heard that
 }
 // ---- the patio cat's thoughts ----------------------------------------------------------------
-const CAT = { x: 158, y: 778, bubble: null, bubbleUntil: 0, smug: false, next: 0, busy: true, left: false, last: null };
-let nextCatTalk = 0;
+const CAT = { x: 158, y: 778, bubble: null, bubbleUntil: 0, smug: false, next: 0, busy: true, left: false, last: null, heard: 0 };
+let nextCatTalk = 30;
 const onPatio = w => (w.x >= 28 && w.x <= 310 && w.y >= 640 && w.y <= 902) || (w.x >= 202 && w.x <= 248 && w.y >= 600 && w.y < 640);   // patio floor + its door (FLOORS)
 const catHearer = w => THEME === 'hero' && !isVillain(w) && powerOf(w).power === 'telepathy' && w.mode === 'idle' && w.spot && onPatio(w);
-function catThink(text, smug = false) { CAT.bubble = text; CAT.bubbleUntil = T + Math.max(4.5, text.length * 0.07); CAT.smug = smug; }
+// Company is someone on the cat's bench. The smokers and the stretcher are nearly always out there and don't count.
+const onCatBench = w => w.mode === 'idle' && w.spot && w.spot.act === 'bench' && Math.hypot(w.x - w.spot.x, w.y - w.spot.y) < 40;
+function catThink(text, smug = false) {
+  CAT.bubble = text; CAT.bubbleUntil = T + Math.max(4.5, text.length * 0.07); CAT.smug = smug;
+  if (!smug && workers.some(w => catHearer(w) && canTalk(w)) && Math.random() < 0.5) CAT.heard = T + 1.5;   // Hero HQ: the telepath hears it
+}
 function updCat() {
-  if (workers.some(onPatio)) {                    // company: the cat keeps its thoughts to itself (except a smug one)
+  if (CAT.heard && T > CAT.heard) {             // ...and mutters about it a moment later
+    CAT.heard = 0; const h = workers.find(w => catHearer(w) && canTalk(w));
+    if (h) say(h, pick(CAT_SOLO), 4);
+  }
+  if (workers.some(onCatBench)) {                 // company: the cat keeps its thoughts to itself (except a smug one)
     if (!CAT.smug) CAT.bubbleUntil = Math.min(CAT.bubbleUntil, T);
     CAT.busy = true; return;
   }
-  if (CAT.busy) {                                // the patio just emptied (or the page just loaded)
-    CAT.busy = false; CAT.next = T + rand(6, 15); CAT.left = workers.length > 0 && Math.random() < 0.4; return;
+  if (CAT.busy) {                                // the bench just emptied (or the page just loaded)
+    CAT.busy = false; CAT.next = T + rand(4, 10); CAT.left = workers.length > 0 && Math.random() < 0.4; return;
   }
   if (T < CAT.next) return;
   if (CAT.left) catThink(CAT_LEFT);
   else if (Math.random() < 0.5) { let t = pick(CAT_THOUGHTS); if (t === CAT.last) t = pick(CAT_THOUGHTS); CAT.last = t; catThink(t); }
   CAT.left = false; CAT.next = T + rand(45, 90);
 }
+// Hero HQ: the telepath on break on the patio and someone out there with her (a hero if there is one)
+// talk about the cat. Checked on its own timer, so a busy office (three talks going) can't crowd it out.
+function startCatTalk() {
+  nextCatTalk = T + rand(6, 12);
+  const hearer = workers.find(w => catHearer(w) && canTalk(w));
+  const mates = hearer ? workers.filter(o => o !== hearer && canTalk(o) && onPatio(o)) : [], heroes = mates.filter(o => !isVillain(o));
+  if (!mates.length || Math.random() < 0.4) return;
+  let lines = pick(CAT_TALKS);
+  for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(CAT_TALKS);
+  recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
+  nextCatTalk = T + rand(150, 240);
+  beginTalk({ a: hearer, b: pick(heroes.length ? heroes : mates), lines, i: 0, next: T + 0.3, rival: false, cat: true });
+}
 function updTalks() {
   if (T > nextTalk) { if (TALKS.length < 3) startTalk(); nextTalk = T + rand(6, 16); }
+  if (THEME === 'hero' && T > nextCatTalk) startCatTalk();
   for (const k of [...TALKS]) {
     if (k.a.mode !== 'idle' || k.b.mode !== 'idle' || k.a.path.length || k.b.path.length || ((k.rival || k.cat) && THEME !== 'hero')) { endTalk(k); continue; }
     if (T < k.next) continue;
