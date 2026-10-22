@@ -496,8 +496,10 @@ const SPOT_BY_ID = Object.fromEntries(IDLE_SPOTS.map(s => [s.id, s]));
 const mk = (arr, area, face) => arr.map(([x, y]) => ({ x, y, area, face, by: null }));
 const VISIT_SPOTS = mk([[800, 282], [756, 288], [844, 288]], 'boss', 'up');
 const TROUBLE_SPOTS = mk([[1100, 252], [1160, 252], [1042, 262], [1218, 262], [1130, 290]], 'trouble', 'up');
-// Meeting room: the team lead stands at the whiteboard, helpers sit around the table.
-const LEAD_SPOT = { x: 592, y: 728, area: 'meet', face: 'left', by: null };
+// Meeting room: a team lead takes a chair at the table (helpers fill the rest); if every chair is taken
+// they stand apart along the whiteboard instead, so two leads never share a spot.
+const LEAD_STAND = [[592, 728, 'left'], [520, 712, 'up'], [440, 712, 'up'], [380, 712, 'up']].map(([x, y, face]) => ({ x, y, face, area: 'meet', by: null }));
+const LEAD_SPOT = LEAD_STAND[0];
 const SEATS = [[410, 754, 'down'], [470, 754, 'down'], [530, 754, 'down'], [356, 802, 'right'], [584, 802, 'left'],
   [410, 864, 'up'], [470, 864, 'up'], [530, 864, 'up']].map(([x, y, face]) => ({ x, y, face, area: 'meet', pose: 'sit', by: null }));
 const MAIL_SPOTS = mk([[1352, 222], [1448, 222], [1544, 222], [1400, 274], [1496, 274], [1330, 282]], 'mail', 'down');
@@ -693,6 +695,7 @@ const DUCK_LINES = ['Quack. Read the error.', 'Tried turning it off and on?', 'E
 const MEET_LINES = ['Team meeting!', 'Huddle time!', 'Coming, lead!', "What's the plan?"];
 const LEAD_LINES = ["Here's your piece.", 'You take this one.', 'Report back when done!', 'Divide and conquer!'];
 const LEAD_TALK = ['Status check, team?', 'Keep it moving!', 'Almost there.', 'Ping me if stuck.', 'Great progress!'];
+const LEAD_CHAT = ['are your helpers back yet?', 'how long is your team out?', 'pass the donuts?', 'seen this video before?', 'coffee after this?'];
 const BOSS_IDLE = ['Quiet day...', 'Anyone want coffee?', '*spins in chair*', 'Team meeting at 3? Kidding.'];
 const BOSS_BUSY = ['Keep it up, team!', 'Love the hustle.', 'Shipping it!', 'Great work, everyone.'];
 const STATUS_COLOR = { working: '#22c55e', trouble: '#f59e0b', waiting: '#ef4444' };
@@ -4436,7 +4439,7 @@ function setTheme(name) {
 function jobSpot(w, kind) {
   if (kind === 'trouble') return firstFree(TROUBLE_SPOTS, w);
   if (kind === 'mail') return firstFree(MAIL_SPOTS, w);
-  if (kind === 'meet') return firstFree([LEAD_SPOT], w);
+  if (kind === 'meet') return firstFree(SEATS.concat(LEAD_STAND), w);
   const sp = stationOf(w.job).spot;
   if (sp.by !== null && sp.by !== w.id) return { ...sp, x: sp.x - 30, y: sp.y + 14, temp: true };
   return sp;
@@ -4502,7 +4505,7 @@ function arrive(w) {
 }
 function stepMove(w, dt) {
   if (THEME === 'hero' && heroTravel(w)) return;
-  const boost = THEME === 'hero' && powerOf(w).power === 'speed' ? 2.5 : 1;   // Hero HQ speedster
+  const boost = THEME === 'hero' ? (powerOf(w).power === 'speed' ? 2.5 : isFlier(w) ? 2 : 1) : 1;   // Hero HQ speedster, fliers
   let budget = w.speed * dt * boost;
   while (budget > 0 && w.path.length) {
     const tgt = w.path[0], dx = tgt.x - w.x, dy = tgt.y - w.y, d = Math.hypot(dx, dy);
@@ -4559,10 +4562,17 @@ function updateWorker(w, dt) {
           if (s.lines && T > w.nextChat) { if (Math.random() < 0.5) say(w, pick(s.lines), 3); w.nextChat = T + rand(25, 45); }
         }
         if (w.locKind === 'st' && dozing(w) && Math.random() < dt * 0.7) puff(w.x + 8, w.y - 58, { kind: 'text', text: 'z', vx: 8, vy: -14, life: 1.6, color: '#fff', font: 'bold 11px system-ui' });
-        if (w.locKind === 'meet' && T > w.nextChat) {
-          const team = helpersOf(w.job.id), h = team.length ? workers[pick(team).worker] : null;
-          say(w, h && Math.random() < 0.5 ? h.L.name + ", how's it going?" : pick(LEAD_TALK), 3);
-          w.nextChat = T + rand(8, 14);
+        if (w.locKind === 'meet') {
+          const seated = w.spot && w.spot.pose === 'sit', video = meetVideoOn();
+          if (seated) w.facing = video ? 'up' : w.spot.face;      // watch the training video on the whiteboard
+          if (video) w.nextChat = Math.max(w.nextChat, T + rand(1, 8));   // stagger the chatter once the video ends
+          else if (T > w.nextChat) {
+            const team = helpersOf(w.job.id), h = team.length ? workers[pick(team).worker] : null;
+            const mate = workers.find(o => o !== w && o.mode === 'job' && o.arrived && o.locKind === 'meet' && o.spot && o.spot.pose === 'sit');
+            say(w, mate && Math.random() < 0.5 ? mate.L.name + ', ' + pick(LEAD_CHAT)
+              : h && Math.random() < 0.5 ? h.L.name + ", how's it going?" : pick(LEAD_TALK), 3);
+            w.nextChat = T + rand(8, 14);
+          }
         }
         if ((w.locKind === 'mail' || w.locKind === 'trouble') && T > w.nextChat && T > ROOM_TALK[w.locKind]
             && !workers.some(o => o !== w && o.mode === 'job' && o.jobPhase === 'go' && o.arrived && o.locKind === w.locKind && o.nextChat < w.nextChat)) {   // longest wait speaks first
@@ -4716,6 +4726,7 @@ function heroBlinkFx(w, x, y, portalC) {
   if (powerOf(w).power === 'portal') BEAMS.push({ kind: 'portal', x0: x, y0: y - 26, c: portalC, life: 0.9, max: 0.9, owner: w });
   for (let i = 0; i < 12; i++) puff(x, y - 28, { vx: rand(-50, 50), vy: rand(-50, 40), life: 0.6, size: 2, color: powerOf(w).fx });
 }
+function isFlier(w) { const p = powerOf(w).power; return p === 'flight' || p === 'telekinesis'; }
 function updHero(dt) {
   for (let i = BEAMS.length - 1; i >= 0; i--) if ((BEAMS[i].life -= dt) <= 0) BEAMS.splice(i, 1);
   for (const d of [...DUELS]) {
@@ -4725,7 +4736,7 @@ function updHero(dt) {
   }
   for (const w of workers) {
     if (THEME !== 'hero') { w.lift = 0; w.fade = 1; w.jx = 0; w.trail = null; w.blink = null; continue; }
-    const p = powerOf(w).power, moving = w.path.length > 0, flier = p === 'flight' || p === 'telekinesis';
+    const p = powerOf(w).power, moving = w.path.length > 0, flier = isFlier(w);
     let lift = 0;
     if (flier && (moving || w.duel)) lift = (w.duel ? 22 : 16) + Math.sin(T * 3 + w.seed) * 2.5;
     if (T < (w.liftUntil || 0)) lift = Math.max(lift, 20);
@@ -4751,6 +4762,7 @@ function drawHeroWorker(w) {
     if (T < (w.zapUntil || 0)) { st.ra = 1.6; st.la = 1.35; st.open = true; } else { st.ra = 0.8; st.la = 0.8; }
   }
   if (frozen) { st.moving = false; st.open = true; }
+  if (isFlier(w) && st.moving) { st.moving = false; st.ra = st.la = 0.3; }   // flying, not walking
   if (T < (w.shakeUntil || 0)) st.shake = true;
   if (lift > 1) { E(x, w.y, Math.max(6, 12 - lift * 0.15), 3, 'rgba(0,0,0,.14)'); st.noShadow = true; }
   if (w.trail) w.trail.forEach((p, i) => { g.globalAlpha = 0.25 * (1 - i / 4) * (w.fade ?? 1); drawPerson(look, p.x, p.y - lift, { ...st, facing: p.f, noShadow: true }); });
@@ -4862,6 +4874,7 @@ function poseFor(w) {
     st.busyHands = true;
     if (['paged', 'brief', 'toBoss', 'toMeet', 'meetWait', 'meetBrief'].includes(w.jobPhase)) { st.ra = w.slip ? 0.5 : 1.25; st.item = w.slip ? 'slip' : null; st.busyHands = false; return st; }
     if (w.locKind === 'trouble') { st.ra = 2.75 + Math.sin(t * 9) * 0.15; st.la = 0.2; return st; }
+    if (w.locKind === 'meet' && w.spot && w.spot.pose === 'sit') { st.ra = st.la = 0.5; st.open = !meetVideoOn() && Math.sin(t * 3) > 0.3; return st; }   // seated lead, hands on the table
     if (w.locKind === 'meet') { st.ra = 2.7 + Math.sin(t * 2) * 0.25; st.la = 0.3; st.item = 'pointer'; st.open = Math.sin(t * 7) > 0.2; return st; }
     if (w.locKind === 'mail') { st.ra = 2.8 + Math.sin(t * 5) * 0.3; st.la = 0.25; st.item = 'envelope'; st.open = Math.sin(t * 2) > 0; return st; }
     if (w.locKind === 'st') {
@@ -5030,8 +5043,20 @@ function drawMeetingTable() {
   RR(462, 800, 7, 8, 2, '#fff', '#999', 0.8); RR(492, 786, 7, 8, 2, '#d97757');
   R(380, 826, 6, 12, '#5e3b22'); R(554, 826, 6, 12, '#5e3b22');
 }
+// Seated team leads watch a short training video on the whiteboard for 12 of every 26 seconds.
+function meetVideoOn() {
+  return T % 26 > 14 && workers.some(w => w.mode === 'job' && w.locKind === 'meet' && w.arrived && w.spot && w.spot.pose === 'sit');
+}
 function drawWhiteboard() {
   RR(370, 636, 200, 48, 3, '#fdfdfd', '#9aa3ad', 3); R(378, 684, 184, 3, '#9aa3ad');
+  if (meetVideoOn()) {
+    const k = (T % 26 - 14) / 12;
+    RR(374, 640, 192, 40, 2, '#0f172a');
+    TXT('▶ TRAINING: DELEGATING 101', 470, 650, 'bold 7.5px system-ui', '#93c5fd');
+    TXT(['Plan', 'Delegate', 'Review', 'Ship'][Math.min(3, Math.floor(k * 4))], 470, 664, 'bold 11px system-ui', '#fde68a');
+    R(382, 674, 176, 3, '#334155'); R(382, 674, 176 * k, 3, '#38bdf8');
+    return;
+  }
   const lead = workers.find(w => w.mode === 'job' && w.job && w.locKind === 'meet');
   if (!lead) {
     TXT('NEXT MEETING: TBD', 470, 650, 'bold 9px system-ui', '#3b82f6');

@@ -40,7 +40,8 @@ session: an agent named in its description ("Neo: fix three bugs") or by the Age
 comes back as the same character every time (its slip reads "Tasha as Neo"), and a continued agent
 keeps its character. Those links are saved with the office and freed when the session ends (done,
 **Done ✓**, `/clear`, `/exit`, 12 hours). When Claude starts subagents, the session's worker becomes
-team lead: they run a meeting at the whiteboard, page each helper to the meeting room, hand
+team lead: they run a meeting (each lead takes their own chair at the table, chats with other
+leads and now and then watches a training video on the whiteboard), page each helper to the meeting room, hand
 them their slips there, and supervise until the helpers are done (a lead whose turn ends while
 helpers are still out keeps waiting for them in the meeting; it only waits on you once the last
 one is back). A failed tool sends the worker to the Troubleshooting desk (staffed by a
@@ -115,8 +116,8 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   stop, a shapeshifter turning into their rival, fliers floating overhead. Heroes never fight
   heroes and villains never fight villains. When either one is paged the duel ends on the spot
   and they head to work. Powers also get them around: the teleporter and the portal maker
-  blink to the end of long trips, the speedster runs 2.5x with afterimages, fliers float along
-  their path and the invisible one fades out while walking. Stations are the Gadget Lab, Suit
+  blink to the end of long trips, the speedster runs 2.5x with afterimages, fliers glide along
+  their path at 2x without a walking animation and the invisible one fades out while walking. Stations are the Gadget Lab, Suit
   Forge, Portal Gate, Hero Hotline, Data Vault, Bio Lab, Danger Room, Comic Press, Cape
   Cleaners, Containment, Hero Supercomputer and Evidence Locker. A night skyline with a
   searchlight out the window and star bunting on the walls; the boss wears a domino mask.
