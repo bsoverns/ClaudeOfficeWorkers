@@ -2842,6 +2842,15 @@ function heroEmblem(power, cx, cy, c) {        // the chest badge: a small glyph
   }
   g.restore();
 }
+// The side mark on the back of the cape, so heroes and villains tell apart from behind: heroes three
+// white stripes, villains an all-seeing eye in a black triangle. Outlined so it reads on every cape color.
+function capeSign(side, cy) {
+  const ink = '#0f172a';
+  if (side === 'villain') {
+    poly([0, cy - 5.5, 5.6, cy + 4.5, -5.6, cy + 4.5], ink); g.strokeStyle = '#fde047'; g.lineWidth = 0.7; g.stroke();
+    E(0, cy + 1.2, 2.7, 1.5, '#fef2f2'); C(0, cy + 1.2, 1.1, '#ef4444'); C(0, cy + 1.2, 0.45, ink);
+  } else for (const sx of [-4.4, -1, 2.4]) RR(sx, cy - 5, 2, 10, 0.6, '#f8fafc', ink, 0.8);
+}
 function heroPow(x, y, text, c) { puff(x, y, { kind: 'text', text, vy: -18, life: 1.1, color: c, font: 'bold 13px Impact, system-ui' }); }
 const HERO = {
   workbench: { label: 'GADGET LAB', name: 'the Gadget Lab', tint: '#dbe4f0', anim: 'fix',
@@ -3338,7 +3347,10 @@ function drawPerson(Lk, x, y, st) {
     L(cx, ty + 3, cx, ty + 19, rc, 1.4);
     for (let j = 0; j < 4; j++) L(cx - w2, ty + 5 + j * 3.6, cx + w2, ty + 5 + j * 3.6, rc, 1.2);
   }
-  if (Lk.cape && back) poly([-10, ty + 1, 10, ty + 1, 14, -2, -14, -2], Lk.cape);
+  if (Lk.cape && back) {
+    poly([-10, ty + 1, 10, ty + 1, 14, -2, -14, -2], Lk.cape);
+    if (Lk.capeSign && pose !== 'chair') capeSign(Lk.capeSign, ty + 15);   // below long hair and the hijab, between the arms
+  }
   if (Lk.wings && back) wing(ty, [-1, 1]);
   if (Lk.robot && !back) {                // robot chest panel with blinking lights
     RR(side ? -3 : -5, ty + 5, side ? 7 : 10, 8, 1.5, '#2b3340');
@@ -3468,7 +3480,7 @@ function drawPerson(Lk, x, y, st) {
     g.globalAlpha = pulse; C(nx, ty + 8, 4.2, Lk.pendant); g.globalAlpha = 1;
     poly([nx, ty + 5.4, nx + 2.2, ty + 8, nx, ty + 10.6, nx - 2.2, ty + 8], Lk.pendant); L(nx - 0.8, ty + 6.6, nx - 0.2, ty + 7.6, '#fff', 0.7);
   }
-  if (Lk.heroBelt) { R(side ? -6 : -8, ty + 16, side ? 12 : 16, 2.5, Lk.heroBelt); if (!back && !side) R(-2, ty + 15.5, 4, 3.5, shade(Lk.heroBelt, -0.3)); }
+  if (Lk.heroBelt && !(back && Lk.cape)) { R(side ? -6 : -8, ty + 16, side ? 12 : 16, 2.5, Lk.heroBelt); if (!back && !side) R(-2, ty + 15.5, 4, 3.5, shade(Lk.heroBelt, -0.3)); }
   if (Lk.emblem && !back) heroEmblem(Lk.emblem, side ? 1.5 : 0, ty + 8, Lk.emblemC);
 
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
@@ -3491,7 +3503,10 @@ function drawPerson(Lk, x, y, st) {
     else { L(-11, sh + 1, -12 - sw, 0, '#9aa3ad', 2); L(11, sh + 1, 12 + sw, 0, '#9aa3ad', 2); }
   }
   if (mob === 'cane' && pose === 'stand' && !st.item) { L(hand[0], hand[1], hand[0] + 1.5, 0, '#6b4423', 2); }
-  if (pose === 'chair' && back) { RR(-10, -36, 20, 22, 3, chair); E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027'); }
+  if (pose === 'chair' && back) {
+    RR(-10, -36, 20, 22, 3, chair); E(-12, -9, 3.5, 9.5, '#1d2027'); E(12, -9, 3.5, 9.5, '#1d2027');
+    if (Lk.cape && Lk.capeSign) capeSign(Lk.capeSign, -8);              // the backrest hides the upper cape: mark the hem below the seat
+  }
   // head
   const hy = ty - 9;
   hairBack(Lk, view, hy);
@@ -4012,7 +4027,7 @@ function dress(L0, kind, id) {
     case 'hero': case 'villain': {         // Hero HQ: a suit in their power's colors, cape, boots, emblem and mask; villains get a cowl
       const p = POWERS[id % POWERS.length], cowl = kind === 'villain' && !covered;
       Object.assign(o, { shirt: p.suit, pants: shade(p.suit, -0.22), plaid: false, skirt: false, glasses: false,
-        cape: p.cape, capeLining: shade(p.cape, -0.22), boots: kind === 'hero' ? shade(p.cape, -0.15) : '#111827',
+        cape: p.cape, capeLining: shade(p.cape, -0.22), capeSign: kind, boots: kind === 'hero' ? shade(p.cape, -0.15) : '#111827',
         emblem: p.power, emblemC: p.fx, heroBelt: kind === 'hero' ? '#facc15' : '#3f3f46', heroMask: p.mask,
         cowl: cowl ? p.mask : null, hairStyle: cowl ? 'none' : L0.hairStyle, beard: cowl ? false : L0.beard }); break; }
   }

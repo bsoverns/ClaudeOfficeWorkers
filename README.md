@@ -107,7 +107,10 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   mammoth for lunch and who invented the wheel this time.
 - **Hero HQ** (superheroes): eight heroes and eight villains (even roster ids are heroes, odd ones
   villains), each with a suit, cape, emblem and mask in their power's colors; villains wear a
-  horned cowl (nobody's turban or hijab gets one). Powers, one each: super strength, heat, flight,
+  horned cowl (nobody's turban or hijab gets one). The chest emblem shows the power; the back of
+  the cape shows the side, so you can tell them apart from behind: heroes have three white
+  stripes, villains an all-seeing eye in a black triangle (`capeSign()`; on a wheelchair it sits
+  on the cape hem below the seat, since the backrest hides the rest). Powers, one each: super strength, heat, flight,
   cold, telepathy, electricity, teleportation, psychokinesis, super speed, time, regeneration,
   shapeshifting, telekinesis, portals, invisibility and eye rays (`POWERS` in `index.html`; hover
   a worker to see their alias and power). Most of the break is the usual break-room stuff, but a
