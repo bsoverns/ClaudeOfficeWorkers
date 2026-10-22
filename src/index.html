@@ -4439,7 +4439,8 @@ function setTheme(name) {
 function jobSpot(w, kind) {
   if (kind === 'trouble') return firstFree(TROUBLE_SPOTS, w);
   if (kind === 'mail') return firstFree(MAIL_SPOTS, w);
-  if (kind === 'meet') return firstFree(SEATS.concat(LEAD_STAND), w);
+  // Leads prefer the far side of the table (so their slips stay off the whiteboard video), then the ends, then the near side.
+  if (kind === 'meet') return firstFree(SEATS.slice(5).concat(SEATS.slice(3, 5), SEATS.slice(0, 3), LEAD_STAND), w);
   const sp = stationOf(w.job).spot;
   if (sp.by !== null && sp.by !== w.id) return { ...sp, x: sp.x - 30, y: sp.y + 14, temp: true };
   return sp;
