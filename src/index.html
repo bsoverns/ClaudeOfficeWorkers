@@ -719,6 +719,15 @@ const STATUS_LABEL = { working: 'Working', trouble: 'Troubleshooting', waiting: 
 // ============================================================================================
 // Work stations (4 x 3 grid on the work floor). Worker stands left of the gear, facing right.
 // ============================================================================================
+const CAR_COLORS = ['#e74c3c', '#f1c40f', '#2ecc71', '#9b59b6', '#ecf0f1'];
+function drawCar(cx, cy, col, rot) {
+  g.save(); g.translate(cx, cy); g.rotate(rot);
+  R(-18, -19, 4, 11, '#111'); R(14, -19, 4, 11, '#111'); R(-18, 8, 4, 11, '#111'); R(14, 8, 4, 11, '#111');
+  RR(-15, -26, 30, 52, 8, col, 'rgba(0,0,0,.35)', 1);
+  RR(-11, -17, 22, 9, 3, '#9fd3ff'); RR(-11, 11, 22, 7, 3, '#9fd3ff'); RR(-11, -6, 22, 15, 3, shade(col, -0.12));
+  C(-9, -24, 2, '#fff7c2'); C(9, -24, 2, '#fff7c2');
+  g.restore();
+}
 function drawHive(x, y, boxes, col) {      // a wooden beehive on a stand, x..x+34, feet at y
   R(x + 3, y - 10, 3, 10, '#6b4423'); R(x + 28, y - 10, 3, 10, '#6b4423'); R(x, y - 13, 34, 4, '#8b5a2b');
   for (let i = 0; i < boxes; i++) { RR(x + 1, y - 31 - i * 18, 32, 18, 1, col, 'rgba(0,0,0,.25)', 1); L(x + 4, y - 22 - i * 18, x + 30, y - 22 - i * 18, 'rgba(0,0,0,.08)', 1); }
@@ -898,22 +907,28 @@ const STA = {
     tick(x, y, w, dt) {
       if (Math.random() < dt * 2.5) puff(x + 106 + rand(0, 6), y + 70 + rand(0, 30), { vy: 20, ay: 60, life: 0.5, size: 1.5, color: pick(FLOWERS) });
     } },
-  lumber: { label: 'LUMBER YARD', tint: '#cbbf9f', anim: 'chop',
+  lumber: { label: 'VALET PARKING', tint: '#b9bcc4', anim: 'keys',
     draw(x, y, t, on) {
-      const row = [[168, 148], [184, 148], [200, 148], [216, 148], [176, 134], [192, 134], [208, 134], [184, 120], [200, 120]];
-      for (const [lx, ly] of row) { C(x + lx, y + ly, 7.6, '#9a6234'); C(x + lx, y + ly, 5, '#d9a066'); C(x + lx, y + ly, 1.6, '#9a6234'); }
-      E(x + 114, y + 157, 20, 3, '#d9a066');
-      R(x + 100, y + 128, 28, 24, '#7b4a24'); L(x + 106, y + 130, x + 106, y + 150, '#5e3719', 1); L(x + 120, y + 130, x + 120, y + 150, '#5e3719', 1);
-      E(x + 114, y + 128, 14, 4.5, '#d9a066'); E(x + 114, y + 128, 8, 2.4, '#c48a4a');
-      if (on) R(x + 108, y + 113, 12, 15, '#c48a4a');
-      else { L(x + 120, y + 126, x + 132, y + 106, '#8b5a2b', 2.5); poly([x + 116, y + 124, x + 124, y + 120, x + 126, y + 128, x + 118, y + 130], '#9aa3ad'); }
-    },
-    tick(x, y, w, dt, t) {
-      if (hitCross(w, Math.sin(t * 4))) {
-        for (let i = 0; i < 7; i++) puff(x + 114, y + 114, { kind: 'rect', vx: rand(-80, 80), vy: rand(-120, -30), ay: 300, life: rand(0.5, 0.8), size: 3, color: '#d9a066' });
-        if (Math.random() < 0.2) puff(x + 116, y + 92, { kind: 'text', text: 'CHOP!', vy: -20, life: 0.8, color: '#fff', font: 'bold 11px system-ui' });
+      RR(x + 96, y + 28, 138, 152, 6, '#3d424b');
+      for (const xx of [138, 188, 232]) L(x + xx, y + 36, x + xx, y + 102, '#f1f1f1', 2);
+      L(x + 104, y + 102, x + 232, y + 102, '#f1f1f1', 2);
+      for (let i = 0; i < 6; i++) L(x + 104 + i * 22, y + 142, x + 114 + i * 22, y + 142, '#ffd23f', 2);
+      drawCar(x + 210, y + 66, '#5b8def', 0);
+      let cx = x + 163, cy = y + 66, col = CAR_COLORS[0], rot = 0;
+      if (on) {
+        const p = t % 8, n = Math.floor(t / 8);
+        col = CAR_COLORS[n % CAR_COLORS.length];
+        const nxt = CAR_COLORS[(n + 1) % CAR_COLORS.length];
+        if (p < 2) {} else if (p < 4) cy = y + 66 + (p - 2) / 2 * 76;
+        else if (p < 5) { cy = y + 142; cx = x + 163 + (p - 4) * 120; rot = Math.PI / 2; }
+        else if (p < 6) { cy = y + 142; cx = x + 283 - (p - 5) * 120; rot = Math.PI / 2; col = nxt; }
+        else { cy = y + 142 - (p - 6) / 2 * 76; col = nxt; }
       }
-    } },
+      g.save(); g.beginPath(); g.rect(x + 96, y + 28, 138, 152); g.clip(); drawCar(cx, cy, col, rot); g.restore();
+      R(x + 96, y + 113, 22, 6, '#5a361d'); RR(x + 99, y + 119, 16, 34, 2, '#7a4b2a');
+      for (let i = 0; i < 3; i++) C(x + 103 + i * 4, y + 126, 1.2, '#d4af37');
+    },
+    tick() {} },
   lab: { label: 'CHEM LAB', tint: '#bfd6df', anim: 'stir',
     draw(x, y, t, on) {
       R(x + 96, y + 112, 134, 8, '#e9ecef'); R(x + 98, y + 120, 130, 34, '#c9d1d9');
