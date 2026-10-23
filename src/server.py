@@ -109,8 +109,9 @@ AREA_RULES = {
            r"|\bpbis?\b|\baz (?:devops|boards|repos|pipelines)\b|\bsprint\b|\bbacklog\b",
     "github": r"github\.com|\bgithub\b|\bgh (?:pr|repo|issue|run|api)\b|\bpull requests?\b|\bgit (?:push|pull|merge|rebase|branch|commit|clone|fetch|cherry-pick)\b"
               r"|\bgit checkout -b\b|\bbranch(?:es)?\b|\bmerge conflicts?\b",
-    "impl": r"\bimplementation\b|appsettings|\bweb\.config\b|\bapp\.config\b|\bconfiguration (?:change|update|file)s?\b"
-            r"|\bfeature flags?\b|\bclient config",
+    "impl": r"\bgo-?lives?\b|\brollouts?\b|\bonboarding\b|\bfeature (?:flags?|toggles?)\b|\benv(?:ironment)? var(?:iable)?s?\b"
+            r"|appsettings|\bweb\.config\b|\bapp\.config\b|(?:^|[\s/\\])\.env\b|\bconfig(?:uration)? (?:change|update|file)s?\b"
+            r"|\b(?:client|tenant|customer) (?:config|setup)\b",
     "python": r"\.py\b|\bpython\b|\bpip install\b|\bpy (?:-m|[\w./\\-]+\.py)\b|\bdjango\b|\bflask\b|\bpandas\b|\bpyinstaller\b",
     "service": r"\bservice code\b|\bwindows services?\b|\bworker services?\b|\bhosted services?\b|\.services?\b|\bservices?\.cs\b|\blegacy\b",
     "qa": r"\bunit tests?\b|\bintegration tests?\b|\bnpm (?:run )?test\b|\bdotnet test\b|\bpytest\b|\bplaywright\b|\bselenium\b"

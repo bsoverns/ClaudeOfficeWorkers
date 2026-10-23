@@ -185,7 +185,7 @@ is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Br
 | Support Tickets | support tickets, incidents, outages, "broken", "not working" |
 | SQL Server | `.sql` files, stored procedures, T-SQL, `sqlcmd` |
 | DB Projects | dacpacs, `.sqlproj`, `sqlpackage`, publish profiles, scripted deployments |
-| Implementation | the Implementation project, appsettings / `.config`, client config, feature flags |
+| Implementation | rollouts, go-lives, onboarding, client/tenant setup, feature flags, env vars, config files (`appsettings`, `.config`, `.env`) |
 | Python | `.py` files, `python`, `pip` |
 | Service Code | `*.Service` projects, Windows/worker/hosted services, legacy code (it's dark in there) |
 | QA Test Lab | unit/integration tests, `pytest`, `dotnet test`, `npm test` |
