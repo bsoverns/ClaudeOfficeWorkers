@@ -3207,6 +3207,8 @@ function drawItem(it, hx, hy, ang, st) {
   switch (it) {
     case 'mug': RR(-3, -6, 6, 7, 1.5, '#fff', '#999', 0.8); g.beginPath(); g.arc(3.5, -2.5, 2, -1.3, 1.3); g.strokeStyle = '#999'; g.lineWidth = 1; g.stroke(); break;
     case 'cup': poly([-2.5, -6, 2.5, -6, 1.5, 1, -1.5, 1], '#f4f4f4'); break;
+    case 'clipboard': g.rotate(-0.2); RR(-5, -12, 10, 13, 1, '#a0703f'); R(-4, -10, 8, 10, '#fffef5');
+      for (let i = 0; i < 3; i++) L(-3, -7.5 + i * 2.6, 3, -7.5 + i * 2.6, '#9aa3ad', 0.7); R(-2, -13, 4, 2.5, '#9aa3ad'); break;
     case 'phone': RR(-2.5, -6, 5, 8, 1, '#222'); R(-1.8, -5.3, 3.6, 6, '#7fd3ff'); break;
     case 'slip': g.rotate(-0.15); RR(-4, -10, 9, 11, 1, '#fffef5', '#aaa', 0.6); L(-2, -7, 3, -7, '#bbb', 0.8); L(-2, -4.5, 3, -4.5, '#bbb', 0.8); break;
     case 'envelope': g.rotate(Math.sin(T * 6) * 0.25); RR(-8, -12, 16, 10, 1, '#fff', '#c33', 1);
@@ -3413,6 +3415,16 @@ function drawPerson(Lk, x, y, st) {
     g.save(); g.beginPath(); g.roundRect(side ? -6 : -8, ty, side ? 12 : 16, 22, 4); g.clip();
     for (let yy = ty + 2; yy < ty + 22; yy += 5) R(-8, yy, 16, 2.2, Lk.stripes);
     g.restore();
+  }
+  if (Lk.vstripes) {                      // pinstripe dress shirt (Dev Shop's Gary)
+    g.save(); g.beginPath(); g.roundRect(side ? -6 : -8, ty, side ? 12 : 16, 22, 4); g.clip();
+    for (let xx = -7; xx <= 7; xx += 3) R(xx, ty, 0.9, 22, Lk.vstripes);
+    g.restore();
+  }
+  if (Lk.suspenders) {                    // two straps front, crossed on the back
+    if (back) { L(-5, ty + 22, 5, ty + 1, Lk.suspenders, 1.6); L(5, ty + 22, -5, ty + 1, Lk.suspenders, 1.6); }
+    else if (side) L(1, ty + 1, 1, ty + 22, Lk.suspenders, 1.8);
+    else { L(-4.5, ty + 1, -4.5, ty + 22, Lk.suspenders, 1.8); L(4.5, ty + 1, 4.5, ty + 22, Lk.suspenders, 1.8); }
   }
   if (Lk.coat) {                          // long coat: open at the chest, gold buttons, gold hem
     g.save(); g.beginPath(); g.roundRect(side ? -6 : -8, ty, side ? 12 : 16, 22, 4); g.clip();
@@ -4426,6 +4438,7 @@ function allowed(s, w) {
   if (m === 'wheelchair' && s.couch) return false;
   if (s.noAid && m) return false;
   if (s.smoke && !w.L.smoker) return false;
+  if (s.act === 'eat' && LUNCH_LOCK && LUNCH_LOCK !== w) return false;   // Dev Shop: the Bobs have the table
   return true;
 }
 function chooseIdle(w, instant) {
@@ -4635,7 +4648,8 @@ function startTalk() {
   const [a, b] = pick(pairs);
   const rival = THEME === 'hero' && isVillain(a) !== isVillain(b);      // a hero and a villain: they bicker (and may duel)
   const list = rival && Math.random() < 0.85 ? HERO_BANTER : THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : THEME === 'pirate' ? BANTER.concat(PIRATE_BANTER, PIRATE_BANTER)
-    : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER) : BANTER;
+    : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER)
+    : THEME === 'dev' && CAST.on && awayFromBobs(a) && awayFromBobs(b) ? BANTER.concat(DEV_NERVOUS, DEV_NERVOUS) : BANTER;
   let lines = pick(list);
   for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(list);
   recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
@@ -4709,7 +4723,7 @@ function updTalks() {
     if (k.i >= k.lines.length) { endTalk(k); if (k.rival && THEME === 'hero' && Math.random() < 0.35) startDuel(k.hero, k.villain); continue; }
     let line = k.lines[k.i], who = k.i % 2 ? k.b : k.a;
     if (k.rival && /^[VH]:/.test(line)) { who = line[0] === 'V' ? k.villain : k.hero; line = line.slice(2); }
-    const text = line.replace('{a}', k.a.L.name).replace('{b}', k.b.L.name);
+    const text = line.replace('{a}', k.a.L.name).replace('{b}', k.b.L.name).replace('{f}', CAST.fav ? CAST.fav.L.name : 'the new hire');
     say(who, text, Math.max(3.6, text.length * 0.055)); k.i++; k.next = T + 2.8 + text.length * 0.035;
   }
   // the couch reacts when something big happens on TV
@@ -4987,6 +5001,239 @@ function drawWorker(w) {
   if (THEME === 'hero') return drawHeroWorker(w);
   drawPerson(lookOf(w), w.x, w.y, poseFor(w));
 }
+
+// ============================================================================================
+// Dev Shop cast: Gary the office manager and the two Bobs, consultants grading the staff. They
+// live only in the Dev Shop theme, never take work and walk the office on their own: Gary
+// wanders with his coffee; the Bobs (always side by side) shadow whoever has a job, interview
+// someone at the lunch table when the office is quiet, and corner Gary about their favorite.
+// ============================================================================================
+const BOB_LOOK = { skin: '#f0c8a4', shirt: '#f8fafc', glasses: true, suspenders: '#1f2937', mobility: '' };
+const CAST = {
+  on: false, fav: null,
+  gary: { L: { name: 'Gary', id: 901, skin: '#e9b993', hair: '#3a2716', hairStyle: 'widow', shirt: '#e3edff', vstripes: '#7aa7e0',
+    pants: '#2b2f3a', suspenders: '#8b1e2b', mobility: '' }, speed: 70 },
+  bobA: { L: { ...BOB_LOOK, name: 'Bob', id: 902, hair: '#6b5440', hairStyle: 'short', tie: '#b91c1c', pants: '#4b5563' }, speed: 78 },
+  bobB: { L: { ...BOB_LOOK, name: 'Bob', id: 903, hair: '#9a948c', hairStyle: 'balding', tie: '#1d4ed8', pants: '#374151' }, speed: 78 },
+};
+// What the Bobs are up to: watch (a worker), toGary/gary (a word with Gary), interview (at the lunch table).
+const BOBS = { mode: 'watch', target: null, switchAt: 0, gx: null, gy: null, repath: 0, next: 0, queue: [], qNext: 0,
+  nextGary: 0, nextInterview: 0, until: 0, stage: null };
+let LUNCH_LOCK = null, INTERVIEW = null;         // the worker being interviewed (only they may sit at the dining table)
+const GARY_SPOTS = [[700, 322], [1100, 322], [1500, 322], [700, 470], [940, 668], [1180, 470], [1420, 866], [140, 206],
+  [330, 300], [520, 318], [860, 270], [300, 560]];
+const castCrew = () => [CAST.gary, CAST.bobA, CAST.bobB];
+const awayFromBobs = w => Math.hypot(w.x - CAST.bobA.x, w.y - CAST.bobA.y) > 320;
+const castName = s => s.replace(/\{w\}/g, BOBS.target ? BOBS.target.L.name : 'that one').replace(/\{f\}/g, CAST.fav ? CAST.fav.L.name : 'the new hire');
+function castSay(n, text, secs) { n.bubble = text; n.bubbleUntil = T + (secs || Math.max(3.6, text.length * 0.06)); }
+function castPose(n) { return n.seat && !n.path.length ? 'sit' : 'stand'; }
+function faceTo(n, o) { const dx = o.x - n.x, dy = o.y - n.y; n.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); }
+// Walk to (x, y): to the nearest free floor next to it, or onto it exactly (a chair).
+function castGo(n, x, y, seat) {
+  if (!navGrid) buildNav();
+  let gx = x, gy = y;
+  if (!seat) { const c = nearestFree(x, y); if (c) { gx = c[0] * NAV + NAV / 2; gy = c[1] * NAV + NAV / 2; } }
+  n.seat = seat || null; n.path = findPath(n.x, n.y, gx, gy) || [];
+}
+function bobsGo(x, y) { castGo(CAST.bobA, x, y); castGo(CAST.bobB, x + 24, y + 6); BOBS.gx = x; BOBS.gy = y; }
+const bobsStill = () => !CAST.bobA.path.length && !CAST.bobB.path.length;
+// A script of [who, line] pairs, who = 'A' | 'B' | 'G' | 'W' (the worker they're talking to), spoken in turn.
+function castScript(lines, gap = 3.2) { BOBS.queue = lines.map(([who, text]) => [who, castName(text)]); BOBS.qNext = T + 0.4; BOBS.gap = gap; }
+function castTick() {
+  if (!BOBS.queue.length || T < BOBS.qNext) return;
+  const [who, text] = BOBS.queue.shift(), w = BOBS.target;
+  if (who === 'W') { if (w) say(w, text, Math.max(3.6, text.length * 0.06)); }
+  else castSay(who === 'A' ? CAST.bobA : who === 'B' ? CAST.bobB : CAST.gary, text);
+  BOBS.qNext = T + BOBS.gap + text.length * 0.03;
+}
+function castOn() {
+  CAST.on = true;
+  const place = (n, x, y, f) => Object.assign(n, { x, y, facing: f, path: [], walk: 0, seed: rand(0, 100), seat: null, dwell: 0, hold: false, bubble: null, bubbleUntil: 0 });
+  place(CAST.gary, 700, 322, 'right'); place(CAST.bobA, 1060, 322, 'left'); place(CAST.bobB, 1084, 328, 'left');
+  Object.assign(BOBS, { mode: 'watch', target: null, queue: [], gx: null, next: T + rand(4, 8), nextGary: T + rand(40, 80), nextInterview: T + rand(90, 150) });
+}
+function castOff() { endInterview(); CAST.on = false; BOBS.queue = []; }
+function updCast(dt) {
+  if (THEME !== 'dev') { if (CAST.on) castOff(); return; }
+  if (!CAST.on) castOn();
+  if (!CAST.fav || !workers.includes(CAST.fav)) CAST.fav = workers.length ? pick(workers) : null;   // their favorite, for this visit
+  for (const n of castCrew()) if (n.path.length) stepMove(n, dt);
+  updGary(); updBobs(); castTick();
+}
+function updGary() {
+  const n = CAST.gary;
+  if (n.slowAt && T > n.slowAt) { n.speed = 70; n.slowAt = 0; }
+  if (n.hold || n.path.length) return;
+  if (!n.dwell) { n.dwell = T + rand(5, 12); n.facing = 'down'; if (Math.random() < 0.5) castSay(n, pick(GARY_LINES)); }
+  else if (T > n.dwell) { n.dwell = 0; const [x, y] = pick(GARY_SPOTS); castGo(n, x, y); }
+}
+function updBobs() {
+  const B = BOBS, A = CAST.bobA, busy = workers.filter(w => w.mode === 'job');
+  if (B.mode === 'interview') return runInterview(busy);
+  if (B.mode === 'toGary' || B.mode === 'gary') return runGary();
+  if (busy.length) {
+    // shadow whoever has a job; with several, take turns about every 25 seconds
+    if (!busy.includes(B.target) || (busy.length > 1 && T > B.switchAt)) {
+      B.target = busy[(busy.indexOf(B.target) + 1) % busy.length]; B.switchAt = T + 25; B.gx = null; B.queue = [];
+    }
+  } else {
+    if (T > B.nextInterview) { if (startInterview()) return; B.nextInterview = T + 30; }
+    if (T > B.nextGary) { B.mode = 'toGary'; B.until = T + 25; B.queue = []; CAST.gary.hold = true; CAST.gary.path = []; return; }
+    if (!B.target || B.target.mode === 'job' || T > B.switchAt) { B.target = pick(workers) || null; B.switchAt = T + rand(18, 28); B.gx = null; B.queue = []; }
+  }
+  const w = B.target; if (!w) return;
+  const tx = w.x - 44, ty = w.y + 22;
+  if ((B.gx === null || Math.hypot(tx - B.gx, ty - B.gy) > 30) && T > B.repath) { bobsGo(tx, ty); B.repath = T + 0.7; }
+  if (bobsStill()) { faceTo(A, w); faceTo(CAST.bobB, w); }
+  if (!B.queue.length && T > B.next) {
+    const job = w.mode === 'job' && w.job, where = job && w.locKind;
+    const set = w === CAST.fav ? BOB_FAV : where === 'mail' ? BOB_MAIL : where === 'trouble' ? BOB_TROUBLE : job ? BOB_WORK : BOB_IDLE;
+    const pair = pick(set); castScript([['A', pair[0]], ['B', pair[1]]]);
+    B.next = T + rand(10, 16);
+  }
+}
+function runGary() {
+  const B = BOBS, n = CAST.gary;
+  if (B.mode === 'toGary') {
+    if (B.gx === null || T > B.repath) { bobsGo(n.x - 52, n.y + 8); B.repath = T + 1.5; }
+    const near = Math.hypot(CAST.bobA.x - n.x, CAST.bobA.y - n.y) < 80;
+    if ((near && bobsStill()) || T > B.until) {
+      B.mode = 'gary'; faceTo(CAST.bobA, n); faceTo(CAST.bobB, n); faceTo(n, CAST.bobA);
+      castScript(pick(GARY_TALKS));
+    }
+    return;
+  }
+  if (B.queue.length || T < B.qNext) return;
+  // Gary slipped away: off he goes, a little faster than usual
+  n.hold = false; n.dwell = 0; n.speed = 95; n.slowAt = T + 6;
+  B.mode = 'watch'; B.target = null; B.gx = null; B.next = T + rand(6, 10); B.nextGary = T + rand(100, 160);
+}
+function startInterview() {
+  const pool = workers.filter(w => canTalk(w) && w.spot.area === 'break');
+  if (!pool.length) return false;
+  const w = pick(pool), B = BOBS;
+  INTERVIEW = { a: w, b: { L: { name: 'the Bobs' } } }; LUNCH_LOCK = w; w.talk = INTERVIEW;
+  for (const o of workers) if (o !== w && o.mode !== 'job' && o.spot && o.spot.act === 'eat') { say(o, pick(CLEAR_LINES), 3); chooseIdle(o); }
+  goTo(w, SPOT_BY_ID.eat5); w.actUntil = T + 120; say(w, pick(SUMMONED_LINES), 3);
+  const s3 = SPOT_BY_ID.eat3, s4 = SPOT_BY_ID.eat4;
+  castGo(CAST.bobA, s3.x, s3.y, s3); castGo(CAST.bobB, s4.x, s4.y, s4);
+  Object.assign(B, { mode: 'interview', stage: 'gather', target: w, until: T + 40, queue: [] });
+  return true;
+}
+function runInterview(busy) {
+  const B = BOBS, w = INTERVIEW && INTERVIEW.a;
+  if (!w || busy.length || w.mode !== 'idle') return endInterview();   // work comes first: never hold anyone up
+  w.actUntil = Math.max(w.actUntil, T + 30);
+  if (B.stage === 'gather') {
+    if ((w.arrived && bobsStill()) || T > B.until) { B.stage = 'talk'; CAST.bobA.facing = CAST.bobB.facing = 'down'; castScript(pick(INTERVIEWS), 3.4); }
+  } else if (!B.queue.length && T > B.qNext + 1) endInterview();
+}
+function endInterview() {
+  const w = INTERVIEW && INTERVIEW.a;
+  if (w) {
+    if (w.talk === INTERVIEW) w.talk = null;
+    if (w.mode === 'idle') { w.actUntil = T + rand(2, 5); w.nextChat = T + rand(10, 20); }
+  }
+  INTERVIEW = null; LUNCH_LOCK = null;
+  if (BOBS.mode === 'interview') {
+    Object.assign(BOBS, { mode: 'watch', target: null, gx: null, queue: [], next: T + rand(6, 10), nextInterview: T + rand(180, 300) });
+    CAST.bobA.seat = CAST.bobB.seat = null;
+  }
+}
+function drawCast(n) {
+  const moving = n.path.length > 0, pose = castPose(n), bob = n !== CAST.gary;
+  const writing = bob && !moving && BOBS.queue.length > 0;
+  const st = { facing: n.facing, pose, moving, walk: n.walk, ra: bob ? 1.15 : 1.35,
+    la: writing ? 1.0 + Math.sin(T * 9) * 0.15 : 0.15, item: bob ? 'clipboard' : 'mug', happy: !bob };
+  if (moving && !bob) st.la = 0.15 + Math.sin(n.walk) * 0.3;
+  drawPerson(n.L, n.x, n.y, st);
+}
+const GARY_LINES = [
+  'Mmkay. Who parked in my spot? It has my name on it.',
+  "Porsche's running great, by the way. Not that anyone asked.",
+  'Someone parked a hatchback in my spot. A hatchback.',
+  'Took the Porsche through the car wash twice this morning. Twice.',
+  "Yeah, I'm gonna need everyone to go ahead and smile more. Mmkay?",
+  'Great coffee. Almost as smooth as my Porsche.',
+  "If that beige sedan is in my spot again, that's not okay.",
+  'Did I mention the Porsche has heated seats? It does.',
+  "Whoever's in my spot: I'm not mad. Just disappointed. And mad.",
+  "Yeah... if everyone could stay a little late tonight, that'd be great.",
+];
+const BOB_WORK = [
+  ['So {w} is working on something.', "Writing that down: 'appears busy.'"],
+  ['{w} has been at that a while.', 'A good while or a bad while?'],
+  ['Look at {w} go. Very... average.', 'Average. I underlined it.'],
+  ['Did {w} just sigh?', "Twice. I'm noting both."],
+  ['What would you even call what {w} is doing?', "I honestly couldn't tell you, Bob."],
+  ['{w} uses a lot of tools.', 'Tools cost money, Bob.'],
+  ['Three keystrokes where two would do.', "I'm going to need a bigger clipboard."],
+  ['{w} looked right at us.', "Nervous. That's a flag."],
+  ['Efficiency: so-so.', 'Enthusiasm: below so-so.'],
+];
+const BOB_MAIL = [
+  ['{w} is just standing in the mailroom.', 'Waiting on someone else. Classic.'],
+  ["Waiting isn't working, Bob.", "Underlined twice."],
+  ['How long has {w} been holding that envelope?', 'Long enough to write a page about it.'],
+];
+const BOB_TROUBLE = [
+  ['{w} is at the help desk. Again.', 'Asking a rubber duck for help. Noted.'],
+  ['Something broke.', "Was it {w}? Let's say it was {w}."],
+  ['The duck seems more productive than {w}.', 'The duck is a straight shooter.'],
+];
+const BOB_IDLE = [
+  ['{w} came in one minute late today.', 'One whole minute. Writing it down.'],
+  ['{w} left fifty minutes after closing yesterday.', 'Fifty. Not sixty. Unacceptable.'],
+  ['The office closes at five. Who leaves before six?', "It's like they have lives or something."],
+  ['{w} is on a break.', 'A break from the last break, I think.'],
+  ['How many coffees has {w} had?', 'Four. Output per coffee: low.'],
+  ['The work here is sub-par.', 'Sub-sub-par, Bob.'],
+  ['{w} seems nice.', "Nice doesn't ship code, Bob."],
+];
+const BOB_FAV = [
+  ['Now {w}. {w} is a straight shooter.', 'Upper management material, Bob.'],
+  ['Look at that focus.', 'We have to tell Gary about {w}.'],
+  ['{w} is the only one here who gets it.', "I'd give {w} a raise out of my own pocket."],
+  ['Gold star for {w}.', 'Two gold stars. Our first ever.'],
+];
+const GARY_TALKS = [
+  [['A', 'Gary! We need to talk about {f}.'], ['B', '{f} is a real go-getter.'], ['G', "Yeah... I'm not so sure about that."],
+    ['A', 'Interesting. Walk us through a typical day, Gary.'], ['B', 'In your own words.'],
+    ['G', "Yeah, I'm gonna go ahead and... check on my Porsche. Mmkay? Great."]],
+  [['B', 'Gary, {f} is the best thing about this place.'], ['G', '{f}? Really? Hmm.'], ['A', 'You seem to disagree. Got a minute?'],
+    ['B', 'Just a few questions.'], ['G', 'Oh, would you look at the time. I have a... thing. Bye now.']],
+  [['A', "We'd like to fast-track {f}."], ['G', "Yeah, about that. I'm gonna have to go ahead and disagree."],
+    ['B', 'Noted. How many hours do you work, Gary?'], ['A', 'Ballpark.'], ['G', "Someone's in my parking spot. Gotta go!"]],
+  [['B', 'Have you seen {f} work? Inspiring.'], ['G', 'Yeah, if you could not encourage that, that would be great.'],
+    ['A', "Gary, what is it you'd say you bring to the table?"], ['G', 'Coffee. I bring coffee. Mmkay, bye.']],
+];
+const INTERVIEWS = [
+  [['A', 'Have a seat, {w}. Relax.'], ['B', 'So, {w}. Tell us what you actually do here.'],
+    ['W', "I, uh... I take the tasks from the boss and... do them? Mostly?"], ['A', 'Mostly.'],
+    ['W', 'Always! I always do them. Is it hot in here?'], ['B', "Thank you, {w}. We'll be in touch."], ['W', '...In touch how?']],
+  [['B', '{w}, walk us through a typical day.'], ['W', 'Well, I get in at nine. Ish.'], ['A', 'Ish?'],
+    ['W', 'Nine! Exactly nine. Sometimes eight fifty-nine.'], ['B', 'And you leave when?'],
+    ['W', 'When... the work is done? Is that a trick question?'], ['A', "That'll be all."]],
+  [['A', '{w}, would you say you have people skills?'], ['W', "Yes! I'm good with people. I talk to the duck a lot."],
+    ['B', 'The duck.'], ['W', "The rubber duck. At the help desk. It's a whole process."], ['A', 'Fascinating.'],
+    ['B', 'I think we have what we need.'], ['W', 'Oh no.']],
+  [['B', 'On a scale of one to ten, how essential are you?'], ['W', 'Ten? Eleven? Whatever the right number is.'],
+    ['A', "There's no right number."], ['W', '...Seven?'], ['B', 'Interesting.'], ['W', 'I can stay late! I love staying late!']],
+  [['A', 'How long have you worked here, {w}?'], ['W', "Since... since I started? Sorry. I'm nervous. Am I fired?"],
+    ['B', 'Nobody said fired.'], ['A', 'Yet.'], ['W', "I'm going to go stand by my station. Very productively."]],
+];
+const CLEAR_LINES = ["I'll... eat somewhere else.", 'Oh, sure. Take the table.', "An interview? I'm not here."];
+const SUMMONED_LINES = ['Me? Now? Okay. Okay okay okay.', 'Am I in trouble?', 'Should I have brought a resume?'];
+const DEV_NERVOUS = [
+  ['Did the Bobs talk to you yet?', 'Not yet. I keep hiding in the nap room.', 'Smart.'],
+  ['They wrote something down when I sneezed.', 'I saw. Bless you, by the way.', "Don't. They'll write that down too."],
+  ['{b}, do you think they\'ll let us go?', 'Only if we look nervous.', "...I look nervous, don't I?", 'Very.'],
+  ['I came in one minute late on Tuesday.', 'Did they see?', 'They see everything, {b}.'],
+  ['I heard the Bobs love {f}.', "Everybody loves {f}. It's exhausting."],
+  ['What do you say if they ask what you do?', "I'm practicing. 'I... handle the tasks.'", 'Strong. Very strong.'],
+  ['Gary asked me to come in Saturday.', 'Did you say no?', "I said 'mmkay'. I panicked."],
+  ["I'm not nervous. Are you nervous?", 'Who said I was nervous?', "Okay. We're both nervous."],
+];
 
 // ============================================================================================
 // Boss, duck, break room toys
@@ -6111,7 +6358,7 @@ function update(dt) {
   if (T > BOSS.nextQuip) { if (!BOSS.visitor) bossSay(pick(activeCount() ? BOSS_BUSY : BOSS_IDLE), 3); BOSS.nextQuip = T + rand(35, 70); }
   const atDesk = workers.some(w => w.mode === 'job' && w.locKind === 'trouble' && w.arrived);
   if (atDesk && T > DUCK.next) { DUCK.bubble = pick(DUCK_LINES); DUCK.bubbleUntil = T + 3.5; DUCK.next = T + rand(7, 11); }
-  updCat();
+  updCat(); updCast(dt);
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
@@ -6126,7 +6373,8 @@ function render() {
   g.drawImage(bgCanvas, 0, 0);
   g.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * OX, DPR * OY);
   drawDynamicBg();
-  const items = PROPS.map(p => ({ y: p.y, f: p.draw })).concat(workers.map(w => ({ y: w.y, f: () => drawWorker(w) })));
+  const items = PROPS.map(p => ({ y: p.y, f: p.draw })).concat(workers.map(w => ({ y: w.y, f: () => drawWorker(w) })),
+    CAST.on ? castCrew().map(n => ({ y: n.y, f: () => drawCast(n) })) : []);
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.f();
   for (const id of STATION_ORDER) { const s = themeStations()[id]; if (s.fx && stationActive(s)) { const w = stationWorker(s); s.fx(s.x0, s.y0, w, T + w.seed); } }
@@ -6148,6 +6396,10 @@ function render() {
   else DUCK._lift = null;
   if (CAT.bubble && T < CAT.bubbleUntil) bubs.push(measureBubble(CAT, CAT.x, CAT.y - 26, CAT.bubble, { thought: true, maxW: 150, maxLines: 4, font: 'italic 12px system-ui', bg: '#fff7ed', border: '#f39c4a' }));
   else CAT._lift = null;
+  for (const n of castCrew()) {
+    if (CAST.on && n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + (castPose(n) === 'sit' ? -52 : -58), n.bubble, { maxW: 150, maxLines: 3 }));
+    else n._lift = null;
+  }
   layoutBubbles(bubs, workers.map(w => w.slipBox).filter(Boolean));
   for (const b of bubs) if (!b.hide) drawBubble(b);   // still in `order`, so the hovered/selected one is on top
   const tip = hovered || selected; if (tip) drawTooltip(tip);

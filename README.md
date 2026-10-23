@@ -144,7 +144,19 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   Forge, Portal Gate, Hero Hotline, Data Vault, Bio Lab, Danger Room, Comic Press, Cape
   Cleaners, Containment, Hero Supercomputer and Evidence Locker. A night skyline with a
   searchlight out the window and star bunting on the walls; the boss wears a domino mask.
-- **Dev Shop**: the same floor re-skinned as where dev work happens.
+- **Dev Shop**: the same floor re-skinned as where dev work happens. Three extra characters live
+  only here and never take work (the "Dev Shop cast" in `index.html`):
+  - **Gary**, the office manager, wanders the office with his coffee, talks about his Porsche and
+    complains that someone parked in his spot.
+  - **The two Bobs**, consultants with glasses, suspenders and clipboards, always walk side by side.
+    While anyone has a job, they shadow that worker and make mostly unflattering notes, following them
+    to the help desk and the mailroom too; with several jobs they move on to the next worker about
+    every 25 seconds. When the office is quiet, they grade whoever is on break: one minute late,
+    leaving before six. They pick one worker per page load to adore and keep telling Gary about,
+    which ends with them interviewing Gary until he slips away. Every 3 to 5 minutes they interview
+    a nervous worker at the break room dining table. Nobody else sits there until they're done, and
+    a new job ends the interview at once.
+  - Workers out of the Bobs' earshot swap nervous chats about them.
 
 Every theme also re-skins the three rooms that used to stay a plain office, with the same furniture
 footprints so nobody walks differently. Troubleshooting room / meeting room / mailroom:
