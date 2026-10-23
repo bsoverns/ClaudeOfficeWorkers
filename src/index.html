@@ -5027,7 +5027,7 @@ const BOB_LOOK = { skin: '#f0c8a4', shirt: '#f8fafc', glasses: true, suspenders:
 const CAST = {
   on: false, fav: null,
   gary: { L: { name: 'Gary', id: 901, skin: '#e9b993', hair: '#3a2716', hairStyle: 'widow', shirt: '#e3edff', vstripes: '#7aa7e0',
-    pants: '#2b2f3a', suspenders: '#8b1e2b', mobility: '' }, speed: 70 },
+    pants: '#2b2f3a', suspenders: '#8b1e2b', glasses: true, mobility: '' }, speed: 70 },
   bobA: { L: { ...BOB_LOOK, name: 'Bob', id: 902, hair: '#6b5440', hairStyle: 'short', tie: '#b91c1c', pants: '#4b5563' }, speed: 78 },
   bobB: { L: { ...BOB_LOOK, name: 'Bob', id: 903, hair: '#9a948c', hairStyle: 'balding', tie: '#1d4ed8', pants: '#374151' }, speed: 78 },
 };
@@ -6277,17 +6277,20 @@ function layoutBubbles(bubs, obstacles) {
     const box = (x, y) => ({ x, y, w: b.bw, h: b.bh + 6 });
     const hitAt = (x, y) => placed.concat(others).find(o => boxesHit(box(x, y), o, 3));
     const fits = (x, y) => y >= 4 && y + b.bh + 6 <= H - 4 && !hitAt(x, y);
-    let spot = null;
-    for (let y = b.by, n = 0; n < 24 && y >= 4; n++) {
-      const hit = hitAt(b.bx, y);
-      if (!hit) { spot = { x: b.bx, y }; break; }
-      y = hit.y - b.bh - 6 - 4;
-    }
     const xs = [];
     for (const o of placed.concat(others)) xs.push(clamp(o.x - b.bw - 4, 4, W - b.bw - 4), clamp(o.x + o.w + 4, 4, W - b.bw - 4));
     xs.sort((p, q) => Math.abs(p - b.bx) - Math.abs(q - b.bx));
     const tryRow = y => { for (const x of [b.bx, ...xs]) if (Math.abs(x - b.bx) < 200 && fits(x, y)) return { x, y }; return null; };
-    spot = spot || tryRow(b.by) || tryRow(b.by - b.bh - 10) || (b.owner.y != null ? tryRow(b.owner.y + 12) : null);
+    const underFeet = () => b.owner.y != null ? tryRow(b.owner.y + (b.opts.under ? 20 : 12)) : null;
+    // opts.under (the Dev Shop cast, who stand beside a worker's slip): below the feet (clear of the other
+    // Bob's) before lifting over the slip, which would need a long leader line
+    let spot = b.opts.under && hitAt(b.bx, b.by) ? underFeet() : null;
+    for (let y = b.by, n = 0; !spot && n < 24 && y >= 4; n++) {
+      const hit = hitAt(b.bx, y);
+      if (!hit) { spot = { x: b.bx, y }; break; }
+      y = hit.y - b.bh - 6 - 4;
+    }
+    spot = spot || tryRow(b.by) || tryRow(b.by - b.bh - 10) || underFeet();
     const o = b.owner;
     if (!spot) { b.hide = true; o._lift = null; continue; }
     const dx = spot.x - b.bx, dy = spot.y - b.by;
@@ -6412,7 +6415,7 @@ function render() {
   if (CAT.bubble && T < CAT.bubbleUntil) bubs.push(measureBubble(CAT, CAT.x, CAT.y - 26, CAT.bubble, { thought: true, maxW: 150, maxLines: 4, font: 'italic 12px system-ui', bg: '#fff7ed', border: '#f39c4a' }));
   else CAT._lift = null;
   for (const n of castCrew()) {
-    if (CAST.on && n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + (castPose(n) === 'sit' ? -52 : -58), n.bubble, { maxW: 150, maxLines: 3 }));
+    if (CAST.on && n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + (castPose(n) === 'sit' ? -52 : -58), n.bubble, { maxW: 150, maxLines: 3, under: true }));
     else n._lift = null;
   }
   layoutBubbles(bubs, workers.map(w => w.slipBox).filter(Boolean));
