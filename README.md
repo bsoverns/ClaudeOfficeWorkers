@@ -32,7 +32,7 @@ For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
 machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
 boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss for a work
-slip and head to a station: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse, pizzeria,
+slip and head to a station: carpentry, blacksmith, dairy barn, beekeeper, bakery, greenhouse, pizzeria,
 art studio, lumber yard, chem lab, server room or shipping. Everyone gets a turn before
 anyone goes twice, and a session keeps the same worker and station for every task it
 gives (as long as they're free). Each subagent gets its own random character, kept for the whole
@@ -84,8 +84,9 @@ What it does cost is a moment of CPU: each hook starts a short-lived Python proc
 
 Pick one on the clock-in screen; your pick becomes the default (change it under Settings).
 
-- **Classic Office**: carpentry, blacksmith, dairy barn, valet parking, bakery, greenhouse,
-  pizzeria, art studio, lumber yard, chem lab, server room, shipping. Stations are random.
+- **Classic Office**: carpentry, blacksmith, dairy barn, beekeeper (hives, bees and honey; the
+  keeper works a smoker in a veiled hat), bakery, greenhouse, pizzeria, art studio, lumber yard,
+  chem lab, server room, shipping. Stations are random.
 - **Sci-Fi Station**: the staff become astronauts, aliens (including xenomorph-style ones), robots, cyborgs and space wizards with laser
   swords; stations are Mission Control, Orbital Cloud, Wormhole, Hull Breach, Data Core,
   Launch Pad, Engine Room, Xeno Lab, Alien Nest, Simulation Deck, Robot Bay and Cargo Bay.
