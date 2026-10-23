@@ -327,7 +327,8 @@ The office remembers its jobs in `%LOCALAPPDATA%\ClaudeOffice\state.json`, so re
 Anyone can propose a change: fork the repo, push a branch, and open a pull request against
 `main`. `.github/CODEOWNERS` makes @bsoverns the owner of every file, so every PR requests
 their review, and the "Protect main" ruleset only lets a PR merge once the code owner has
-approved it. Nobody pushes to `main` directly.
+approved it. Nobody pushes to `main` directly. Claude Code may squash-merge a PR it opened
+only when the owner asked it to and CI has passed (see `AGENTS.md`).
 
 ## License
 

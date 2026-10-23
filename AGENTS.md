@@ -56,8 +56,11 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
   links (`Claude-Session:` lines) in commit messages: `.githooks/commit-msg` strips them and CI fails
   a PR that has one. Never commit `dist/`, `build/`, `.claude/` or settings backups.
 - Base branch `main` (read "master" as `main`). **Never push to `main`**, not even a one-line
-  fix: work on a feature branch named `YYYY-MM-DD_Short_Description` and open a PR; the owner
-  merges and is the only approver (`.github/CODEOWNERS` + the "Protect main" ruleset).
+  fix: work on a feature branch named `YYYY-MM-DD_Short_Description` and open a PR. The owner
+  is the only approver (`.github/CODEOWNERS` + the "Protect main" ruleset). An agent may
+  squash-merge its own PR (`gh pr merge <n> --squash`) when the owner asked for it, in chat or in
+  the ticket ("squash and merge"), and every CI check has passed. Then it pulls `main` and starts
+  the next piece of work on a new branch. Otherwise it leaves the PR for the owner to merge.
   `.githooks/pre-push` refuses pushes to `main` (and `commit-msg` strips session links); enable them in each clone with
   `git config core.hooksPath .githooks`. Never bypass it (`--no-verify`).
 
