@@ -61,6 +61,25 @@ chair to sit on it.
 Everything is drawn in code (no images or libraries) and runs on your own PC: prompts and
 tool activity go only to the local server on `127.0.0.1`, never anywhere else.
 
+## Cost and privacy
+
+> **The office costs no tokens and adds nothing to your Claude usage.** It only listens: it
+> never calls Claude or any other AI model, and Claude never sees anything it does.
+
+| | What happens | Why it's free |
+|---|---|---|
+| 🎣 **Hooks** | Claude Code runs a small script for each event (prompt sent, tool used, stop, subagent start and end). | They're `command` hooks, the kind that just runs a program. Claude Code's `prompt` and `agent` hook types ask the model and cost tokens; the office uses neither. |
+| 🤫 **Hook output** | The script prints nothing and always exits 0, even on errors. | For some events (like `UserPromptSubmit`) Claude Code adds a hook's output to Claude's context. No output means nothing is added. |
+| ⚡ **Speed** | Every hook is `async` with a 5-second limit, and the post gives up after half a second. | Claude never waits on the office. If it isn't running, the post fails instantly and nothing happens. |
+| 🏠 **Network** | The script posts the event to `http://127.0.0.1:<port>/api/hook`, your own PC. | No internet, no API keys, no telemetry, no update checks. The page loads no CDNs, fonts or images. |
+| 📄 **Your files** | The script reads the end of the session's transcript (on disk) to find its name, and a subagent's small `.meta.json` for its task description. | Plain local file reads. Prompts and messages are trimmed to 2,000 characters and tool results are dropped before the post. |
+
+What it does cost is a moment of CPU: each hook starts a short-lived Python process (or
+`ClaudeOffice.exe --hook`). The office remembers its jobs in a local state file (see
+[Settings](#settings-right-hand-panel)); nothing leaves your machine. To check for yourself, read
+[src/claude_hook.py](src/claude_hook.py) (about 120 lines) and the hook list in
+[src/install_hooks.py](src/install_hooks.py).
+
 ## Themes
 
 Pick one on the clock-in screen; your pick becomes the default (change it under Settings).
