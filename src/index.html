@@ -526,14 +526,15 @@ const CHAT = {
   stretch: ['Gotta stretch.', 'Oof, my back.'],
 };
 // Break room banter: now and then two people on break near each other trade a short exchange.
-// Lines alternate between them, first speaker first; {a} and {b} become their names.
+// Lines alternate between them, first speaker first; {a} and {b} become their names (so a's lines
+// name {b} and b's lines name {a}), {c} someone else in the office.
 const BANTER = [
   ['Who microwaved fish?!', "It's salmon. It's GOURMET.", "It's a crime, {b}.", 'The whole floor smells like a dock now.'],
   ['Did you see the game last night?', 'The ref was blind. BLIND.', 'We still covered the spread.', 'You bet on it, {a}?!', 'Fantasy points, {b}. Totally different.'],
   ['Market dipped 3% today.', 'Buy the dip, {a}!', "That's what you said last month.", 'Long term, baby. Long term.'],
   ['I put my whole bonus in a dog coin.', 'How is it doing?', "It's... a learning experience.", 'So it went to zero.', 'Zero is still a number, {b}.'],
   ['Do you max out your 401k?', 'I max out my snack budget.', 'So your retirement plan is...', 'Lottery tickets, {a}. Diversified.'],
-  ['Who hit reply-all on the company-wide email?', 'Kevin. Again.', 'Then 40 people replied "please remove me".', 'Then I replied-all to complain. Oops.'],
+  ['Who hit reply-all on the company-wide email?', '{c}. Again.', 'Then 40 people replied "please remove me".', 'Then I replied-all to complain. Oops.'],
   ['That meeting could have been an email.', 'That email could have been a sticky note.', 'That sticky note could have been nothing.', 'Beautiful, {a}. Just beautiful.'],
   ['Who set the thermostat to 64?', 'I run hot, okay?', "I'm wearing a coat INDOORS, {b}.", 'Layers, {a}. Layers.'],
   ['I named my sourdough starter Gerald.', 'Is Gerald okay?', 'Gerald escaped the jar last night.', 'Gerald lives his own life, {a}.'],
@@ -564,7 +565,7 @@ const BANTER = [
   ['The printer says PC LOAD LETTER.', 'What does that even MEAN?!', 'Field trip? Bring a bat.', 'I did not hear that, {a}.'],
   ['Looks like someone has a case of the Mondays!', 'Please never say that again.', 'Ooh, somebody has a case of the—', 'I will end you, {a}.'],
   ['How many bosses do you have, {b}?', 'Eight. Eight different bosses.', 'So eight people tell you about the cover sheet?', 'Every. Single. Time.'],
-  ['Are you wearing your minimum flair?', 'Fifteen pieces. The minimum.', 'Bob over there wears thirty-seven.', 'Some people just love flair, {a}.'],
+  ['Are you wearing your minimum flair?', 'Fifteen pieces. The minimum.', '{c} over there wears thirty-seven.', 'Some people just love flair, {a}.'],
   ['What would you do with a million dollars?', 'Nothing. Absolutely nothing.', "That's the dream, {b}.", 'Sit on a porch. Watch the clouds.'],
 ];
 const XMAS_BANTER = [
@@ -584,9 +585,9 @@ const PIRATE_BANTER = [
 ];
 const STONE_BANTER = [
   ['Who invented the wheel again?', 'Third time this week.', 'Did anyone check the old wheel?', 'It was square, {a}.'],
-  ['The T-Rex ate my standup notes.', 'Classic T-Rex.', 'Tiny arms, huge appetite.', "Can't even reach the keyboard, {b}."],
+  ['The T-Rex ate my standup notes.', 'Classic T-Rex.', 'Tiny arms, huge appetite.', "Can't even reach the keyboard, {a}."],
   ['Is fire still in beta?', 'It keeps going out.', 'Have you tried more sticks?', 'Filed a ticket, {a}.'],
-  ['Who carved a TODO into the wall?', 'It says "fix later".', 'That wall is 40,000 years old.', 'Later never comes, {b}.'],
+  ['Who carved a TODO into the wall?', 'It says "fix later".', 'That wall is 40,000 years old.', 'Later never comes, {a}.'],
   ['Lunch? Mammoth again?', 'It is always mammoth.', 'One mammoth feeds the team for a month.', 'Agile, {a}.'],
   ['Did the pterodactyl drop the deploy?', 'Only half of it.', 'Which half?', 'The important half, {a}.'],
 ];
@@ -4665,10 +4666,14 @@ function startTalk() {
   const list = rival && Math.random() < 0.85 ? HERO_BANTER : THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : THEME === 'pirate' ? BANTER.concat(PIRATE_BANTER, PIRATE_BANTER)
     : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER)
     : THEME === 'dev' && CAST.on && awayFromBobs(a) && awayFromBobs(b) ? BANTER.concat(DEV_NERVOUS, DEV_NERVOUS) : BANTER;
+  const c = pick(workers.filter(w => w !== a && w !== b)) || null;
+  // skip a recent script, one that needs a third person ({c}) when there's none, or one about {f} when {f} is talking
+  const misfit = l => recentTalks.includes(l) || (!c && l.some(s => s.includes('{c}')))
+    || ((CAST.fav === a || CAST.fav === b) && l.some(s => s.includes('{f}')));
   let lines = pick(list);
-  for (let k = 0; k < 6 && recentTalks.includes(lines); k++) lines = pick(list);
+  for (let k = 0; k < 12 && misfit(lines); k++) lines = pick(list);
   recentTalks.push(lines); if (recentTalks.length > 8) recentTalks.shift();
-  const talk = { a, b, lines, i: 0, next: T + 0.3, rival };
+  const talk = { a, b, c, lines, i: 0, next: T + 0.3, rival };
   if (rival) { talk.villain = isVillain(a) ? a : b; talk.hero = talk.villain === a ? b : a; }
   beginTalk(talk);
 }
@@ -4738,7 +4743,7 @@ function updTalks() {
     if (k.i >= k.lines.length) { endTalk(k); if (k.rival && THEME === 'hero' && Math.random() < 0.35) startDuel(k.hero, k.villain); continue; }
     let line = k.lines[k.i], who = k.i % 2 ? k.b : k.a;
     if (k.rival && /^[VH]:/.test(line)) { who = line[0] === 'V' ? k.villain : k.hero; line = line.slice(2); }
-    const text = line.replace('{a}', k.a.L.name).replace('{b}', k.b.L.name).replace('{f}', CAST.fav ? CAST.fav.L.name : 'the new hire');
+    const text = line.replace('{a}', k.a.L.name).replace('{b}', k.b.L.name).replace('{c}', k.c ? k.c.L.name : 'Someone').replace('{f}', CAST.fav ? CAST.fav.L.name : 'the new hire');
     say(who, text, Math.max(3.6, text.length * 0.055)); k.i++; k.next = T + 2.8 + text.length * 0.035;
   }
   // the couch reacts when something big happens on TV
