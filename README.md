@@ -140,7 +140,18 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   heroes and villains never fight villains. When either one is paged the duel ends on the spot
   and they head to work. Powers also get them around: the teleporter and the portal maker
   blink to the end of long trips, the speedster runs 2.5x with afterimages, fliers glide along
-  their path at 2x without a walking animation and the invisible one fades out while walking. Stations are the Gadget Lab, Suit
+  their path at 2x without a walking animation and the invisible one fades out while walking.
+  The quieter powers show off on break too, every minute or so per person and only while they're
+  idle (it stops the moment they're paged or walk off): Bulwark (strength) walks over and lifts the
+  couch or the dining table overhead when nobody is using it, then sets it back down exactly where it
+  was (its seats are off limits while it's up); Mend (regeneration)
+  pops an arm off, cartoon style, and grows it back; Paradox (time) makes people walking nearby
+  walk backwards along the way they came for a moment; Mindwave (telepathy) mind-links someone
+  nearby and reads their mind or plants a thought (the patio cat moment is still there); Rupture
+  (psychokinesis) sends a ripple across the floor that makes everyone nearby hop; and Facade
+  (shapeshifting) borrows a coworker's face for a few seconds (hover him: the tooltip still says
+  who he really is). To see one right away, run `heroTry(w, true)` in the browser console with a
+  worker from `workers`. Stations are the Gadget Lab, Suit
   Forge, Portal Gate, Hero Hotline, Data Vault, Bio Lab, Danger Room, Comic Press, Cape
   Cleaners, Containment, Hero Supercomputer and Evidence Locker. A night skyline with a
   searchlight out the window and star bunting on the walls; the boss wears a domino mask.
