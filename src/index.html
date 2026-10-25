@@ -237,6 +237,8 @@ function updParticles(dt) {
       p.x = lerp(p.x0, p.x1, k); p.y = lerp(p.y0, p.y1, k) - Math.sin(k * Math.PI) * 45; continue;
     }
     p.vy += p.ay * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.size = Math.max(0.2, p.size + p.grow * dt);
+    if (p.spin) p.rot = (p.rot || 0) + p.spin * dt;
+    if (p.floor != null && p.y > p.floor) { p.y = p.floor; p.vx = p.vy = p.ay = p.spin = 0; }   // landed (Hero HQ: Mend's arm)
   }
 }
 function drawParticles() {
@@ -248,6 +250,7 @@ function drawParticles() {
     else if (p.kind === 'text') TXT(p.text, p.x, p.y, p.font || 'bold 12px system-ui', p.color);
     else if (p.kind === 'ring') { g.beginPath(); g.arc(p.x, p.y, p.size, 0, TAU); g.strokeStyle = p.color; g.lineWidth = 1.5; g.stroke(); }
     else if (p.kind === 'paper') { g.save(); g.translate(p.x, p.y); g.rotate(p.life * 8); RR(-5, -6, 10, 12, 1, '#fffef5', '#999', 0.8); g.restore(); }
+    else if (p.kind === 'limb') { g.save(); g.translate(p.x, p.y); g.rotate(p.rot || 0); L(0, -6, 0, 5, p.color, 4.2); C(0, 6.5, 2.3, p.skin); g.restore(); }
   }
   g.globalAlpha = 1;
 }
@@ -3354,13 +3357,13 @@ function drawPerson(Lk, x, y, st) {
   // torso
   const ty = -37 + bo, sh = ty + 3;
   const outline = 'rgba(0,0,0,.28)';
-  const arm = (sx, ang, dir, color) => {
-    const hx = sx + dir * Math.sin(ang) * 14, hy2 = sh + Math.cos(ang) * 14;
-    L(sx, sh, hx, hy2, color, 4.2); C(hx, hy2, 2.3, Lk.skin); return [hx, hy2];
+  const arm = (sx, ang, dir, color, k = 1) => {           // k: arm length (st.laLen / st.raLen, Hero HQ's Mend regrowing one)
+    const hx = sx + dir * Math.sin(ang) * 14 * k, hy2 = sh + Math.cos(ang) * 14 * k;
+    L(sx, sh, hx, hy2, color, 4.2); if (k > 0.35) C(hx, hy2, 2.3, Lk.skin); return [hx, hy2];
   };
   let hand, lhand;
   if (side) {
-    lhand = arm(-1, st.la ?? 0.1, 1, shade(Lk.shirt, -0.16));
+    lhand = arm(-1, st.la ?? 0.1, 1, shade(Lk.shirt, -0.16), st.laLen);
     RR(-6, ty, 12, 22, 4, Lk.shirt, outline, 0.8);
   } else {
     RR(-8, ty, 16, 22, 5, Lk.shirt, outline, 0.8);
@@ -3535,8 +3538,8 @@ function drawPerson(Lk, x, y, st) {
 
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
   if (Lk.tie && !back) { if (side) L(3, ty + 2, 4, ty + 12, Lk.tie, 1.6); else poly([-1.6, ty + 3, 1.6, ty + 3, 2.2, ty + 14, 0, ty + 17, -2.2, ty + 14], Lk.tie); }
-  if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.metalArm || Lk.shirt);
-  else { lhand = arm(-7.5, st.la ?? 0.12, -1, Lk.shirt); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.metalArm || Lk.shirt); }
+  if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.metalArm || Lk.shirt, st.raLen);
+  else { lhand = arm(-7.5, st.la ?? 0.12, -1, Lk.shirt, st.laLen); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.metalArm || Lk.shirt, st.raLen); }
   if (Lk.chromeHands) { C(hand[0], hand[1], 2.5, Lk.chromeHands); C(lhand[0], lhand[1], 2.5, Lk.chromeHands); }
   if (Lk.shoulderPlate) {                  // street samurai: armored shoulder with a neon edge
     if (side) poly([-4, ty - 1, 5, ty, 5, ty + 7, -3, ty + 6], '#3a3a48'); else poly([3, ty - 1, 12, ty + 1, 12, ty + 7, 4, ty + 5], '#3a3a48');
@@ -4455,6 +4458,7 @@ function allowed(s, w) {
   if (s.noAid && m) return false;
   if (s.smoke && !w.L.smoker) return false;
   if (s.act === 'eat' && LUNCH_LOCK && LUNCH_LOCK !== w) return false;   // Dev Shop: the Bobs have the table
+  if (HEAVE && HEAVE.p.seats.includes(s.id)) return false;               // Hero HQ: Bulwark has that couch / table overhead
   return true;
 }
 function chooseIdle(w, instant) {
@@ -4571,7 +4575,7 @@ function arrive(w) {
   }
 }
 function stepMove(w, dt) {
-  if (THEME === 'hero' && heroTravel(w)) return;
+  if (THEME === 'hero') { if (w.rewind && heroRewind(w, dt)) return; if (heroTravel(w)) return; heroCrumb(w, null); }
   const boost = THEME === 'hero' ? (powerOf(w).power === 'speed' ? 2.5 : isFlier(w) ? 2 : 1) : 1;   // Hero HQ speedster, fliers
   let budget = w.speed * dt * boost;
   while (budget > 0 && w.path.length) {
@@ -4579,6 +4583,7 @@ function stepMove(w, dt) {
     if (d > 0.5) w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
     if (d <= budget) {
       w.x = tgt.x; w.y = tgt.y; budget -= d; w.path.shift();
+      if (THEME === 'hero' && !tgt.final) heroCrumb(w, tgt);
       if (tgt.final) { arrive(w); break; }
     } else { w.x += dx / d * budget; w.y += dy / d * budget; budget = 0; }
   }
@@ -4655,7 +4660,7 @@ function updateWorker(w, dt) {
 // Banter: pairs on break within earshot (and not asleep) talk through one BANTER script.
 const TALKS = [], recentTalks = [];
 let nextTalk = 10, tvWasBig = false;
-function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && !w.duel && w.spot && w.spot.act !== 'nap'; }
+function canTalk(w) { return w.mode === 'idle' && w.arrived && !w.path.length && !w.talk && !w.duel && !w.hx && w.spot && w.spot.act !== 'nap'; }
 function startTalk() {
   const free = workers.filter(canTalk), pairs = [];
   for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++)
@@ -4854,7 +4859,12 @@ function updHero(dt) {
     if (T >= d.next) { const w = d.turn ? d.b : d.a; d.turn = !d.turn; usePower(w, w === d.a ? d.b : d.a); d.next = T + rand(0.7, 1.1); }
   }
   for (const w of workers) {
-    if (THEME !== 'hero') { w.lift = 0; w.fade = 1; w.jx = 0; w.trail = null; w.blink = null; continue; }
+    if (THEME !== 'hero') { w.lift = 0; w.fade = 1; w.jx = 0; w.trail = null; w.blink = null;
+      if (w.hx) hxEnd(w, true); w.rewind = null; w.hopAt = 0; w.hxNext = null; continue; }
+    if (w.hx) hxTick(w, dt);                                             // everyday powers (below)
+    else if (T > (w.hxNext ??= T + rand(15, 60)) && heroTry(w) !== true && w.hxNext !== Infinity) w.hxNext = T + rand(4, 10);
+    if (w.rewind && (!w.path.length || T > w.rewind.until)) w.rewind = null;   // paged or teleported mid-rewind: drop the glow
+    if (w.rewind && Math.random() < dt * 14) puff(w.x + rand(-10, 10), w.y - rand(8, 50) - (w.lift || 0), { vy: -10, life: 0.6, size: 1.6, color: '#fcd34d' });
     const p = powerOf(w).power, moving = w.path.length > 0, flier = isFlier(w);
     let lift = 0;
     if (flier && (moving || w.duel)) lift = (w.duel ? 22 : 16) + Math.sin(T * 3 + w.seed) * 2.5;
@@ -4873,8 +4883,13 @@ function updHero(dt) {
   }
 }
 function drawHeroWorker(w) {
-  const st = poseFor(w), lift = w.lift || 0, x = w.x + (w.jx || 0), look = w.mimic ? lookOf(w.mimic) : lookOf(w);
-  const frozen = T < (w.frozenUntil || 0);
+  const st = poseFor(w), lift = (w.lift || 0) + heroHop(w), x = w.x + (w.jx || 0), look = w.mimic ? mimicLook(w.mimic) : lookOf(w);
+  const frozen = T < (w.frozenUntil || 0), hx = w.hx;
+  if (hx && hx.kind === 'strength' && HEAVE && HEAVE.t0 != null) {               // furniture overhead: arms up, straining at the top
+    const k = heaveK(); st.pose = 'stand'; st.facing = 'up'; st.item = null; st.busyHands = true; st.ra = st.la = lerp(0.3, Math.PI - 0.55, k); st.raLen = st.laLen = 1 + k * 0.8; if (k > 0.95) st.shake = true;
+  }
+  if (hx && hx.kind === 'regen') { const t = T - hx.t0; st.raLen = t < 1 ? 0.2 : Math.min(1, 0.2 + (t - 1) / 1.5 * 0.8); if (st.raLen < 1) st.item = null; }
+  if (w.rewind) { g.globalAlpha = 0.2 + Math.sin(T * 9) * 0.07; C(x, w.y - 28 - lift, 20, '#fcd34d'); g.globalAlpha = 1; }   // golden afterglow while rewinding
   if (w.duel) {                                                         // battle stance: on their feet, arms out when using the power
     if (st.pose === 'sit') st.pose = 'stand';
     st.item = null; st.busyHands = true;
@@ -4888,6 +4903,9 @@ function drawHeroWorker(w) {
   g.globalAlpha = w.fade ?? 1;
   drawPerson(look, x, w.y - lift, st);
   g.globalAlpha = 1;
+  if (hx && hx.kind === 'mimic' && (T - hx.t0) % 1.1 > 0.85) {           // a faint green shimmer gives the fake away
+    const top = w.y + headTop(w) - 3; g.globalAlpha = 0.55; RR(x - 13, top, 26, w.y - lift + 2 - top, 9, null, '#a3e635', 1.3); g.globalAlpha = 1;
+  }
   if (frozen) {                                                         // an ice block, or a golden time-stop glow
     const top = w.y + headTop(w) - 4, h = w.y - lift + 2 - top;
     g.globalAlpha = w.frozenKind === 'ice' ? 0.4 : 0.25;
@@ -4912,9 +4930,225 @@ function drawBeams() {
       g.beginPath(); g.arc(cx, cy, 24, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 2; g.stroke();
       for (let i = 0; i < 12; i++) { const an = i * Math.PI / 6; L(cx + Math.cos(an) * 20, cy + Math.sin(an) * 20, cx + Math.cos(an) * 24, cy + Math.sin(an) * 24, b.c, 1.4); }
       L(cx, cy, cx + Math.cos(-T * 4) * 18, cy + Math.sin(-T * 4) * 18, b.c, 1.6); }
+    else if (b.kind === 'mind') {                                       // a wavy, pulsing mind-link head to head
+      const p = b.who, o = b.o, x0 = p.x + (p.jx || 0), y0 = p.y + headTop(p) + 11, x1 = o.x + (o.jx || 0), y1 = o.y + headTop(o) + 11;
+      const d = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / d, ny = (x1 - x0) / d, fa = a * Math.min(1, (1 - k) * b.max * 4);
+      for (let pass = 0; pass < 2; pass++) {
+        g.beginPath();
+        for (let i = 0; i <= 24; i++) { const t = i / 24, off = Math.sin(t * 16 - T * 10) * Math.sin(t * Math.PI) * 5; g.lineTo(lerp(x0, x1, t) + nx * off, lerp(y0, y1, t) + ny * off); }
+        g.globalAlpha = fa * (pass ? 0.9 : 0.45); g.strokeStyle = pass ? '#fdf4ff' : b.c; g.lineWidth = pass ? 1.4 : 5 + Math.sin(T * 8) * 1.5; g.lineCap = 'round'; g.stroke();
+      }
+      g.globalAlpha = fa * (0.22 + Math.sin(T * 8) * 0.08); C(x1, y1, 13, b.c);
+      g.globalAlpha = fa * 0.7; g.beginPath(); g.arc(x1, y1, 12 + Math.sin(T * 8) * 1.5, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 1.5; g.stroke(); }
   }
   g.globalAlpha = 1;
 }
+// Rupture's floor ripple: rings racing out to ~120 px, drawn on the floor (under people)
+function drawRipples() {
+  for (const b of BEAMS) {
+    if (b.kind !== 'ripple') continue;
+    const k = b.life / b.max;
+    for (let i = 0; i < 3; i++) { const q = (1 - k) * 1.25 - i * 0.18; if (q <= 0 || q > 1) continue;
+      g.globalAlpha = (1 - q) * 0.9; g.beginPath(); g.ellipse(b.x0, b.y0, 8 + q * 112, 4 + q * 56, 0, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 3 - i * 0.7; g.stroke(); }
+  }
+  g.globalAlpha = 1;
+}
+
+// ---- Hero HQ everyday powers -----------------------------------------------------------------
+// Now and then someone on break shows off a power that never shows outside a duel (first try 15-60 s after
+// load, then every 40-90 s each; a try that finds them busy retries in 4-10 s):
+// Bulwark lifts the couch or the lunch table, Mend's arm pops off and grows back, Paradox rewinds
+// people walking by, Mindwave links minds, Rupture shakes the floor and Facade borrows a face.
+// w.hx is the effect in progress; it ends the moment that person is paged, walks off or duels, or
+// the theme changes. heroTry(w, true) starts one right away (for testing), keeping the safety checks.
+const HX_DUR = { regen: 2.9, time: 1.6, mind: 2.5, quake: 1.2, mimic: 7 };
+const HX_STRENGTH = ['Light work.', 'Leg day? Every day.', 'Anyone lose a coin under here?', 'Just checking for crumbs.'];
+const HX_REGEN = ['Not again...', 'Give it a second.', "It's fine. It grows back.", 'Ugh, my good arm.'];
+const HX_TIME = ['Let me rewind that.', 'Again, from the top.', 'Oops. Too far.', 'Déjà vu, anyone?'];
+const HX_READ = ["You're thinking about pizza, {name}.", 'Relax, {name}. Your secret is safe.', "{name}, it's Tuesday. Not Friday.", 'That song is stuck in your head again, {name}.', 'No, {name}. Nobody noticed.'];
+const HX_NUDGE = ['...I suddenly want a donut.', 'Why am I thinking about llamas?', 'I should call my mom.', 'Wait, what was I doing?', 'Must... water... the plants.'];
+const HX_WHOA = ['Whoa!', 'Earthquake?!', 'My coffee!', 'Not again, {name}!'];
+const HX_MIMIC = ["Who, me? I'm {name}.", 'Hi. {name} here. Totally.', "Yep, I'm {name}. Always have been."];
+const HX_COPIED = ["Hey! That's MY face!", 'Give that back!', 'Is my hair really like that?', '{name}, I can see you.'];
+const HEAVES = {                                // what Bulwark lifts: footprint (FURNITURE), its seats, room to keep clear
+  couch: { rect: FURNITURE[0], seats: ['tv1', 'tv2', 'tv3'], pad: [6, 6], draw: drawCouch },
+  table: { rect: FURNITURE[1], seats: ['eat1', 'eat2', 'eat3', 'eat4', 'eat5'], pad: [30, 20], draw: drawDiningTable, lunch: true },
+};
+let HEAVE = null;                                // { who, p, spot, rise, t0 (null while walking over) }
+const heaveK = () => { const t = T - HEAVE.t0, s = v => v * v * (3 - 2 * v); return t < 0.5 ? s(t / 0.5) : t < 3 ? 1 : Math.max(0, 1 - s((t - 3) / 0.5)); };
+function heaveFree(p, w) {
+  const [x, y, rw, rh] = p.rect, [px, py] = p.pad;
+  return p.seats.every(id => SPOT_BY_ID[id].by === null || SPOT_BY_ID[id].by === w.id) && !(p.lunch && LUNCH_LOCK)
+    && !workers.some(o => o !== w && o.x > x - px && o.x < x + rw + px && o.y > y - py && o.y < y + rh + py);
+}
+function heroHop(w) { const t = T - (w.hopAt || 0); return w.hopAt && t > 0 && t < 0.35 ? Math.sin(t / 0.35 * Math.PI) * 8 : 0; }
+function hxDropBeams(w) { for (let i = BEAMS.length - 1; i >= 0; i--) if (BEAMS[i].owner === w && BEAMS[i].hx) BEAMS.splice(i, 1); }
+const hxBusy = w => w.mode !== 'idle' || !w.arrived || w.path.length || w.duel || w.talk;
+const HX_START = {
+  strength(w) {
+    if (HEAVE || w.spot.area !== 'break') return 'not in the break room / already lifting';
+    if (!navGrid) buildNav();
+    for (const key of Object.keys(HEAVES).sort(() => Math.random() - 0.5)) {
+      const p = HEAVES[key], [x, y, rw, rh] = p.rect, sx = x + rw / 2, sy = y + rh + 14;
+      if (!heaveFree(p, w) || !navFreeAt(sx, sy) || !findPath(w.x, w.y, sx, sy)) continue;
+      const spot = { x: sx, y: sy, area: 'break', face: 'up', temp: true };
+      goTo(w, spot); HEAVE = { who: w, p, spot, rise: y + rh - sy + 66, t0: null };
+      w.hx = { kind: 'strength', t0: T };
+      return true;
+    }
+    return 'couch and table busy or out of reach';
+  },
+  regen(w) {
+    const dir = w.facing === 'left' ? -1 : 1, side = w.facing === 'left' || w.facing === 'right', Lk = lookOf(w), bo = w.spot.pose === 'sit' ? 6 : 0;
+    w.hx = { kind: 'regen', t0: T };
+    puff(w.x + dir * (side ? 1 : 7.5), w.y - 30 + bo, { kind: 'limb', vx: dir * rand(40, 70), vy: -rand(70, 100), ay: 300, floor: w.y + rand(2, 7), spin: dir * rand(7, 11), life: 2.6, color: Lk.shirt, skin: Lk.skin });
+    puff(w.x + dir * 14, w.y - 50 + bo, { kind: 'text', text: 'POP!', vy: -16, life: 0.9, color: '#fff', font: 'bold 11px Impact, system-ui' });
+    if (Math.random() < 0.5) say(w, pick(HX_REGEN), 2.5);
+    return true;
+  },
+  time(w) {
+    const walkers = workers.filter(o => o !== w && o.path.length >= 2 && !o.blink && !o.rewind && o.hist && o.hist.path === o.path && o.hist.n >= 3 && Math.hypot(o.x - w.x, o.y - w.y) < 260);
+    if (!walkers.length) return 'nobody walking nearby';
+    while (walkers.length > 3 || (walkers.length > 1 && Math.random() < 0.4)) walkers.splice(Math.floor(Math.random() * walkers.length), 1);   // 1-3 of them
+    w.hx = { kind: 'time', t0: T };
+    BEAMS.push({ kind: 'clock', who: w, c: powerOf(w).fx, life: HX_DUR.time, max: HX_DUR.time, owner: w, hx: true });
+    heroPow(w.x, w.y - 72, 'REWIND!', powerOf(w).fx);
+    for (const o of walkers) { o.rewind = { path: o.path, until: T + 1.5, by: w }; heroPow(o.x, o.y - 66 - (o.lift || 0), '◀◀', powerOf(w).fx); }
+    if (Math.random() < 0.4) say(w, pick(HX_TIME), 2.5);
+    return true;
+  },
+  telepathy(w) {
+    const near = workers.filter(o => o !== w && canTalk(o) && Math.hypot(o.x - w.x, o.y - w.y) < 220);
+    if (!near.length) return 'nobody idle nearby';
+    const o = pick(near);
+    w.hx = { kind: 'mind', t0: T, o, said: false };
+    BEAMS.push({ kind: 'mind', who: w, o, c: powerOf(w).fx, life: HX_DUR.mind, max: HX_DUR.mind, owner: w, hx: true });
+    return true;
+  },
+  psychokinesis(w) {
+    const c = powerOf(w).fx;
+    w.hx = { kind: 'quake', t0: T };
+    BEAMS.push({ kind: 'ripple', x0: w.x, y0: w.y, c, life: 1.1, max: 1.1, owner: w, hx: true });
+    for (let i = 0; i < 12; i++) { const an = rand(0, TAU), r = rand(10, 60); puff(w.x + Math.cos(an) * r, w.y + Math.sin(an) * r * 0.5, { vx: rand(-40, 40), vy: rand(-70, -25), ay: 160, life: 0.7, size: rand(1.5, 2.6), color: pick(['#a8a29e', '#78716c', 'rgba(214,211,209,.8)']) }); }
+    heroPow(w.x, w.y - 72, 'KRAK!', c);
+    for (const o of workers) {
+      if (o === w || o.path.length || o.duel || T < (o.frozenUntil || 0) || o.L.mobility === 'wheelchair' || (o.mode === 'idle' && o.spot && o.spot.act === 'nap')) continue;
+      const r = Math.hypot((o.x - w.x) / 120, (o.y - w.y) / 60);
+      if (r > 1) continue;
+      o.hopAt = T + r / 1.25 * 1.1;                                    // hop when the first ring reaches them
+      if (o.mode === 'idle' && !o.talk && !o.duel && Math.random() < 0.5) say(o, pick(HX_WHOA).replace('{name}', w.L.name), 2);
+    }
+    return true;
+  },
+  changeling(w) {
+    const others = workers.filter(o => o !== w), near = others.filter(o => Math.hypot(o.x - w.x, o.y - w.y) < 300);
+    const o = pick(near.length ? near : others);
+    if (!o) return 'nobody to copy';
+    w.hx = { kind: 'mimic', t0: T, o, react: Math.hypot(o.x - w.x, o.y - w.y) < 250 && canTalk(o) ? T + 1.6 : 0 };
+    w.mimic = o; w.mimicUntil = T + HX_DUR.mimic + 1;                 // hxTick ends it (and puts his own face back)
+    hxPoof(w);
+    say(w, pick(HX_MIMIC).replace('{name}', o.L.name), 3);
+    return true;
+  },
+};
+// Facade's borrowed look, without the owner's wheelchair / crutches / cane (cached like lookOf)
+function mimicLook(o) { const k = 'mimic:' + THEME + ':' + o.id; return _looks[k] || (_looks[k] = { ...lookOf(o), mobility: '' }); }
+function hxPoof(w) { for (let i = 0; i < 14; i++) puff(w.x, w.y - 30, { vx: rand(-45, 45), vy: rand(-45, 25), grow: 3, life: 0.7, size: 2.2, color: 'rgba(163,230,53,.75)' }); }
+// Start w's everyday power now if they're free for it (force skips the timer). true, or why not.
+function heroTry(w, force) {
+  if (!w) return 'no such worker';
+  if (THEME !== 'hero') return 'not Hero HQ';
+  if (!force && T < (w.hxNext || 0)) return 'not yet';
+  if (w.hx) return 'already busy with ' + w.hx.kind;
+  if (!canTalk(w)) return 'not idle';
+  const fn = HX_START[powerOf(w).power];
+  if (!fn) { w.hxNext = Infinity; return 'no everyday effect for ' + powerOf(w).power; }
+  const r = fn(w);
+  if (r === true) w.actUntil = Math.max(w.actUntil, T + (HX_DUR[w.hx.kind] || 0) + 2);   // don't wander off mid-effect
+  return r;
+}
+function hxTick(w, dt) {
+  const x = w.hx, t = T - x.t0;
+  if (x.kind === 'strength') {
+    if (!HEAVE || HEAVE.who !== w || w.mode !== 'idle' || w.duel || w.spot !== HEAVE.spot) return hxEnd(w, true);
+    if (HEAVE.t0 == null) {                                             // still walking over
+      if (!w.arrived || w.path.length) return;
+      if (!heaveFree(HEAVE.p, w)) { hxEnd(w, true); return chooseIdle(w); }   // someone got there first
+      HEAVE.t0 = T; w.facing = 'up'; w.actUntil = Math.max(w.actUntil, T + 5);
+      const [rx, ry, rw] = HEAVE.p.rect; heroPow(rx + rw / 2, ry - HEAVE.rise - 6, 'HUP!', powerOf(w).fx);
+      if (Math.random() < 0.4) say(w, pick(HX_STRENGTH), 2.5);
+      return;
+    }
+    if (w.path.length) return hxEnd(w, true);
+    if (T - HEAVE.t0 >= 3.5) {                                          // set down: a dust puff, then back to the break
+      const [rx, ry, rw, rh] = HEAVE.p.rect;
+      for (let i = 0; i < 16; i++) puff(rx + rand(0, rw), ry + rh - rand(0, 6), { vx: rand(-40, 40), vy: rand(-30, -5), grow: 2.5, life: 0.8, size: 2.2, color: 'rgba(200,195,190,.7)' });
+      hxEnd(w); chooseIdle(w);
+    }
+    return;
+  }
+  if (hxBusy(w)) return hxEnd(w, true);
+  if (t >= HX_DUR[x.kind]) return hxEnd(w);
+  if (x.kind === 'regen' && t > 1 && t < 2.6 && Math.random() < dt * 9)
+    puff(w.x + (w.facing === 'left' ? -10 : 10) + rand(-5, 5), w.y - rand(22, 40), { kind: 'text', text: '+', vy: -18, life: 0.8, color: powerOf(w).fx, font: 'bold 11px system-ui' });
+  else if (x.kind === 'mind') {
+    const o = x.o;
+    if (o.mode !== 'idle' || o.path.length || o.duel) return hxEnd(w, true);
+    if (!x.said && t > 0.7) {
+      x.said = true;
+      if (o.talk || o.duel || Math.random() < 0.5) say(w, pick(HX_READ).replace('{name}', o.L.name), 3);   // never talk over a banter
+      else { say(o, pick(HX_NUDGE), 3); puff(o.x, o.y + headTop(o) - 4, { kind: 'text', text: '?', vy: -12, life: 1, color: powerOf(w).fx, font: 'bold 13px system-ui' }); }
+    }
+  } else if (x.kind === 'mimic') {
+    if (x.react && T > x.react) { x.react = 0; if (canTalk(x.o)) say(x.o, pick(HX_COPIED).replace('{name}', w.L.name), 3); }
+    if (Math.random() < dt * 2) puff(w.x + rand(-10, 10), w.y - rand(10, 50), { vy: -12, life: 0.6, size: 1.4, color: '#a3e635', alpha: 0.6 });
+  }
+}
+// End w's everyday effect; quiet = cut short (or the theme changed): no flourish, nothing left behind
+// (a mimic still poofs in Hero HQ, since his face visibly changes back).
+function hxEnd(w, quiet) {
+  const x = w.hx; if (!x) return;
+  w.hx = null; w.hxNext = T + rand(40, 90);
+  if (x.kind === 'strength' && HEAVE && HEAVE.who === w) HEAVE = null;   // a cut-short lift snaps back into place
+  if (x.kind === 'time' && quiet) for (const o of workers) if (o.rewind && o.rewind.by === w) o.rewind = null;
+  if (x.kind === 'mimic') { w.mimic = null; if (THEME === 'hero') hxPoof(w); }
+  hxDropBeams(w);
+}
+// Paradox's rewind: a short trail of where each walker has been (the points of their current path
+// they passed, plus a sample every 0.05 s, ~2 s in all). Rewinding walks them back along it and puts
+// the passed waypoints back on their path, so the way forward again is the way they came.
+const CRUMBS = 48;
+function heroCrumb(w, wp) {
+  const h = w.hist || (w.hist = { pts: Array.from({ length: CRUMBS }, () => ({ x: 0, y: 0, wp: null })), head: 0, n: 0, path: null, next: 0 });
+  if (h.path !== w.path) { h.path = w.path; h.n = 0; h.next = 0; }    // a new trip: forget the old trail
+  if (!wp && T < h.next) return;
+  if (!wp) h.next = T + 0.05;
+  if (h.n === CRUMBS) { h.head = (h.head + 1) % CRUMBS; h.n--; }
+  const p = h.pts[(h.head + h.n) % CRUMBS]; p.x = w.x; p.y = w.y; p.wp = wp; h.n++;
+}
+function heroRewind(w, dt) {
+  const r = w.rewind, h = w.hist;
+  if (r.path !== w.path || !h || h.path !== w.path || T > r.until || h.n <= 1) { w.rewind = null; if (h) h.next = 0; return false; }
+  let budget = w.speed * dt;
+  while (budget > 0 && h.n > 1) {
+    const p = h.pts[(h.head + h.n - 1) % CRUMBS], dx = p.x - w.x, dy = p.y - w.y, d = Math.hypot(dx, dy);
+    if (d <= budget) { w.x = p.x; w.y = p.y; budget -= d; if (p.wp) w.path.unshift(p.wp); h.n--; }
+    else { w.x += dx / d * budget; w.y += dy / d * budget; budget = 0; }
+  }
+  w.walk -= dt * w.speed / 8.5;                                         // the walk cycle runs backwards too
+  return true;
+}
+function heaveShadow(p) {
+  const [x, y, rw, rh] = p.rect, k = heaveK();
+  g.globalAlpha = 0.2 - k * 0.06; E(x + rw / 2, y + rh * 0.6, rw / 2 * (1 - k * 0.2), rh * 0.35, '#000'); g.globalAlpha = 1;
+}
+// the lifted piece, drawn over everyone (called after the beams)
+function drawHeave() {
+  if (!HEAVE || HEAVE.t0 == null) return;
+  const k = heaveK(), hold = k > 0.95 ? 1 : 0;
+  g.save(); g.translate(Math.sin(T * 23) * 0.9 * hold, -HEAVE.rise * k + Math.sin(T * 17) * 0.7 * hold); HEAVE.p.draw(); g.restore();
+}
+function drawProp(p) { if (p.heave && HEAVE && HEAVE.t0 != null && HEAVE.p === HEAVES[p.heave]) heaveShadow(HEAVE.p); else p.draw(); }
 
 // idle side effects (smoke, steam, Zzz, pool strikes)
 function idleTick(w, dt, t) {
@@ -6385,7 +6619,7 @@ function update(dt) {
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
-  { y: 258, draw: drawCouch }, { y: 339, draw: drawDiningTable }, { y: PY + 88, draw: drawPoolTable },
+  { y: 258, draw: drawCouch, heave: 'couch' }, { y: 339, draw: drawDiningTable, heave: 'table' }, { y: PY + 88, draw: drawPoolTable },
   { y: 540, draw: drawPingPong }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
   { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
 ];
@@ -6396,7 +6630,8 @@ function render() {
   g.drawImage(bgCanvas, 0, 0);
   g.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * OX, DPR * OY);
   drawDynamicBg();
-  const items = PROPS.map(p => ({ y: p.y, f: p.draw })).concat(workers.map(w => ({ y: w.y, f: () => drawWorker(w) })),
+  if (THEME === 'hero') drawRipples();
+  const items = PROPS.map(p => ({ y: p.y, f: p.heave ? () => drawProp(p) : p.draw })).concat(workers.map(w => ({ y: w.y, f: () => drawWorker(w) })),
     CAST.on ? castCrew().map(n => ({ y: n.y, f: () => drawCast(n) })) : []);
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.f();
@@ -6404,7 +6639,7 @@ function render() {
   drawPingPongBall();
   drawPager();
   drawParticles();
-  if (THEME === 'hero') drawBeams();
+  if (THEME === 'hero') { drawBeams(); drawHeave(); }
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
   const bubs = [];
