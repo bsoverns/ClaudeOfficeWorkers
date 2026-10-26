@@ -1011,6 +1011,9 @@ function deskSit(x, y) {                    // chair, desk and keyboard for a se
 function monitor(x, y, bg) {                // screen area x+104..138, y+86..108
   R(x + 118, y + 110, 4, 8, '#333'); RR(x + 102, y + 84, 38, 26, 2, '#111'); R(x + 104, y + 86, 34, 22, bg);
 }
+function stapler(x, y) {                    // the red stapler, side view, ~14 x 6, resting with its bottom-left at x, y
+  R(x, y - 2, 14, 2, '#2b2b2b'); R(x, y - 5, 3, 3, '#444'); RR(x + 1, y - 6, 13, 4, 1.5, '#c8102e'); L(x + 3, y - 5.2, x + 12, y - 5.2, '#ff6b7f', 0.8); R(x + 12, y - 2.5, 2, 1, '#8a0b1f');
+}
 function gear(cx, cy, r, teeth, a, c) {
   g.save(); g.translate(cx, cy); g.rotate(a); g.fillStyle = c;
   for (let i = 0; i < teeth; i++) { g.rotate(TAU / teeth); g.fillRect(-r * 0.18, -r - 3, r * 0.36, 5); }
@@ -3125,7 +3128,7 @@ const AREA_SLOT = { ado: 'workbench', azure: 'forge', github: 'dairy', support: 
 // (skins for the troubleshooting room, meeting room and mailroom, assigned in the "Themed rooms" section).
 const THEMES = {
   classic: { name: 'Classic Office', stations: STA },
-  dev: { name: 'Dev Shop', stations: DEV, routed: true },
+  dev: { name: 'Dev Shop', stations: DEV, routed: true, decor: () => decorDev() },
   scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, swaps: { 5: 'cyborg', 9: 'cyborg', 12: 'robot', 15: 'robot' }, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
   horror: { name: 'Haunted House', stations: HORROR, routed: true,
     swaps: { 2: 'demon', 7: 'zombie', 8: 'slime', 10: 'pumpkin', 11: 'demon', 12: 'slime', 14: 'pumpkin', 15: 'zombie' }, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
@@ -4091,6 +4094,10 @@ function dress(L0, kind, id) {
 function windowScene(sky, frame, draw) {
   g.save(); g.beginPath(); g.rect(670, 30, 116, 54); g.clip(); R(670, 30, 116, 54, sky); draw(); g.restore();
   L(728, 30, 728, 84, frame, 3); L(670, 57, 786, 57, frame, 3);
+}
+const STAPLER_SPOT = pick(['table', 'workbench', 'dairy', 'bakery']);   // Dev Shop: where the red stapler is this page load
+function decorDev() {                       // the stapler on a sit-down desk, right of the monitor stand (the table spot draws in drawDiningTable)
+  if (STAPLER_SPOT !== 'table') stapler(DEV[STAPLER_SPOT].x0 + 126, DEV[STAPLER_SPOT].y0 + 118);
 }
 function decorScifi() {
   windowScene('#0b1030', '#cfd8e3', () => {
@@ -5585,6 +5592,7 @@ function drawDiningTable() {
   RR(70, 316, 132, 26, 6, '#a87b4f'); R(74, 342, 124, 6, '#8a6340'); R(80, 346, 5, 18, '#6b4b30'); R(187, 346, 5, 18, '#6b4b30');
   RR(98, 320, 34, 18, 2, '#f5f0e6'); C(115, 329, 7, '#f3c26b'); C(112, 327, 1.2, '#c0392b'); C(118, 331, 1.2, '#c0392b'); C(116, 326, 1, '#2e7d32');
   RR(150, 322, 7, 11, 2, '#e74c3c'); RR(162, 324, 7, 11, 2, '#3498db'); RR(176, 326, 14, 6, 1, '#fff');
+  if (THEME === 'dev' && STAPLER_SPOT === 'table') stapler(78, 334);   // the red stapler on the free left end
 }
 const POOL = { balls: [] };
 (function () {

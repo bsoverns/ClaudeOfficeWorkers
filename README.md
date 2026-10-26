@@ -170,6 +170,9 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
     a new job ends the interview at once.
   - Workers out of the Bobs' earshot swap nervous chats about them.
 
+  A red stapler sits somewhere in the office: on the Azure DevOps, GitHub or SQL Server desk, or on
+  the lunch table. It picks a new spot each time the page loads.
+
 Every theme also re-skins the three rooms that used to stay a plain office, with the same furniture
 footprints so nobody walks differently. Troubleshooting room / meeting room / mailroom:
 
