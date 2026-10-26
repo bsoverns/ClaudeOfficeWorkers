@@ -6744,13 +6744,18 @@ function setOnline(on) {
 }
 async function poll() {
   for (;;) {
+    let s;
     try {
       const r = await fetch('/api/state?since=' + rev, { cache: 'no-store' });
       if (!r.ok) throw new Error(r.status);
-      const s = await r.json(); setOnline(true); apply(s);
-    } catch (e) { setOnline(false); rev = 0; await new Promise(r => setTimeout(r, 2000)); }
+      s = await r.json(); setOnline(true);
+    } catch (e) { setOnline(false); rev = 0; await new Promise(r => setTimeout(r, 2000)); continue; }
+    try { apply(s); } catch (e) { console.error('apply failed', e); }   // a page bug, not a closed server
   }
 }
+// Tell the server this window closed, so the app-mode exe can quit (it no longer quits on silence alone:
+// minimized windows, sleeping tabs and PC sleep pause the polling too).
+addEventListener('pagehide', e => { if (!e.persisted) try { navigator.sendBeacon('/api/bye'); } catch (err) {} });
 async function cmd(body) {
   try {
     const r = await fetch('/api/cmd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

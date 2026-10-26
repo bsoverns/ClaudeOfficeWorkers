@@ -1,7 +1,7 @@
 r"""ClaudeOffice.exe: the whole Claude Office in one program (built by scripts/build.bat).
 
   ClaudeOffice.exe                     open the office in its own window (starts the server;
-                                       it shuts down a minute after the window is closed)
+                                       it shuts down shortly after the window is closed)
   ClaudeOffice.exe --server [port]     run the server only, no window, until stopped
   ClaudeOffice.exe --install [--project C:\repo] [--uninstall]
                                        connect Claude Code (same as src/install_hooks.py)
@@ -23,7 +23,11 @@ import time
 import webbrowser
 
 FROZEN = getattr(sys, "frozen", False)
-IDLE_EXIT_SECONDS = 60     # app mode: quit when no window has been open this long
+BYE_EXIT_SECONDS = 15      # app mode: quit this long after a window said goodbye, if no page polled since
+                           # (a reload or a second window keeps it alive; silence alone never quits it,
+                           # since minimized windows, sleeping tabs and PC sleep pause the polling too)
+NO_WINDOW_EXIT_SECONDS = 120   # app mode: quit if no page has polled at all this long after start
+                               # (the browser failed to open the window)
 
 
 def attach_console() -> bool:
@@ -113,7 +117,8 @@ def run_app() -> None:
     started = time.time()
     while True:
         time.sleep(5)
-        if time.time() - started > IDLE_EXIT_SECONDS and server.VIEWERS.idle_for() > IDLE_EXIT_SECONDS:
+        never_loaded = not server.VIEWERS.ever_seen() and time.time() - started > NO_WINDOW_EXIT_SECONDS
+        if never_loaded or server.VIEWERS.gone_for() > BYE_EXIT_SECONDS:
             httpd.shutdown()
             return
 

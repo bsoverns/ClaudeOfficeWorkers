@@ -301,7 +301,9 @@ The exe is everything in one:
 
 ```
 ClaudeOffice.exe                      open the office in its own window (Edge/Chrome app mode);
-                                      quits ~1 minute after the window is closed
+                                      quits shortly after the window is closed (minimizing,
+                                      PC sleep or a sleeping tab don't shut it down; if the browser
+                                      crashes instead, it keeps running and the next launch reuses it)
 ClaudeOffice.exe --server [port]      server only, no window
 ClaudeOffice.exe --install [--project C:\repo] [--uninstall]
 ClaudeOffice.exe --hook               what Claude Code runs for each event
@@ -364,7 +366,7 @@ only when the owner asked it to and CI has passed (see `AGENTS.md`).
 README.md, LICENSE       this page and the MIT license
 AGENTS.md, CLAUDE.md     rules for agents working in the repo (CLAUDE.md just imports AGENTS.md)
 src/                     the program
-  server.py              office state, worker rotation, HTTP API (/api/state long-poll, /api/hook, /api/cmd)
+  server.py              office state, worker rotation, HTTP API (/api/state long-poll, /api/hook, /api/cmd, /api/bye)
   index.html             the animated office, themes and side panel (canvas, no libraries)
   claude_hook.py         Claude Code hook: forwards trimmed events to the server; silent, always exits 0
   install_hooks.py       adds/removes the hooks in ~/.claude/settings.json or a project's settings.local.json
