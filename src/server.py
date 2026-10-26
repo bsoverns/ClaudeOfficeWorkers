@@ -6,7 +6,7 @@ Open:  http://127.0.0.1:8777/
 
 Claude Code reports in through claude_hook.py (wired up by install_hooks.py), which
 POSTs each hook payload to /api/hook. office.py sends manual commands to /api/cmd.
-The page long-polls /api/state and does all the animation itself.
+The page long-polls /api/state and does all the animation itself; on closing it posts /api/bye.
 
 Standard library only. Binds to 127.0.0.1, so nothing outside this PC can reach it.
 """
@@ -728,27 +728,42 @@ OFFICE = Office()
 
 
 class Viewers:
-    """Counts open pages (each keeps a long-poll running) so the standalone app can quit
-    once its window has been closed for a while."""
+    """Counts open pages (each keeps a long-poll running) and their goodbyes (/api/bye on
+    pagehide) so the standalone app can quit once its window has really been closed."""
 
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.active = 0
         self.last_seen = time.time()
+        self.bye_at = 0.0       # when a page last said goodbye; 0 = no goodbye since the last poll
+        self.seen = False       # has any page ever polled?
 
     def enter(self) -> None:
         with self.lock:
             self.active += 1
             self.last_seen = time.time()
+            self.bye_at = 0.0   # a page is still (or again) open: cancel any goodbye
+            self.seen = True
+
+    def ever_seen(self) -> bool:
+        with self.lock:
+            return self.seen
+
+    def bye(self) -> None:
+        with self.lock:
+            self.bye_at = time.time()
+
+    def gone_for(self) -> float:
+        """Seconds since a page said goodbye with no page polling since; 0 otherwise."""
+        with self.lock:
+            if not self.bye_at or self.active:
+                return 0.0
+            return time.time() - max(self.bye_at, self.last_seen)
 
     def leave(self) -> None:
         with self.lock:
             self.active -= 1
             self.last_seen = time.time()
-
-    def idle_for(self) -> float:
-        with self.lock:
-            return 0.0 if self.active else time.time() - self.last_seen
 
 
 VIEWERS = Viewers()
@@ -769,7 +784,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         try:
             self.wfile.write(data)
-        except (BrokenPipeError, ConnectionResetError):
+        except ConnectionError:     # the page went away (closed window, aborted long-poll)
             pass
 
     def do_GET(self) -> None:
@@ -794,6 +809,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"ok": False, "error": "not found"})
 
     def do_POST(self) -> None:
+        if urlparse(self.path).path == "/api/bye":
+            # The page's sendBeacon on pagehide: no body, no JSON. Any site could post this, but
+            # all it does is let an app-mode server quit when no page is polling it, and a real
+            # page's next poll cancels it, so that's harmless.
+            VIEWERS.bye()
+            self._send(200, {"ok": True})
+            return
         # JSON only: a cross-site form post can't send this type without a CORS preflight,
         # which we never answer, so other web pages can't drive the office.
         if not self.headers.get("Content-Type", "").startswith("application/json"):
