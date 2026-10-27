@@ -53,8 +53,13 @@ or your first prompt until the session has a name.
 On break, people chat with whoever is nearby: short back-and-forth exchanges about fish in the
 microwave, last night's game, the stock market, reply-all disasters, TPS reports and the
 cover-sheet memo, being asked to come in on Saturday (and Sunday), and more. The break room TV
-flips channels every 40 seconds (the match, a paternity-test talk show, a survey game show and
-a soap opera), and the couch reacts to the big moments. Everyone walks around the furniture:
+flips channels every 40 seconds through 20 shows (the match, a paternity-test talk show, a survey
+game show, a soap opera, then parodies: a cloud-bill pricing game, small-claims court, a
+screaming chef, a briefcase game full of stack traces, a nature documentary, the shopping
+channel, an infomercial, a flowchart-painting show, a true-crime series about the stapler, a
+legacy-code appraisal, a tabs-vs-spaces cage match, the news, the weather, a renovation show,
+slow-motion golf and a dating show for servers), and the couch comments on each and reacts to
+the big moments. Everyone walks around the furniture:
 paths go around tables, counters and station equipment, and only step onto a couch, beanbag or
 chair to sit on it.
 

@@ -675,22 +675,55 @@ const DUEL_START = { hero: ['Not on my watch!', 'Stand down!', 'Have at you!', '
 const DUEL_END = ['Truce. Break is almost over.', 'Same time tomorrow?', "We'll call it a draw.", 'Nobody tell HR.'];
 const DUEL_CUT = ['Saved by the page!', 'This isn’t over!', 'Truce. For now.', 'Duty calls. Rain check!'];
 // The break room TV flips channels every 40 seconds; TV_CHAT is what the couch says about each.
-const TV_SHOWS = ['sports', 'talk', 'game', 'soap'];
-const TV_NAMES = { sports: 'the match', talk: 'a trashy talk show', game: 'a game show', soap: 'a soap opera' };
+const TV_SHOWS = ['sports', 'talk', 'game', 'soap', 'price', 'judge', 'chef', 'deploy', 'nature', 'shop', 'promo', 'paint',
+  'crime', 'roadshow', 'wrestle', 'news', 'weather', 'reno', 'golf', 'bachelor'];
+const TV_NAMES = { sports: 'the match', talk: 'a trashy talk show', game: 'a game show', soap: 'a soap opera',
+  price: 'a pricing game show', judge: 'a courtroom show', chef: 'a cooking show', deploy: 'a briefcase game show',
+  nature: 'a nature documentary', shop: 'the shopping channel', promo: 'an infomercial', paint: 'a painting show',
+  crime: 'a true crime series', roadshow: 'an antiques show', wrestle: 'the wrestling', news: 'the news',
+  weather: 'the weather', reno: 'a home renovation show', golf: 'the golf', bachelor: 'a dating show' };
 const TV_CHAT = {
   sports: ['GOOOAL!', 'Ref! Come on!', 'Who has the remote?', 'Best match all season.'],
   talk: ['He is SO not the father.', 'Look at him dance!', 'Who even ARE these people?', 'Third DNA test this season...', 'Security! SECURITY!'],
   game: ['Survey says...!', 'Name something in a break room... COFFEE!', 'Good answer! Good answer!', 'How was THAT not on the board?', "They're gonna steal it!"],
   soap: ['She has an evil twin?!', "He's back from the dead. Again.", 'Not the amnesia plot...', "Don't open that letter!", "I can't watch. Okay, I can."],
+  price: ['Bid one dollar!', 'Nobody is ever close.', 'Is egress extra?!', 'Who left a VM running all weekend?', 'Higher! HIGHER!'],
+  judge: ['That yogurt had a NAME on it.', 'She merged WHAT to main?', 'Approving your own PR? Bold.', 'Judgy does NOT play.', 'Guilty. So guilty.'],
+  chef: ['This burrito is FROZEN in the MIDDLE!', 'Two minutes is not enough.', "He's gonna throw it.", 'Who microwaved fish?!', "I'd still eat that."],
+  deploy: ['Open case four! No, wait...', 'Every case is a stack trace.', 'Take the deal! Roll back!', 'NullPointer again?!', 'The banker is calling...'],
+  nature: ['Shh, the narrator is talking.', "Don't touch it, little guy...", 'Nature is brutal.', 'The herd just WATCHES?', 'Somebody revoke his access!'],
+  shop: ['Only 3 left! Call now!', 'Is that number localhost?', 'I need that chair.', 'Lumbar support. LUMBAR.', 'Operators are standing by!'],
+  promo: ["Tired of semicolons? Who isn't.", "But wait, there's more!", "That guy can't compile anything.", 'Only three easy payments!', 'Does it work on JavaScript?'],
+  paint: ['There are no mistakes, only happy little bugs.', 'His voice is so calming.', "Let's give that box a friend.", 'Is that a flowchart?', 'A happy little flowchart.'],
+  crime: ['The copier knows something.', 'It was always the copier.', 'Who takes a stapler?!', 'This music is so ominous.', 'Check the lunch table!'],
+  roadshow: ['Is that... VB6?', "Grandpa's payroll system.", 'It still runs on XP!', 'Nobody touch it.', 'Value: one full rewrite.'],
+  wrestle: ["OH MY GOD, HE'S USING A FOLDING CHAIR!", 'Tabs forever!', 'Spaces! Spaces!', 'Four spaces or bust.', 'Ref, check the indentation!'],
+  news: ['No suspects? Really?', 'Who drank the last cup?', 'More at 11? I need it NOW.', 'This is a crisis.', 'Check the security tapes!'],
+  weather: ['90% chance of merge conflicts.', 'Clearing by Friday deploy? Sure.', 'Bring an umbrella. And a rebase.', 'Storm front over main.', 'Never deploy on a Friday.'],
+  reno: ["It's load-bearing?!", 'Open concept database!', "Don't swing that hammer...", 'Who wrote that procedure?', 'Demo day!'],
+  golf: ['*whisper* He is lining it up.', 'Still lining it up...', 'Is this paused?', 'Riveting.', 'Wake me when he putts.'],
+  bachelor: ['Five nines? Swoon.', 'That one is NOT here for the right reasons.', 'That one rebooted twice!', 'Give the rose to the mainframe!', 'Pack your cables.'],
 };
 const TV_REACT = { sports: ['GOOOAL!', 'YES!!', 'What a strike!'], talk: ['OHHHH!', 'I KNEW IT!', 'Called it!'],
-  game: ['Ouch!', 'Nooo!', 'Big red X!'], soap: ['*gasp*', 'NO WAY!', 'I knew it!'] };
+  game: ['Ouch!', 'Nooo!', 'Big red X!'], soap: ['*gasp*', 'NO WAY!', 'I knew it!'],
+  price: ['HOW MUCH?!', 'Egress fees!', 'Nobody was close!'], judge: ['ORDER!', 'GUILTY!', 'Ooooh, burn!'],
+  chef: ['FROZEN!', 'He is SO mad.', 'Get out of the break room!'], deploy: ['NO DEPLOY!', 'Stack trace!', 'Roll it back!'],
+  nature: ['NOOO!', 'He dropped the table!', 'Nature is metal.'], shop: ['CALL NOW!', 'I want it!', 'Last one!'],
+  promo: ['INTRODUCING!', 'But wait!', 'Take my money!'], paint: ['Happy little bug!', 'So soothing...', 'Aww.'],
+  crime: ['IT WAS HIM!', '*gasp*', 'Plot twist!'], roadshow: ['VB6?!', 'He went pale!', 'Burn it!'],
+  wrestle: ['OH MY GOD!', 'FOLDING CHAIR!', 'Tabs is DOWN!'], news: ['NOT THE COFFEE!', 'Who did this?!', 'Breaking!'],
+  weather: ['STORM WARNING!', 'Rebase! REBASE!', 'Take cover!'], reno: ['THE CEILING!', 'Load-bearing!', 'Called it!'],
+  golf: ['*polite clapping*', 'It moved!', 'Ooooh.'], bachelor: ['The ROSE!', 'Five nines!', 'Awww!'] };
 function tvShow() { return TV_SHOWS[Math.floor(T / 40) % TV_SHOWS.length]; }
-// the dramatic moment on the current show (the couch throws its hands up)
-function tvBig() {
-  const p = T % 40, show = tvShow();
-  return show === 'sports' ? (T % 25) < 1.6 : show === 'talk' ? p > 30 : show === 'game' ? (p % 10) > 8.6 : (p % 13) > 11.2;
-}
+// the dramatic moment on each show (the couch throws its hands up); p = seconds into the 40-second channel
+const TV_BIG = {
+  sports: p => (T % 25) < 1.6, talk: p => p > 30, game: p => (p % 10) > 8.6, soap: p => (p % 13) > 11.2,
+  price: p => p > 32 && p < 38, judge: p => (p % 20) > 17, chef: p => (p % 20) > 16, deploy: p => (p % 10) > 7.5,
+  nature: p => p > 34, shop: p => (p % 20) > 16.5, promo: p => p > 20 && p < 25, paint: p => (p % 20) > 17,
+  crime: p => p > 30 && p < 35, roadshow: p => p > 28 && p < 34, wrestle: p => (p % 20) > 16, news: p => (p % 20) > 17,
+  weather: p => p > 25 && p < 30, reno: p => p > 33, golf: p => p > 35, bachelor: p => (p % 20) > 16.5,
+};
+function tvBig() { return TV_BIG[tvShow()](T % 40); }
 const GO_LINES = ['On it!', 'Coming, boss!', 'Ooh, a task!', 'Duty calls!', 'My turn!', 'Back to work!'];
 const BRIEF_LINES = ["Here's your slip!", 'Make it shine.', "You've got this!", 'Fresh one, hot off the press.', "Go get 'em!"];
 const DONE_LINES = ['Done! ✓', 'Nailed it!', 'Clocking out!', 'Break time!', 'Easy.'];
@@ -6388,11 +6421,17 @@ function drawStatic() {
   if (wash) { g.globalAlpha = wash[1]; R(0, 0, W, H, wash[0]); g.globalAlpha = 1; }
 }
 
-// The TV screen (drawn in a 288..412 x 35..93 box, scaled 1.25x onto 443..598 x 42..114.5): the match, a paternity-test talk show, a survey game show, a soap.
+// The TV screen (drawn in a 288..412 x 35..93 box, scaled 1.25x onto 443..598 x 42..114.5): the match, a paternity-test talk show,
+// a survey game show, a soap, then the parody channels listed in TV_SHOWS.
 function drawTV() {
   const show = tvShow(), p = T % 40, big = tvBig();
   const guy = (x, y, c, up) => { RR(x - 4, y - 12, 8, 12, 2, c); C(x, y - 15, 3.4, '#e0ac69');
     if (up) { L(x - 3, y - 11, x - 6, y - 19, c, 1.6); L(x + 3, y - 11, x + 6, y - 19, c, 1.6); } };
+  // text that shrinks to stay inside the screen
+  const FT = (s, x, y, px, c, align = 'center', st = 'bold') => { g.font = st + ' ' + px + 'px system-ui';
+    const room = align === 'left' ? 410 - x : align === 'right' ? x - 290 : 2 * Math.min(x - 289, 411 - x), w = g.measureText(s).width;
+    TXT(s, x, y, st + ' ' + (w > room ? px * room / w : px) + 'px system-ui', c, align); };
+  const flash = Math.floor(T * 6) % 2;
   g.save(); g.beginPath(); g.rect(443, 42, 155, 72.5); g.clip();
   g.translate(443, 42); g.scale(1.25, 1.25); g.translate(-288, -35);
   if (show === 'sports') {
@@ -6423,6 +6462,163 @@ function drawTV() {
     RR(292, 80, 20, 13, 2, '#b91c1c'); RR(388, 80, 20, 13, 2, '#b91c1c'); guy(302, 80, '#f59e0b', false); guy(398, 80, '#10b981', false);
     TXT('SURVEY SAYS!', 350, 88, 'bold 6px system-ui', '#fde68a');
     if (big) { L(336, 50, 364, 76, '#ef4444', 6); L(364, 50, 336, 76, '#ef4444', 6); }
+  } else if (show === 'price') {                            // guess the Azure bill; nobody is ever close
+    R(288, 35, 124, 58, '#0e7490'); for (let i = 0; i < 8; i++) C(296 + i * 15, 37, 1.4, Math.floor(T * 5 + i) % 2 ? '#fde047' : '#f472b6');
+    FT('THE PRICE IS WRONG', 350, 44, 8, '#fde047');
+    const bids = ['$12', '$300', '$1'];
+    for (let i = 0; i < 3; i++) { const x = 312 + i * 38; guy(x, 80, ['#f97316', '#a855f7', '#22c55e'][i], big);
+      RR(x - 13, 80, 26, 12, 2, '#fbbf24'); FT(bids[i], x, 86, 6, big ? '#b91c1c' : '#111'); }
+    if (big) { RR(316, 49, 68, 11, 2, '#111', '#fde047', 1); FT('AZURE: $48,213', 350, 54.5, 7, flash ? '#fde047' : '#fff'); }
+    else FT('GUESS THE AZURE BILL', 350, 54.5, 6, '#fff');
+  } else if (show === 'judge') {                            // small claims; the gavel comes down twice a channel
+    const cases = ['HE ATE MY LABELED YOGURT', 'SHE MERGED TO MAIN WITHOUT REVIEW'];
+    R(288, 35, 124, 58, '#7c4a1e'); for (let i = 0; i < 6; i++) R(298 + i * 21, 35, 1, 40, 'rgba(0,0,0,.25)');
+    RR(340, 50, 20, 10, 2, '#111'); C(350, 46, 4, '#e0ac69'); E(350, 43, 5, 2.4, '#9ca3af');   // the judge
+    if (big) { L(358, 54, 370, 55, '#3f2a14', 1.6); RR(368, 51, 5, 9, 1, '#3f2a14'); FT('BANG!', 390, 46, 7, '#fde047'); }
+    else { L(358, 54, 366, 46, '#3f2a14', 1.6); RR(362, 41, 9, 5, 1, '#3f2a14'); }
+    R(318, 56, 64, 14, '#5b3410'); FT('JUDGE JUDGY', 350, 63, 6.5, '#fde68a');
+    for (const [x, c] of [[302, '#2563eb'], [398, '#db2777']]) { guy(x, 78, c, big && x === 398); R(x - 8, 72, 16, 10, '#5b3410'); }
+    R(288, 82, 124, 11, '#111'); FT(cases[Math.floor(T / 40 / TV_SHOWS.length) % 2], 350, 87.5, 6, '#fde68a');
+  } else if (show === 'chef') {                             // the screaming chef; the burrito is frozen in the middle
+    R(288, 35, 124, 58, '#475569'); for (let i = 0; i < 7; i++) R(288 + i * 18, 35, 17, 17, i % 2 ? '#64748b' : '#94a3b8');
+    R(288, 74, 124, 19, '#cbd5e1');                         // steel counter
+    RR(372, 56, 30, 18, 2, '#e5e7eb', '#334155', 0.8); R(375, 59, 18, 12, '#111'); C(397, 62, 1.2, '#16a34a');   // microwave
+    guy(320, 74, '#fff', big); RR(316, 51, 8, 6, 2, '#fff');
+    if (big) { C(320, 59, 3.4, '#ef4444'); E(343, 71, 5, 3, '#d6a756'); E(357, 71, 5, 3, '#d6a756'); C(350, 71, 2.4, '#93c5fd'); }
+    else E(350, 71, 9, 3, '#d6a756');
+    FT(big ? "It's FROZEN in the MIDDLE!" : "HELL'S BREAK ROOM", 350, 84, 7.5, '#dc2626');
+  } else if (show === 'deploy') {                           // every briefcase holds a different stack trace
+    const errs = ['NullPointerException', 'Segmentation fault', 'StackOverflowError', 'KeyError: prod', 'undefined is not a function', 'Out of memory'];
+    const open = Math.floor(T / 10) % 6;
+    R(288, 35, 124, 58, '#111827'); FT('DEAL OR NO DEPLOY', 350, 41, 7, '#facc15');
+    for (let i = 0; i < 6; i++) { const x = 300 + i * 20; if (big && i === open) continue;
+      RR(x - 7, 50, 14, 10, 1.5, '#d1d5db', '#6b7280', 0.6); R(x - 2.5, 48.5, 5, 2, '#6b7280'); FT(String(i + 1), x, 55.5, 5, '#111'); }
+    if (big) { RR(316, 47, 68, 30, 2, '#d1d5db', '#6b7280', 0.8); R(319, 50, 62, 24, '#fff');
+      FT(errs[Math.floor(T / 10) % errs.length], 350, 55, 5.5, '#b91c1c'); FT('at deploy (prod.js:42)', 322, 63, 4.5, '#555', 'left'); FT('at main (index.js:7)', 322, 69, 4.5, '#555', 'left'); }
+    else FT('OPEN A CASE!', 350, 67, 6, '#fff');
+    guy(306, 92, '#e5e7eb', false); guy(394, 92, '#22c55e', big);
+  } else if (show === 'nature') {                           // hushed narrator; the junior developer approaches prod
+    R(288, 35, 124, 34, '#fcd9a0'); R(288, 69, 124, 24, '#b98b4e'); C(396, 44, 5, '#fff3c4');
+    for (const tx of [300, 404]) { R(tx - 1, 60, 2, 9, '#5b3a1a'); E(tx, 60, 7, 2.5, '#4d7c0f'); }   // acacias
+    for (let i = 0; i < 3; i++) guy(298 + i * 8, 78, '#64748b', false);   // the herd
+    guy(Math.min(366, 324 + p * 1.3), 79, '#22c55e', big);
+    const dbc = big && flash ? '#ef4444' : '#60a5fa';
+    R(376, 62, 16, 14, dbc); E(384, 76, 8, 2.5, dbc); E(384, 62, 8, 2.5, '#bfdbfe'); FT('PROD', 384, 69, 5, '#fff');
+    if (big) for (let i = 0; i < 4; i++) C(384 + Math.sin(T * 3 + i) * 6, 58 - ((T * 8 + i * 4) % 14), 2.5, 'rgba(80,80,80,.6)');   // smoke
+    const sub = p < 12 ? 'Here we see the junior developer...' : p < 24 ? '...approaching the production database.' : p < 34 ? 'The herd watches.' : 'It does not end well.';
+    R(288, 83, 124, 10, 'rgba(0,0,0,.55)'); FT(sub, 350, 88, 5.5, '#fff', 'center', 'italic');
+  } else if (show === 'shop') {                             // only 3 ergonomic chairs left; the number is localhost
+    R(288, 35, 124, 58, '#0f766e'); R(288, 35, 124, 10, '#134e4a'); FT('ERGONOMIC CHAIR', 350, 40, 6.5, '#fff');
+    RR(312, 47, 14, 17, 3, '#1f2937'); RR(308, 64, 22, 5, 2, '#111'); R(318, 69, 2, 8, '#6b7280'); L(308, 78, 330, 78, '#6b7280', 1.5); C(309, 79.5, 1.5, '#111'); C(329, 79.5, 1.5, '#111');
+    guy(340, 80, '#f472b6', big);
+    RR(348, 48, 56, 13, 2, '#fde047'); FT('$499.99', 376, 54.5, 8, '#b91c1c');
+    FT('ONLY ' + Math.max(1, 3 - Math.floor(p / 14)) + ' LEFT!', 376, 68, 6.5, big && flash ? '#fde047' : '#fff');
+    R(288, 82, 124, 11, big && flash ? '#ef4444' : '#111'); FT(big ? 'CALL NOW! 127.0.0.1' : 'CALL 127.0.0.1', 350, 87.5, 6.5, '#fde047');
+  } else if (show === 'promo') {                            // late-night infomercial: black-and-white struggle, then the product
+    if (p < 20) {
+      R(288, 35, 124, 58, '#4b5563'); R(288, 75, 124, 18, '#374151');
+      RR(352, 50, 30, 22, 2, '#1f2937', '#9ca3af', 0.8); R(355, 53, 24, 14, '#d1d5db'); FT('ERROR', 367, 57.5, 5, '#111'); FT('; ; ; ;', 367, 63, 5, '#111');
+      guy(330, 80, '#9ca3af', Math.floor(T * 2) % 2);
+      for (let i = 0; i < 14; i++) { const k = Math.floor(T * 20); R(288 + (i * 37 + k * 13) % 124, 35 + (i * 53 + k * 7) % 58, 1, 1, 'rgba(255,255,255,.4)'); }   // film grain
+      R(288, 83, 124, 10, '#111'); FT('TIRED OF SEMICOLONS?', 350, 88, 6.5, '#fff');
+    } else {
+      R(288, 35, 124, 58, big && flash ? '#9333ea' : '#7c3aed');
+      if (big) for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + T; L(350, 61, 350 + Math.cos(a) * 60, 61 + Math.sin(a) * 40, '#fde047', 2); }
+      RR(326, 50, 48, 24, 3, '#facc15', '#111', 0.8); FT('SEMICOLON', 350, 57, 6, '#111'); FT('REMOVER 3000', 350, 66, 6, '#b91c1c');
+      FT(big ? 'INTRODUCING...' : 'ONLY 3 EASY PAYMENTS!', 350, 42, 7, '#fde047');
+      R(288, 83, 124, 10, '#111'); FT("BUT WAIT, THERE'S MORE!", 350, 88, 6, '#fff');
+    }
+  } else if (show === 'paint') {                            // happy little trees, but the painting is a flowchart
+    R(288, 35, 124, 58, '#1c1917');
+    L(340, 82, 336, 93, '#78350f', 1.5); L(382, 82, 386, 93, '#78350f', 1.5); RR(330, 39, 62, 44, 1, '#fafaf9', '#78350f', 1.2);   // canvas on its easel
+    const n = 1 + Math.floor(p / 6);                        // the flowchart grows a piece at a time
+    RR(346, 42, 30, 7, 2, '#60a5fa'); FT('START', 361, 45.5, 4.5, '#fff');
+    if (n > 1) { L(361, 49, 361, 53, '#111', 0.8); poly([361, 53, 372, 58, 361, 63, 350, 58], '#facc15'); FT('BUG?', 361, 58, 4, '#111'); }
+    if (n > 2) { L(361, 63, 361, 67, '#111', 0.8); RR(346, 67, 30, 7, 2, '#4ade80'); FT('SHIP IT', 361, 70.5, 4.5, '#111'); }
+    if (n > 3) { L(339, 80, 339, 72, '#78350f', 1.4); C(339, 69, 4, '#15803d'); }   // a happy little tree
+    if (n > 4) { E(383, 46, 5, 2.5, '#bfdbfe'); E(386, 44, 3.5, 2.5, '#bfdbfe'); }
+    C(310, 58, 7, '#4a2c17'); guy(310, 76, '#93c5fd', false); E(298, 74, 5, 3, '#d6a756'); C(297, 73, 1, '#ef4444'); C(300, 74, 1, '#2563eb');
+    const sw = big ? Math.sin(T * 25) * 4 : Math.sin(T * 2) * 3;   // the brush; on the big moment he beats it clean
+    L(313, 67, 324 + sw, 57 + sw * 0.5, '#e0ac69', 1.4); C(324 + sw, 57 + sw * 0.5, 1.2, '#111');
+    if (big) { R(288, 78, 124, 15, 'rgba(0,0,0,.7)'); FT('There are no mistakes,', 350, 82, 5.5, '#fff', 'center', 'italic'); FT('only happy little bugs.', 350, 89, 5.5, '#fff', 'center', 'italic'); }
+    else { R(288, 84, 124, 9, 'rgba(0,0,0,.6)'); FT('HAPPY LITTLE FLOWCHARTS', 350, 88.5, 5.5, '#fde68a'); }
+  } else if (show === 'crime') {                            // true crime: the stapler is missing, the copier is interviewed
+    if (p < 20) {                                           // the evidence board
+      R(288, 35, 124, 58, '#0b1120'); RR(300, 39, 100, 39, 1, '#a16207');
+      RR(310, 45, 26, 19, 1, '#fff'); R(313, 53, 20, 5, '#dc2626'); poly([313, 53, 333, 50, 333, 53], '#991b1b'); FT('MISSING', 323, 61, 4.5, '#111');
+      RR(352, 47, 18, 13, 1, '#fef08a'); FT('LAST', 361, 51.5, 4, '#111'); FT('SEEN?', 361, 56, 4, '#111');
+      RR(376, 56, 18, 14, 1, '#fff'); R(379, 60, 12, 7, '#6b7280');
+      L(336, 52, 352, 52, '#ef4444', 0.6); L(370, 55, 385, 58, '#ef4444', 0.6); L(323, 64, 385, 69, '#ef4444', 0.6);
+      R(288, 79, 124, 14, '#000'); FT('THE STAPLER', 350, 83.5, 6.5, '#e5e7eb'); FT('A MISSING PERSONS STORY', 350, 89.5, 4.5, '#9ca3af');
+    } else {                                                // the interview with the copier
+      R(288, 35, 124, 58, '#111827'); E(360, 68, 36, 24, 'rgba(255,255,255,.07)'); guy(304, 82, '#1f2937', false);
+      RR(340, 55, 40, 26, 2, '#d1d5db', '#6b7280', 0.8); R(344, 52, 32, 4, '#9ca3af'); R(345, 70, 30, 3, '#6b7280'); C(372, 60, 1.4, '#22c55e');
+      if (big) { R(344, 56 + (T * 20) % 12, 32, 1.5, '#a5f3fc'); R(288, 35, 124, 58, 'rgba(127,29,29,.35)'); }
+      R(288, 82, 124, 11, '#000'); FT(big ? '"I saw nothing."' : 'THE COPIER, WITNESS', 350, 87.5, 6, big ? '#fca5a5' : '#e5e7eb');
+    }
+    if (Math.sin(T * 13) > 0.85) R(288, 35, 124, 58, 'rgba(255,255,255,.05)');   // ominous flicker
+  } else if (show === 'roadshow') {                         // a VB6 app gets appraised; the appraiser goes pale
+    R(288, 35, 124, 58, '#e7d3a8'); R(288, 35, 124, 10, '#7f1d1d'); FT('LEGACY ROADSHOW', 350, 40, 7, '#fde68a');
+    R(318, 70, 64, 4, '#78350f'); R(322, 74, 2, 9, '#78350f'); R(376, 74, 2, 9, '#78350f');
+    RR(336, 52, 28, 18, 2, '#e7e5e4', '#78716c', 0.8); R(339, 55, 22, 12, '#1e3a8a'); FT('VB6', 350, 61, 6, '#fff'); R(366, 65, 7, 5, '#111');
+    guy(306, 82, '#16a34a', false); guy(394, 82, '#1f2937', false); poly([391, 69, 397, 69, 394, 71], '#b91c1c');
+    if (big) { C(394, 67, 3.4, '#f1f5f9'); C(398.5, 64, 0.9, '#60a5fa'); }
+    R(288, 83, 124, 10, 'rgba(0,0,0,.6)'); FT(big ? '"Where did you... find this?"' : 'APPRAISAL IN PROGRESS', 350, 88, 5.5, '#fff');
+  } else if (show === 'wrestle') {                          // Tabs vs. Spaces in a steel cage; the folding chair comes out
+    R(288, 35, 124, 58, '#0f0f1a'); FT('TABS vs. SPACES', 350, 40, 7, '#fde047');
+    R(296, 72, 108, 10, '#e5e7eb'); R(296, 82, 108, 4, '#1d4ed8'); R(296, 54, 3, 20, '#9ca3af'); R(401, 54, 3, 20, '#9ca3af');
+    const tx = 335 + Math.sin(T * 3) * 4, sx = 365 - Math.sin(T * 3) * 4;
+    guy(tx, 72, '#f97316', big); guy(sx, 72 + (big ? 2 : 0), '#3b82f6', false);
+    if (big) { g.save(); g.translate(tx + 6, 53); g.rotate(Math.sin(T * 10) * 0.8);   // the folding chair
+      L(0, 0, 0, -10, '#cbd5e1', 1.6); L(0, -5, 8, -5, '#cbd5e1', 1.6); L(8, -5, 8, 0, '#cbd5e1', 1.2); g.restore(); }
+    for (const y of [58, 63, 68]) L(298, y, 402, y, '#ef4444', 0.7);   // ropes
+    for (let i = 0; i < 14; i++) L(290 + i * 9, 44, 290 + i * 9, 86, 'rgba(156,163,175,.35)', 0.6);   // the cage
+    FT('TABS', tx, 77, 4.5, '#c2410c'); FT('SPACES', sx, 77, 4.5, '#1d4ed8');
+    R(288, 86, 124, 7, '#000'); FT(big ? "OH MY GOD, HE'S USING A FOLDING CHAIR!" : 'STEEL CAGE MATCH', 350, 89.5, 5, big ? '#fde047' : '#fff');
+  } else if (show === 'news') {                             // breaking: the coffee pot is empty
+    R(288, 35, 124, 58, '#1e3a8a'); R(288, 35, 124, 3, '#60a5fa'); R(292, 40, 16, 7, '#dc2626'); FT('LIVE', 300, 43.5, 5, '#fff');
+    RR(366, 42, 38, 28, 2, '#0f172a', '#93c5fd', 0.8); R(378, 47, 14, 3, '#111'); RR(378, 50, 14, 15, 3, 'rgba(219,234,254,.5)'); L(392, 53, 395, 60, '#111', 1.2);   // the empty pot
+    guy(326, 72, '#111827', false); R(306, 64, 44, 12, '#0f172a');
+    R(288, 76, 124, 9, big && flash ? '#fde047' : '#dc2626'); FT(big ? 'COFFEE POT EMPTY' : 'BREAKING NEWS', 350, 80.5, 6.5, big && flash ? '#dc2626' : '#fff');
+    R(288, 85, 124, 8, '#111'); FT('COFFEE POT EMPTY. NO SUSPECTS. MORE AT 11.', 350, 89, 5, '#fff');
+  } else if (show === 'weather') {                          // 90% chance of merge conflicts, clearing by Friday deploy
+    R(288, 35, 124, 58, '#38bdf8'); E(358, 63, 40, 16, '#4ade80'); E(384, 54, 18, 10, '#4ade80'); FT('FORECAST', 294, 40, 5, '#0f172a', 'left');
+    L(326, 50, 396, 76, '#1d4ed8', 1.2); for (let i = 0; i < 5; i++) { const x = 334 + i * 13, y = 53 + i * 4.8; poly([x, y, x + 5, y + 2, x + 1, y + 5], '#1d4ed8'); }   // the front
+    const cx = 344 + Math.sin(T * 0.3) * 8, cc = big ? '#475569' : '#f8fafc';
+    E(cx, 54, 11, 5, cc); E(cx + 7, 50, 7, 5, cc);
+    if (big) { for (let i = 0; i < 5; i++) L(cx - 8 + i * 4, 60, cx - 10 + i * 4, 66, '#1e40af', 0.8); if (flash) poly([cx + 2, 58, cx - 3, 66, cx + 1, 66, cx - 2, 73, cx + 5, 63, cx + 1, 63], '#fde047'); }
+    FT('90%', cx + 2, 53, 6, big ? '#fff' : '#1e3a8a');
+    guy(302, 80, '#be185d', false); L(305, 70, 316, 62, '#be185d', 1.4);
+    R(288, 82, 124, 11, '#0f172a'); FT(big ? 'SEVERE CONFLICT WARNING' : p < 20 ? '90% CHANCE OF MERGE CONFLICTS' : 'CLEARING BY FRIDAY DEPLOY', 350, 87.5, 5.5, big ? '#fde047' : '#fff');
+  } else if (show === 'reno') {                             // tearing out a load-bearing stored procedure; the ceiling comes down
+    const fall = big ? Math.min(1, (p - 33) / 1.5) : 0;
+    R(288, 35, 124, 58, '#fef3c7'); R(288, 76, 124, 17, '#a16207'); RR(296, 48, 20, 16, 1, '#bae6fd', '#78350f', 1);
+    g.save(); g.translate(366, 76); g.rotate(fall * 0.5); R(-7, -32, 14, 32, '#9ca3af'); RR(-21, -22, 42, 9, 1, '#fff'); TXT('STORED PROC', 0, -17.5, 'bold 5px system-ui', '#b91c1c'); g.restore();
+    g.save(); g.translate(288, 38); g.rotate(fall * 0.35); R(0, 0, 124, 6, '#78350f'); g.restore();   // the ceiling beam
+    guy(326, 76, '#ea580c', big); L(330, 66, 338, 56, '#78350f', 1.4); R(335, 53, 7, 4, '#4b5563');   // sledgehammer
+    if (big) { for (let i = 0; i < 8; i++) R(296 + i * 14, 42 + fall * (24 + (i % 3) * 5), 4, 3, '#78716c'); E(350, 76, 60 * fall, 10 * fall, 'rgba(120,113,108,.6)'); }
+    R(288, 79, 124, 14, 'rgba(0,0,0,.7)');
+    FT(big ? 'IT WAS LOAD-BEARING.' : "Today we're tearing out this", 350, 82.5, 5.5, '#fff'); FT(big ? 'ALL SERVICES DOWN.' : 'load-bearing stored procedure.', 350, 89, 5.5, big ? '#fca5a5' : '#fff');
+  } else if (show === 'golf') {                             // whispering commentators, everything at 0.1x speed
+    R(288, 35, 124, 22, '#bae6fd'); R(288, 57, 124, 36, '#16a34a'); E(370, 70, 34, 10, '#4ade80');
+    C(300, 55, 5, '#15803d'); C(309, 54, 6, '#166534'); C(318, 55, 4.5, '#15803d');
+    E(392, 70, 3, 1.3, '#111'); L(392, 70, 392, 51, '#e5e7eb', 0.8); poly([392, 51, 401 + Math.sin(T * 0.3), 54, 392, 57], '#ef4444');
+    RR(292, 38, 30, 9, 1, '#14532d'); FT('HOLE 18', 307, 42.5, 4.5, '#fff'); FT('0.1x', 406, 41, 5, '#0f172a', 'right');
+    guy(330 + Math.sin(T * 0.6), 76, '#7c3aed', false); L(333, 67, 339, 74, '#9ca3af', 0.8);
+    C(big ? 342 + (p - 35) * 1.2 : 342, 73, 1.4, '#fff');   // the ball, rolling at 0.1x
+    R(288, 84, 124, 9, 'rgba(0,0,0,.5)');
+    FT(big ? "It's... rolling..." : p < 18 ? '*whisper* A tricky lie here.' : "And he's... still lining up the putt.", 350, 88.5, 5, '#fff', 'center', 'italic');
+  } else if (show === 'bachelor') {                         // roses for uptime
+    R(288, 35, 124, 58, '#4a044e'); FT('THE BACHELOR... SERVER', 350, 40, 6.5, '#f9a8d4');
+    for (const cx of [294, 406]) { R(cx - 1, 70, 2, 8, '#fef3c7'); C(cx, 68, 1.4, Math.sin(T * 9 + cx) > 0 ? '#fbbf24' : '#f97316'); }
+    const ups = ['99.9%', '99.99%', '97.0%'];
+    for (let i = 0; i < 3; i++) { const x = 334 + i * 22; RR(x - 8, 48, 16, 30, 1, '#1f2937', '#6b7280', 0.6);
+      for (let j = 0; j < 4; j++) { R(x - 6, 51 + j * 6, 12, 4, '#374151'); C(x + 4, 53 + j * 6, 0.9, big && i === 2 ? '#ef4444' : Math.floor(T * 3 + i + j) % 3 ? '#22c55e' : '#065f46'); }
+      FT(ups[i], x, 82, 4.5, '#fbcfe8'); }
+    guy(304, 80, '#111', big);
+    if (big) { L(356, 50, 356, 44, '#16a34a', 0.8); C(356, 43, 2.4, '#e11d48'); for (const hx of [348, 364]) C(hx, 45 - (T * 6) % 4, 1.2, '#f472b6'); }
+    else { L(308, 70, 312, 64, '#16a34a', 0.8); C(312, 63, 1.8, '#e11d48'); }
+    R(288, 86, 124, 7, '#000'); FT(big ? 'WILL YOU ACCEPT THIS ROSE?' : 'ROSES FOR UPTIME', 350, 89.5, 5, '#f9a8d4');
   } else {
     R(288, 35, 124, 58, '#5b2a3a'); R(288, 35, 14, 58, '#7f1d1d'); R(398, 35, 14, 58, '#7f1d1d');
     for (const cx of [312, 388]) { R(cx - 1, 60, 2, 8, '#fef3c7'); C(cx, 58, 1.6, Math.sin(T * 9 + cx) > 0 ? '#fbbf24' : '#f97316'); }
