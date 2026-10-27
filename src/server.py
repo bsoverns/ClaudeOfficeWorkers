@@ -90,7 +90,8 @@ SESSION_END_DONE = {"clear": "you cleared the session", "logout": "you logged ou
                     "prompt_input_exit": "you closed the session"}
 
 PUBLIC_JOB_KEYS = ("id", "title", "project", "kind", "parent", "status", "message", "activity",
-                   "worker", "station", "created", "updated", "prompt", "area", "agent", "agent_type")
+                   "worker", "station", "created", "updated", "prompt", "area", "agent", "agent_type",
+                   "waited", "wait_since")
 
 # Work areas: what kind of work a job is doing, guessed from the prompt, the project folder
 # and the tools Claude uses. Themes that label their stations by kind of work (Dev Shop) send
@@ -268,6 +269,9 @@ class Office:
             except (OSError, ValueError):
                 return
             self.jobs = {k: v for k, v in (data.get("jobs") or {}).items() if isinstance(v, dict)}
+            for j in self.jobs.values():       # saved before the timer paused: its wait began at the last update
+                if j.get("status") == "waiting" and not j.get("wait_since"):
+                    j["wait_since"] = j.get("updated") or time.time()
             self.seq = int(data.get("seq") or 0)
             self.used = set(data.get("used") or [])
             self.recent = list(data.get("recent") or [])[:RECENT_MAX]
@@ -414,6 +418,14 @@ class Office:
             return
         job["status"] = status
         job["status_ts"] = ts
+        # the card's timer stops while the job waits on you: remember when the wait began
+        # and add each finished wait to "waited". Timed on the server's clock (like "created"),
+        # not the hook's ts, so the page subtracts like from like.
+        if status == "waiting" and not job.get("wait_since"):
+            job["wait_since"] = job["updated"]
+        elif status != "waiting" and job.get("wait_since"):
+            job["waited"] = job.get("waited", 0.0) + job["updated"] - job["wait_since"]
+            job["wait_since"] = None
         if message is not None:
             job["message"] = clip(message, 200)
 
