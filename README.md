@@ -339,7 +339,8 @@ character. It prints `all passed` or the failures.
 
 Chime when someone waits, soft blips on start/finish, re-chime every 5 minutes while
 anyone waits, and desktop notifications. Stored in the browser. **Done ✓** on a card ends
-that task; **Find** highlights the worker. Hover or click a worker to see what they're up to.
+that task; **Find** highlights the worker. The timer on a card counts working time only: it
+stops while the job waits on you and picks up where it left off when work resumes. Hover or click a worker to see what they're up to.
 A worker whose Claude has gone quiet for 5 minutes dozes at their station; jobs with no
 news for 12 hours are sent home automatically. "Recently finished" says why each worker
 went home (you said done, Done button, `/clear`, helper finished, 12 hours); it shows only

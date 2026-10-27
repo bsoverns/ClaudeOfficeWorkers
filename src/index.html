@@ -6781,7 +6781,7 @@ function jobCard(j) {
   const w = j.worker != null ? workers[j.worker] : null;
   return `<div class="job ${esc(j.status)}" data-id="${esc(j.id)}">
     <div class="jt"><span class="dot" style="background:${w ? w.L.shirt : '#777'}"></span><b>${w ? esc(w.L.name + (j.agent ? ' as ' + j.agent : '')) : 'Waiting for a free worker'}</b>
-      <span class="pill">${esc(STATUS_LABEL[j.status] || j.status)}</span><span class="age" data-since="${j.created}"></span></div>
+      <span class="pill">${esc(STATUS_LABEL[j.status] || j.status)}</span><span class="age" data-since="${j.created + (j.waited || 0)}"${j.wait_since ? ` data-until="${j.wait_since}"` : ''}></span></div>
     <div class="title">${esc(j.title)}</div>
     ${teamLine(j, w)}
     ${j.status === 'working' && j.activity ? `<div class="act">${esc(j.activity)}</div>` : ''}
@@ -6806,7 +6806,8 @@ function renderPanel() {
   }).join('') || '<div class="empty">Nothing yet.</div>';
   tickAges();
 }
-function tickAges() { const now = serverNow(); document.querySelectorAll('.age[data-since]').forEach(el => { el.textContent = ago(now - Number(el.dataset.since)); }); }
+// a card's timer counts working time only: time spent waiting on you is left out, and it holds still while waiting
+function tickAges() { const now = serverNow(); document.querySelectorAll('.age[data-since]').forEach(el => { el.textContent = ago((Number(el.dataset.until) || now) - Number(el.dataset.since)); }); }
 $('#panel').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const id = b.closest('.job').dataset.id, j = JOBS[id]; if (!j) return;
