@@ -341,8 +341,9 @@ const FLOORS = [
 // nearest free cell. Themes add their own pieces with `blocks`; every station's equipment
 // (right of the worker, x0 + 92 onward) is blocked in stationBlocks().
 const FURNITURE = [
-  [436, 222, 168, 36], [70, 316, 132, 48],      // couch (under the TV), dining table
+  [315, 222, 168, 36], [70, 236, 132, 48],      // couch (under the TV), dining table
   [48, 476, 178, 98], [380, 470, 180, 89],      // pool table, ping pong table
+  [64, 398, 124, 22],                           // vending machine and arcade (above the pool table)
   [259, 376, 22, 64],                           // water cooler
   [510, 380, 74, 24], [510, 414, 74, 24], [460, 414, 44, 28],                     // nap room cots and beanbag
   [32, 596, 16, 16], [592, 596, 16, 16],        // break room plants
@@ -462,20 +463,20 @@ function findPath(x0, y0, x1, y1) {
 
 // Idle spots in the break room and on the patio. couch: no wheelchair. smoke: smokers only.
 const IDLE_SPOTS = [
-  { id: 'tv1', x: 475, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
-  { id: 'tv2', x: 520, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
-  { id: 'tv3', x: 565, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
-  { id: 'tv4', x: 420, y: 262, face: 'up', act: 'tv' },
+  { id: 'tv1', x: 354, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
+  { id: 'tv2', x: 399, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
+  { id: 'tv3', x: 444, y: 236, face: 'up', pose: 'sit', act: 'tv', couch: true },
+  { id: 'tv4', x: 299, y: 262, face: 'up', act: 'tv' },
   { id: 'fridge', x: 56, y: 174, face: 'up', act: 'fridge' },
   { id: 'coffee', x: 111, y: 174, face: 'up', act: 'coffee' },
   { id: 'micro', x: 183, y: 174, face: 'up', act: 'micro' },
-  { id: 'vend', x: 315, y: 174, face: 'up', act: 'vend' },
-  { id: 'arcade', x: 389, y: 174, face: 'up', act: 'arcade' },
-  { id: 'eat1', x: 46, y: 340, face: 'right', pose: 'sit', act: 'eat' },
-  { id: 'eat2', x: 224, y: 340, face: 'left', pose: 'sit', act: 'eat' },
-  { id: 'eat3', x: 105, y: 302, face: 'down', pose: 'sit', act: 'eat' },
-  { id: 'eat4', x: 165, y: 302, face: 'down', pose: 'sit', act: 'eat' },
-  { id: 'eat5', x: 135, y: 380, face: 'up', pose: 'sit', act: 'eat' },
+  { id: 'vend', x: 89, y: 440, face: 'up', act: 'vend' },
+  { id: 'arcade', x: 162, y: 440, face: 'up', act: 'arcade' },
+  { id: 'eat1', x: 46, y: 260, face: 'right', pose: 'sit', act: 'eat' },
+  { id: 'eat2', x: 224, y: 260, face: 'left', pose: 'sit', act: 'eat' },
+  { id: 'eat3', x: 105, y: 222, face: 'down', pose: 'sit', act: 'eat' },
+  { id: 'eat4', x: 165, y: 222, face: 'down', pose: 'sit', act: 'eat' },
+  { id: 'eat5', x: 135, y: 300, face: 'up', pose: 'sit', act: 'eat' },
   { id: 'pool1', x: 34, y: 525, face: 'right', act: 'pool', partner: 'pool2' },
   { id: 'pool2', x: 242, y: 515, face: 'left', act: 'pool', partner: 'pool1' },
   { id: 'pool3', x: 137, y: 586, face: 'up', act: 'poolwatch' },
@@ -4196,7 +4197,7 @@ function decorXmas() {
   // a wreath on the break room door frame and stockings by the TV
   g.beginPath(); g.arc(606, 293, 9, 0, TAU); g.strokeStyle = '#166534'; g.lineWidth = 5; g.stroke();
   for (let i = 0; i < 6; i++) C(606 + Math.cos(i) * 9, 293 + Math.sin(i) * 9, 1.4, '#ef4444'); poly([602, 302, 610, 302, 606, 297], '#b91c1c');
-  for (let i = 0; i < 3; i++) { const sx = 470 + i * 45; RR(sx, 134, 10, 14, 2, i % 2 ? '#166534' : '#b91c1c'); RR(sx, 148, 15, 6, 3, i % 2 ? '#166534' : '#b91c1c'); R(sx - 1, 132, 12, 4, '#f8fafc'); }
+  for (let i = 0; i < 3; i++) { const sx = 340 + i * 55; RR(sx, 138, 10, 14, 2, i % 2 ? '#166534' : '#b91c1c'); RR(sx, 152, 15, 6, 3, i % 2 ? '#166534' : '#b91c1c'); R(sx - 1, 136, 12, 4, '#f8fafc'); }
   // patio: snow drifts, a snowcap on the bench, a snowman
   g.globalAlpha = 0.8;
   for (const [x, y, rx, ry] of [[60, 900, 50, 8], [170, 902, 60, 7], [280, 900, 34, 8], [40, 650, 26, 6], [260, 640, 40, 6], [110, 830, 40, 7]]) E(x, y, rx, ry, '#f8fafc');
@@ -4265,10 +4266,10 @@ function decorPirate() {
   g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.strokeStyle = '#8a5a36'; g.lineWidth = 2.4; g.stroke();
   for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; L(Math.cos(a) * 3, Math.sin(a) * 3, Math.cos(a) * 11.5, Math.sin(a) * 11.5, '#a0703d', 1.8); }
   C(0, 0, 2.4, '#d4af37'); g.restore();
-  g.save(); g.translate(427, 64); g.scale(0.6, 0.6); g.translate(-325, -105);      // the anchor, in the gap between the arcade and the TV
+  g.save(); g.translate(578, 64); g.scale(0.6, 0.6); g.translate(-325, -105);      // the anchor, on the wall right of the TV
   g.strokeStyle = '#4b5563'; g.lineWidth = 2; g.beginPath(); g.moveTo(325, 106); g.lineTo(325, 128); g.moveTo(319, 111); g.lineTo(331, 111); g.stroke();
   g.beginPath(); g.arc(325, 128, 9, 0.2, Math.PI - 0.2); g.stroke(); C(325, 105, 2, '#4b5563'); g.restore();
-  for (let r = 3; r <= 8; r += 2.5) { g.beginPath(); g.ellipse(470, 126, r, r * 0.55, 0, 0, TAU); g.strokeStyle = '#c9a46a'; g.lineWidth = 1.6; g.stroke(); }
+  for (let r = 3; r <= 8; r += 2.5) { g.beginPath(); g.ellipse(298, 148, r, r * 0.55, 0, 0, TAU); g.strokeStyle = '#c9a46a'; g.lineWidth = 1.6; g.stroke(); }
   // patio beach: sand, X marks the spot, a barrel and a treasure chest on the old bush spots, a palm, waves
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip();
   g.globalAlpha = 0.85;
@@ -4397,7 +4398,7 @@ function decorStone() {
     for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; L(606 + Math.cos(a) * 6.3, 293 + Math.sin(a) * 6.3, 606 + Math.cos(a) * 8.2, 293 + Math.sin(a) * 8.2, '#57534e', i % 3 ? 0.8 : 1.4); }
     L(606, 293, 606 + Math.cos(hA) * 4, 293 + Math.sin(hA) * 4, '#3b2417', 1.6); L(606, 293, 606 + Math.cos(mA) * 6, 293 + Math.sin(mA) * 6, '#3b2417', 1.1); C(606, 293, 1.2, '#3b2417'); }
   g.lineCap = 'round';
-  g.save(); g.translate(427, 92); g.scale(0.45, 0.45); g.translate(-372, -134);      // a small tusk arch in the gap between the arcade and the TV
+  g.save(); g.translate(578, 92); g.scale(0.45, 0.45); g.translate(-372, -134);      // a small tusk arch on the wall right of the TV
   for (const d of [-1, 1]) {
     g.beginPath(); g.moveTo(372 + d * 22, 134); g.quadraticCurveTo(372 + d * 24, 100, 372 + d * 3, 106);
     g.strokeStyle = '#f5f0e1'; g.lineWidth = 4.2; g.stroke(); g.strokeStyle = '#d6c3a1'; g.lineWidth = 1; g.stroke();
@@ -4444,7 +4445,7 @@ function decorHorror() {
       poly([bx - 6, by - f, bx, by, bx + 6, by - f, bx, by + 2], '#000'); }
   });
   for (const [cx, cy, a0] of [[24, 24, 0], [611, 24, Math.PI / 2], [644, 24, 0], [971, 24, Math.PI / 2], [984, 24, 0], [1286, 24, Math.PI / 2], [1304, 24, 0], [1591, 24, Math.PI / 2]]) web(cx, cy, a0);
-  for (const [px, py] of [[44, 340], [300, 600], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
+  for (const [px, py] of [[44, 260], [300, 600], [660, 282], [1576, 286], [300, 930], [958, 282]]) pumpkin(px, py);
   g.save(); g.beginPath(); g.rect(20, 630, 298, 310); g.clip(); g.globalAlpha = 0.2;
   for (let i = 0; i < 4; i++) E(((T * 8 + i * 90) % 400) - 40, 860 + i * 18, 80, 12, '#e9e3ff');
   g.restore(); g.globalAlpha = 1;
@@ -5005,8 +5006,8 @@ const HX_MIMIC = ["Who, me? I'm {name}.", 'Hi. {name} here. Totally.', "Yep, I'm
 const HX_COPIED = ["Hey! That's MY face!", 'Give that back!', 'Is my hair really like that?', '{name}, I can see you.'];
 const HEAVES = {                                // what Bulwark lifts: footprint (FURNITURE), its seats, room to keep clear
   couch: { rect: FURNITURE[0], seats: ['tv1', 'tv2', 'tv3'], pad: [6, 6], draw: drawCouch },
-  table: { rect: FURNITURE[1], seats: ['eat1', 'eat2', 'eat3', 'eat4', 'eat5'], pad: [30, 20], draw: drawDiningTable, lunch: true },
-};
+  table: { rect: FURNITURE[1], seats: ['eat1', 'eat2', 'eat3', 'eat4', 'eat5'], pad: [30, 20], draw: drawDiningTable, lunch: true, lift: 50 },
+};                                               // lift: how high it goes (default 66); the table stays below the kitchen
 let HEAVE = null;                                // { who, p, spot, rise, t0 (null while walking over) }
 const heaveK = () => { const t = T - HEAVE.t0, s = v => v * v * (3 - 2 * v); return t < 0.5 ? s(t / 0.5) : t < 3 ? 1 : Math.max(0, 1 - s((t - 3) / 0.5)); };
 function heaveFree(p, w) {
@@ -5025,7 +5026,7 @@ const HX_START = {
       const p = HEAVES[key], [x, y, rw, rh] = p.rect, sx = x + rw / 2, sy = y + rh + 14;
       if (!heaveFree(p, w) || !navFreeAt(sx, sy) || !findPath(w.x, w.y, sx, sy)) continue;
       const spot = { x: sx, y: sy, area: 'break', face: 'up', temp: true };
-      goTo(w, spot); HEAVE = { who: w, p, spot, rise: y + rh - sy + 66, t0: null };
+      goTo(w, spot); HEAVE = { who: w, p, spot, rise: y + rh - sy + (p.lift || 66), t0: null };
       w.hx = { kind: 'strength', t0: T };
       return true;
     }
@@ -5193,7 +5194,7 @@ function idleTick(w, dt, t) {
   } else if (a === 'nap' && Math.random() < dt * 0.6) puff(w.x - 16, w.y - 18, { kind: 'text', text: 'Z', vx: 6, vy: -14, life: 2, color: '#fff', font: 'bold 12px system-ui' });
   else if (a === 'coffee' && Math.random() < dt * 2) puff(111 + rand(-3, 3), 82, { vy: -14, grow: 2, life: 1.4, size: 1.6, color: 'rgba(255,255,255,.5)' });
   else if (a === 'micro' && Math.random() < dt * 0.1) puff(183, 72, { kind: 'text', text: 'DING!', vy: -12, life: 1.2, color: '#ffd23f', font: 'bold 11px system-ui' });
-  else if (a === 'vend' && Math.random() < dt * 0.08) puff(315, 60, { kind: 'text', text: '*thunk*', vy: -10, life: 1.2, color: '#fff', font: 'italic 10px system-ui' });
+  else if (a === 'vend' && Math.random() < dt * 0.08) puff(89, 330, { kind: 'text', text: '*thunk*', vy: -10, life: 1.2, color: '#fff', font: 'italic 10px system-ui' });
   else if (a === 'pool') { const p = t % 7, prev = (t - dt) % 7; if (prev < 6.3 && p >= 6.3) strikePool(); }
   else if (a === 'cooler' && Math.random() < dt * 1.5) puff(270 + rand(-4, 4), 398, { vy: -10, life: 0.8, size: 1.2, color: 'rgba(255,255,255,.8)' });
 }
@@ -5307,7 +5308,7 @@ const CAST = {
 const BOBS = { mode: 'watch', target: null, switchAt: 0, gx: null, gy: null, repath: 0, next: 0, queue: [], qNext: 0,
   nextGary: 0, nextInterview: 0, until: 0, stage: null };
 let LUNCH_LOCK = null, INTERVIEW = null;         // the worker being interviewed (only they may sit at the dining table)
-const GARY_SPOTS = [[700, 322], [1100, 322], [1500, 322], [700, 470], [940, 668], [1180, 470], [1420, 866], [140, 206],
+const GARY_SPOTS = [[700, 322], [1100, 322], [1500, 322], [700, 470], [940, 668], [1180, 470], [1420, 866], [240, 330],
   [330, 300], [520, 318], [860, 270], [300, 560]];
 const castCrew = () => [CAST.gary, CAST.bobA, CAST.bobB];
 const awayFromBobs = w => Math.hypot(w.x - CAST.bobA.x, w.y - CAST.bobA.y) > 320;
@@ -5611,13 +5612,24 @@ function drawTellerCounter() {
 }
 // break room furniture that people can be in front of / behind
 function drawCouch() {
-  RR(442, 222, 156, 36, 8, '#8a5a36'); RR(436, 226, 14, 32, 6, '#6b4227'); RR(590, 226, 14, 32, 6, '#6b4227');
-  L(495, 226, 495, 254, 'rgba(0,0,0,.22)', 1.5); L(545, 226, 545, 254, 'rgba(0,0,0,.22)', 1.5);
+  RR(321, 222, 156, 36, 8, '#8a5a36'); RR(315, 226, 14, 32, 6, '#6b4227'); RR(469, 226, 14, 32, 6, '#6b4227');
+  L(374, 226, 374, 254, 'rgba(0,0,0,.22)', 1.5); L(424, 226, 424, 254, 'rgba(0,0,0,.22)', 1.5);
 }
 function drawDiningTable() {
-  RR(70, 316, 132, 26, 6, '#a87b4f'); R(74, 342, 124, 6, '#8a6340'); R(80, 346, 5, 18, '#6b4b30'); R(187, 346, 5, 18, '#6b4b30');
-  RR(98, 320, 34, 18, 2, '#f5f0e6'); C(115, 329, 7, '#f3c26b'); C(112, 327, 1.2, '#c0392b'); C(118, 331, 1.2, '#c0392b'); C(116, 326, 1, '#2e7d32');
-  RR(150, 322, 7, 11, 2, '#e74c3c'); RR(162, 324, 7, 11, 2, '#3498db'); RR(176, 326, 14, 6, 1, '#fff');
+  RR(70, 236, 132, 26, 6, '#a87b4f'); R(74, 262, 124, 6, '#8a6340'); R(80, 266, 5, 18, '#6b4b30'); R(187, 266, 5, 18, '#6b4b30');
+  RR(98, 240, 34, 18, 2, '#f5f0e6'); C(115, 249, 7, '#f3c26b'); C(112, 247, 1.2, '#c0392b'); C(118, 251, 1.2, '#c0392b'); C(116, 246, 1, '#2e7d32');
+  RR(150, 242, 7, 11, 2, '#e74c3c'); RR(162, 244, 7, 11, 2, '#3498db'); RR(176, 246, 14, 6, 1, '#fff');
+}
+// the vending machine and the arcade, free-standing above the pool table (base at y 420)
+function drawMachines() {
+  g.save(); g.translate(-386, 270);
+  RR(450, 36, 50, 114, 4, '#c0392b'); R(456, 44, 30, 84, '#1d2733'); R(489, 50, 8, 26, '#2a2a2a'); R(458, 132, 26, 12, '#111');
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) RR(459 + c * 9, 48 + r * 20, 7, 12, 1, ['#f1c40f', '#e67e22', '#2ecc71', '#3498db'][(r + c) % 4]);
+  RR(522, 44, 52, 106, 4, '#2c1f5e'); RR(524, 46, 48, 10, 2, '#ff4fa3'); TXT('ARCADE', 548, 51.5, 'bold 7px system-ui', '#fff');
+  R(526, 94, 44, 12, '#3b2c80'); C(538, 100, 2.6, '#e74c3c'); C(550, 100, 2.2, '#f1c40f'); C(558, 100, 2.2, '#2ecc71');
+  const arc = SPOT_BY_ID.arcade.by !== null;
+  R(530, 60, 36, 30, '#000'); for (let i = 0; i < 4; i++) C(536 + ((T * (arc ? 40 : 12) + i * 9) % 26), 66 + i * 6, 1.6, ['#ff4fa3', '#4ff', '#ff0', '#0f0'][i]);
+  g.restore();
 }
 const POOL = { balls: [] };
 (function () {
@@ -6289,8 +6301,8 @@ function decorHero() {
     g.strokeStyle = '#94a3b8'; g.lineWidth = 1; g.stroke();
     for (let x = a + 12, i = 0; x < b; x += 24, i++) heroStar(x, 33 + Math.sin(T * 1.6 + x * 0.05), 4, ['#dc2626', '#2563eb', '#facc15'][i % 3]);
   }
-  RR(410, 50, 34, 26, 2, '#fffef5', '#dc2626', 1.2);                          // break-room rule between the arcade and the TV
-  TXT('NO', 427, 57, 'bold 6px system-ui', '#dc2626'); TXT('POWERS AT', 427, 64, 'bold 4.5px system-ui', '#1f2937'); TXT('THE COFFEE', 427, 70, 'bold 4.5px system-ui', '#1f2937');
+  RR(561, 50, 34, 26, 2, '#fffef5', '#dc2626', 1.2);                          // break-room rule on the wall right of the TV
+  TXT('NO', 578, 57, 'bold 6px system-ui', '#dc2626'); TXT('POWERS AT', 578, 64, 'bold 4.5px system-ui', '#1f2937'); TXT('THE COFFEE', 578, 70, 'bold 4.5px system-ui', '#1f2937');
   C(606, 293, 10, '#1e3a8a'); heroStar(606, 293, 8, '#facc15', Math.sin(T) * 0.2);     // HQ badge on the break room door frame
 }
 
@@ -6314,7 +6326,7 @@ function drawStatic() {
     R(20, y, 595, 16, k % 2 ? '#c79a66' : '#c1925d');
     for (let x = 20 + (k % 3) * 60; x < 615; x += 180) L(x, y, x, y + 16, 'rgba(0,0,0,.12)', 1);
   }
-  RR(430, 166, 180, 114, 12, '#5b7db1'); RR(438, 174, 164, 98, 8, null, '#89a7d4', 2);
+  RR(309, 166, 180, 114, 12, '#5b7db1'); RR(317, 174, 164, 98, 8, null, '#89a7d4', 2);
   // kitchen
   RR(84, 26, 152, 34, 3, '#7f8fa6'); for (const xx of [122, 160, 198]) L(xx, 27, xx, 59, '#6b7a90', 1.5);
   R(80, 118, 156, 32, '#8095ad'); R(78, 105, 160, 13, '#dfe4ea'); for (const xx of [118, 158, 198]) L(xx, 120, xx, 148, '#6b7a90', 1.5);
@@ -6322,14 +6334,7 @@ function drawStatic() {
   RR(210, 98, 22, 8, 2, '#b8c2cc'); L(221, 98, 221, 88, '#9aa3ad', 2); L(221, 88, 226, 88, '#9aa3ad', 2);
   // employee board + clock wall
   RR(245, 30, 26, 32, 2, '#c49a6c'); R(249, 34, 18, 18, '#d97757'); TXT('★', 258, 43, '10px system-ui', '#fff'); TXT('MVP', 258, 57, 'bold 6px system-ui', '#5a3d2b');
-  R(452, 132, 136, 18, '#5a3d2b'); R(456, 135, 30, 12, '#4a3122'); R(554, 135, 30, 12, '#4a3122');
-  // vending + arcade bodies
-  g.save(); g.translate(-160, 0);
-  RR(450, 36, 50, 114, 4, '#c0392b'); R(456, 44, 30, 84, '#1d2733'); R(489, 50, 8, 26, '#2a2a2a'); R(458, 132, 26, 12, '#111');
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) RR(459 + c * 9, 48 + r * 20, 7, 12, 1, ['#f1c40f', '#e67e22', '#2ecc71', '#3498db'][(r + c) % 4]);
-  RR(522, 44, 52, 106, 4, '#2c1f5e'); RR(524, 46, 48, 10, 2, '#ff4fa3'); TXT('ARCADE', 548, 51.5, 'bold 7px system-ui', '#fff');
-  R(526, 94, 44, 12, '#3b2c80'); C(538, 100, 2.6, '#e74c3c'); C(550, 100, 2.2, '#f1c40f'); C(558, 100, 2.2, '#2ecc71');
-  g.restore();
+  R(314, 136, 170, 18, '#5a3d2b'); R(318, 139, 30, 12, '#4a3122'); R(450, 139, 30, 12, '#4a3122');
   // water cooler
   R(259, 400, 22, 40, '#f0f0f0'); R(263, 416, 6, 4, '#4aa3ff'); R(271, 416, 6, 4, '#e74c3c'); E(270, 388, 11, 14, 'rgba(120,190,255,.75)');
   // dining chairs (people sit on them)
@@ -6342,7 +6347,7 @@ function drawStatic() {
   C(601, 368, 5, 'rgba(253,230,138,.35)'); C(601, 368, 2.4, '#fde68a');
   wall(455, 355, 466, 355); wall(510, 355, 615, 355); wall(455, 355, 455, 445); wall(455, 445, 615, 445);
   RR(530, 349, 66, 12, 3, '#1e293b'); TXT('NAP ROOM · shhh', 563, 355.5, 'bold 6.5px system-ui', '#c7d2fe');
-  plant(428, 150, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
+  plant(506, 150, 0.9); plant(40, 610, 0.9); plant(600, 610, 0.9); plant(240, 160, 0.7);
   // walls
   wall(20, 20, 615, 20); wall(20, 20, 20, 615); wall(615, 20, 615, 300); wall(615, 345, 615, 615);
   wall(20, 615, 200, 615); wall(250, 615, 615, 615);
@@ -6421,7 +6426,7 @@ function drawStatic() {
   if (wash) { g.globalAlpha = wash[1]; R(0, 0, W, H, wash[0]); g.globalAlpha = 1; }
 }
 
-// The TV screen (drawn in a 288..412 x 35..93 box, scaled 1.25x onto 443..598 x 42..114.5): the match, a paternity-test talk show,
+// The TV screen (drawn in a 288..412 x 35..93 box, scaled 1.6x onto 300..498.4 x 36..128.8): the match, a paternity-test talk show,
 // a survey game show, a soap, then the parody channels listed in TV_SHOWS.
 function drawTV() {
   const show = tvShow(), p = T % 40, big = tvBig();
@@ -6432,8 +6437,8 @@ function drawTV() {
     const room = align === 'left' ? 410 - x : align === 'right' ? x - 290 : 2 * Math.min(x - 289, 411 - x), w = g.measureText(s).width;
     TXT(s, x, y, st + ' ' + (w > room ? px * room / w : px) + 'px system-ui', c, align); };
   const flash = Math.floor(T * 6) % 2;
-  g.save(); g.beginPath(); g.rect(443, 42, 155, 72.5); g.clip();
-  g.translate(443, 42); g.scale(1.25, 1.25); g.translate(-288, -35);
+  g.save(); g.beginPath(); g.rect(300, 36, 198.4, 92.8); g.clip();
+  g.translate(300, 36); g.scale(1.6, 1.6); g.translate(-288, -35);
   if (show === 'sports') {
     R(288, 35, 124, 58, big ? (Math.floor(T * 8) % 2 ? '#ffd23f' : '#2f8f46') : '#2f8f46');
     L(350, 35, 350, 93, 'rgba(255,255,255,.4)', 1); g.beginPath(); g.arc(350, 64, 10, 0, TAU); g.strokeStyle = 'rgba(255,255,255,.4)'; g.stroke();
@@ -6636,11 +6641,11 @@ function drawTV() {
 // animated bits of the scenery (drawn every frame, under the people)
 function drawDynamicBg() {
   // TV
-  RR(438, 37, 165, 82.5, 4, '#111');
+  RR(295, 31, 208.4, 102.8, 4, '#111');
   drawTV();
-  g.globalAlpha = 0.07 + Math.sin(T * 3) * 0.02; E(520, 152, 84, 30, '#9fd3ff'); g.globalAlpha = 1;
+  g.globalAlpha = 0.07 + Math.sin(T * 3) * 0.02; E(399, 158, 104, 32, '#9fd3ff'); g.globalAlpha = 1;
   // real wall clock in the break room
-  const now = new Date(), ox = 351, oy = 50;
+  const now = new Date(), ox = 532, oy = 50;
   C(ox, oy, 11, '#fff'); g.beginPath(); g.arc(ox, oy, 11, 0, TAU); g.strokeStyle = '#333'; g.lineWidth = 2; g.stroke();
   const hr = (now.getHours() % 12 + now.getMinutes() / 60) / 12 * TAU, mn = now.getMinutes() / 60 * TAU, sc = now.getSeconds() / 60 * TAU;
   L(ox, oy, ox + Math.sin(hr) * 5.5, oy - Math.cos(hr) * 5.5, '#222', 2);
@@ -6659,9 +6664,6 @@ function drawDynamicBg() {
   // microwave
   RR(160, 82, 46, 23, 2, '#e6e6e6'); const micro = SPOT_BY_ID.micro.by !== null && workers[SPOT_BY_ID.micro.by]?.arrived;
   R(164, 86, 28, 15, micro ? '#ffd36b' : '#333'); R(195, 87, 7, 3, '#777'); if (micro) C(178, 93, 4, '#c97f38');
-  // arcade screen
-  const arc = SPOT_BY_ID.arcade.by !== null;
-  R(370, 60, 36, 30, '#000'); for (let i = 0; i < 4; i++) C(376 + ((T * (arc ? 40 : 12) + i * 9) % 26), 66 + i * 6, 1.6, ['#ff4fa3', '#4ff', '#ff0', '#0f0'][i]);
   // mailroom beacons
   const waiting = STATE ? STATE.jobs.some(j => j.status === 'waiting') : false;
   for (const lx of [1318, 1582]) {
@@ -6815,7 +6817,8 @@ function update(dt) {
   if (selected && T > selectUntil && selectUntil) { selected = null; selectUntil = 0; }
 }
 const PROPS = [
-  { y: 258, draw: drawCouch, heave: 'couch' }, { y: 339, draw: drawDiningTable, heave: 'table' }, { y: PY + 88, draw: drawPoolTable },
+  { y: 258, draw: drawCouch, heave: 'couch' }, { y: 259, draw: drawDiningTable, heave: 'table' }, { y: PY + 88, draw: drawPoolTable },
+  { y: 420, draw: drawMachines },
   { y: 540, draw: drawPingPong }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
   { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
 ];
