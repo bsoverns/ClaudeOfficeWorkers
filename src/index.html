@@ -141,15 +141,15 @@ py src\office.py demo</pre>
   <h3>Welcome to the office</h3>
   <p>Pick a theme to clock in. (Browsers only allow sound after a click, and the chime is how you'll hear that Claude is done.)</p>
   <div class="themes">
-    <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python… Workers go to the station that matches what Claude is doing.</span></button>
-    <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad… (also follows the work)</span></button>
-    <button class="theme" data-theme="horror"><b>🎃 Haunted House</b><span>Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and ghosts. The Crypt, the Cauldron, the Dungeon… (also follows the work)</span></button>
-    <button class="theme" data-theme="xmas"><b>🎄 North Pole</b><span>Christmas at Santa's workshop: elves, Santa and Mrs. Claus, reindeer (one with a very red nose), gingerbread people, snowmen and ugly sweaters. The Nice List, the Cookie Kitchen, the Yeti Cave, Gift Wrapping… (also follows the work)</span></button>
-    <button class="theme" data-theme="cyber"><b>🌃 Neon City</b><span>Cyberpunk: netrunners, street samurai with neon katanas, LED-mask punks, holo-idols, corpos, ripperdocs, drone couriers and androids. The Gig Board, Fork Alley, the Blackwall… (also follows the work)</span></button>
-    <button class="theme" data-theme="pirate"><b>🦜 Pirate Cove</b><span>Pirates with eyepatches and parrots, buccaneers, a captain and a few cursed skeletons. The Treasure Map, the Cannon Deck, Parrot Review, the Kraken, Walk the Plank… (also follows the work)</span></button>
-    <button class="theme" data-theme="stone"><b>🦖 Stone Age</b><span>Cave people, hunters, shamans and coworkers in dino and mammoth onesies; real dinosaurs do the heavy lifting. The Stone Tablets, Pterodactyl Airlift, the Wheel (reinvented), the T-Rex Den, Volcano Testing… (also follows the work)</span></button>
-    <button class="theme" data-theme="hero"><b>🦸 Hero HQ</b><span>Eight heroes and eight villains, each with a power: fire, ice, lightning, flight, teleporting, portals, super speed… They squabble and duel on break, use their powers to get around, and call a truce when work comes in. The Gadget Lab, the Portal Gate, the Danger Room, Containment… (also follows the work)</span></button>
-    <button class="theme" data-theme="fantasy"><b>🐉 Might &amp; Mayhem</b><span>An adventurers' guild: knights, elves, dwarves, an ogre and a goblin who swaps the potions. Dice decide the party, a party of 4 or 5 leaves the Tavern for each task, and a small Dungeon Master pops in with riddles. Slay the Dragon, the Goblin Caves, the Sphinx… (also follows the work)</span></button>
+    <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python, the QA Test Lab…</span></button>
+    <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad…</span></button>
+    <button class="theme" data-theme="horror"><b>🎃 Haunted House</b><span>Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and ghosts. The Crypt, the Cauldron, the Dungeon…</span></button>
+    <button class="theme" data-theme="xmas"><b>🎄 North Pole</b><span>Christmas at Santa's workshop: elves, Santa and Mrs. Claus, reindeer (one with a very red nose), gingerbread people, snowmen and ugly sweaters. The Nice List, the Cookie Kitchen, the Yeti Cave, Gift Wrapping…</span></button>
+    <button class="theme" data-theme="cyber"><b>🌃 Neon City</b><span>Cyberpunk: netrunners, street samurai with neon katanas, LED-mask punks, holo-idols, corpos, ripperdocs, drone couriers and androids. The Gig Board, Fork Alley, the Blackwall…</span></button>
+    <button class="theme" data-theme="pirate"><b>🦜 Pirate Cove</b><span>Pirates with eyepatches and parrots, buccaneers, a captain and a few cursed skeletons. The Treasure Map, the Cannon Deck, Parrot Review, the Kraken, Walk the Plank…</span></button>
+    <button class="theme" data-theme="stone"><b>🦖 Stone Age</b><span>Cave people, hunters, shamans and coworkers in dino and mammoth onesies; real dinosaurs do the heavy lifting. The Stone Tablets, Pterodactyl Airlift, the Wheel (reinvented), the T-Rex Den, Volcano Testing…</span></button>
+    <button class="theme" data-theme="hero"><b>🦸 Hero HQ</b><span>Eight heroes and eight villains, each with a power: fire, ice, lightning, flight, teleporting, portals, super speed… They squabble and duel on break, use their powers to get around, and call a truce when work comes in. The Gadget Lab, the Portal Gate, the Danger Room, Containment…</span></button>
+    <button class="theme" data-theme="fantasy"><b>🐉 Might &amp; Mayhem</b><span>An adventurers' guild: knights, elves, dwarves, an ogre and a goblin who swaps the potions. Dice decide the party, a party of 4 or 5 leaves the Tavern for each task, and a small Dungeon Master pops in with riddles. Slay the Dragon, the Goblin Caves, the Sphinx…</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
 </div></div>
@@ -167,6 +167,7 @@ const mainCtx = cv.getContext('2d');
 const bgCanvas = document.createElement('canvas');
 let g = mainCtx;                               // every draw helper uses the current g
 let DPR = 1, SC = 1, OX = 0, OY = 0, T = 0;
+let VIEW = { x0: 0, y0: 0, x1: W, y1: H };    // the part of the world on screen (resize()); slips and bubbles stay inside it
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -218,6 +219,18 @@ function wrap(text, maxW, maxLines) {
   if (cur && lines.length < maxLines) { lines.push(cur); i = words.length; }
   if (i < words.length && lines.length) lines[lines.length - 1] = fitText(lines[lines.length - 1], maxW, true);
   return lines;
+}
+// Markdown in a job's message to plain text for its bubble, like plain_text() in server.py: code blocks and table
+// separator rows go, table cells are joined with " · ", headers, bullets, bold/italic, inline code and links lose their marks
+function plainMd(s) {
+  // a table row: a line starting with "|", or a whole table already on one line (several pipes and a |---| run)
+  const table = l => /^\s*\|/.test(l) || ((l.match(/\|/g) || []).length >= 3 && /\|\s*:?-{3,}:?\s*\|/.test(l));
+  return String(s || '').replace(/(^|\n)[ \t]*(```|~~~)[\s\S]*?(\n[ \t]*\2[^\n]*|$)/g, '$1').split('\n')
+    .filter(l => !/^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$|^\s*([-*_])(\s*\2){2,}\s*$/.test(l))
+    .map(l => table(l) ? l.replace(/\|?\s*(:?-{3,}:?\s*\|\s*)+(:?-{3,}:?)?/g, '|').split('|').map(c => c.trim()).filter(Boolean).join(' · ')
+      : l.replace(/^\s*(#{1,6}\s*|>\s*|[-*+]\s+|\d+[.)]\s+)/, ''))
+    .join(' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*\*|__|~~|`+/g, '')
+    .replace(/(^|[^\w*])\*(?=\S)([^*]+?)(?<=\S)\*(?![\w*])/g, '$1$2').replace(/(^|\W)_(?=\S)([^_]+?)(?<=\S)_(?!\w)/g, '$1$2').replace(/\s+/g, ' ').trim();
 }
 
 // ============================================================================================
@@ -5189,7 +5202,7 @@ function updateWorker(w, dt) {
         }
         if ((w.locKind === 'mail' || w.locKind === 'trouble') && T > w.nextChat && T > ROOM_TALK[w.locKind]
             && !workers.some(o => o !== w && o.mode === 'job' && o.jobPhase === 'go' && o.arrived && o.locKind === w.locKind && o.nextChat < w.nextChat)) {   // longest wait speaks first
-          say(w, w.job.message || (w.locKind === 'mail' ? 'Your turn!' : 'Hmm...'), 4.5);
+          say(w, plainMd(w.job.message) || (w.locKind === 'mail' ? 'Your turn!' : 'Hmm...'), 4.5);
           w.nextChat = T + (w.locKind === 'mail' ? 9 : 7);
           ROOM_TALK[w.locKind] = T + 4.7;   // one speaker at a time per room, so their bubbles don't pile up
         }
@@ -7814,10 +7827,10 @@ function measureBubble(owner, x, bottom, text, opts = {}) {
   const lines = wrap(text, opts.maxW || 170, opts.maxLines || 2);
   const tw = Math.max(...lines.map(l => g.measureText(l).width));
   const bw = tw + 14, bh = lines.length * 14 + 8;
-  return { owner, x, bottom, lines, opts, bw, bh, bx: clamp(x - bw / 2, 4, W - bw - 4), by: bottom - bh - 6 };
+  return { owner, x, bottom, lines, opts, bw, bh, bx: clamp(x - bw / 2, VIEW.x0 + 4, VIEW.x1 - bw - 4), by: bottom - bh - 6 };
 }
 const boxesHit = (a, b, pad) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
-// Place bubbles so none covers another bubble (or another worker's slip). The hovered/selected
+// Place bubbles so none covers another bubble or a slip (layoutSlips runs first). The hovered/selected
 // worker goes first, then the lowest bubbles. Each tries, in order: its own spot, lifted straight up
 // past what is in the way, beside it (nearest first, own height or one step up), below the speaker's
 // feet. A bubble with no clear spot is skipped this frame. Moves are eased per speaker so bubbles
@@ -7825,19 +7838,19 @@ const boxesHit = (a, b, pad) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad &
 function layoutBubbles(bubs, obstacles) {
   const placed = [], first = o => o === hovered || o === selected;
   for (const b of [...bubs].sort((p, q) => first(q.owner) - first(p.owner) || q.by - p.by)) {
-    const others = obstacles.filter(o => o.owner !== b.owner);
+    const others = obstacles;   // every slip, the speaker's own too (it may sit beside them now)
     const box = (x, y) => ({ x, y, w: b.bw, h: b.bh + 6 });
     const hitAt = (x, y) => placed.concat(others).find(o => boxesHit(box(x, y), o, 3));
-    const fits = (x, y) => y >= 4 && y + b.bh + 6 <= H - 4 && !hitAt(x, y);
-    const xs = [];
-    for (const o of placed.concat(others)) xs.push(clamp(o.x - b.bw - 4, 4, W - b.bw - 4), clamp(o.x + o.w + 4, 4, W - b.bw - 4));
+    const fits = (x, y) => y >= VIEW.y0 + 4 && y + b.bh + 6 <= VIEW.y1 - 4 && !hitAt(x, y);
+    const xs = [], cx = x => clamp(x, VIEW.x0 + 4, VIEW.x1 - b.bw - 4);
+    for (const o of placed.concat(others)) xs.push(cx(o.x - b.bw - 4), cx(o.x + o.w + 4));
     xs.sort((p, q) => Math.abs(p - b.bx) - Math.abs(q - b.bx));
     const tryRow = y => { for (const x of [b.bx, ...xs]) if (Math.abs(x - b.bx) < 200 && fits(x, y)) return { x, y }; return null; };
     const underFeet = () => b.owner.y != null ? tryRow(b.owner.y + (b.opts.under ? 20 : 12)) : null;
     // opts.under (the Dev Shop cast, who stand beside a worker's slip): below the feet (clear of the other
     // Bob's) before lifting over the slip, which would need a long leader line
     let spot = b.opts.under && hitAt(b.bx, b.by) ? underFeet() : null;
-    for (let y = b.by, n = 0; !spot && n < 24 && y >= 4; n++) {
+    for (let y = b.by, n = 0; !spot && n < 24 && y >= VIEW.y0 + 4; n++) {
       const hit = hitAt(b.bx, y);
       if (!hit) { spot = { x: b.bx, y }; break; }
       y = hit.y - b.bh - 6 - 4;
@@ -7877,30 +7890,132 @@ function drawBubble(b) {
   }
   lines.forEach((l, i) => TXT(l, bx + 7, by + 11 + i * 14, opts.font || '12px system-ui', opts.color || '#222', 'left'));
 }
-function drawSlip(w) {
-  w.slipBox = null;
-  const j = w.job; if (!j || !w.slip) return w.y + headTop(w);
-  const color = STATUS_COLOR[j.status] || '#888';
+// ---- Work slips: placed out of the way (layoutSlips), then drawn (slipLeader, drawSlip) --------------------------------
+// What a slip should not cover, besides people and station equipment: signs, boards, the TV and doorways ([x, y, w, h]).
+// Themed rooms keep Classic's footprints, so one list serves every theme; station plaques are added per station.
+const FOCAL = [
+  [250, 2, 136, 16], [738, 2, 136, 16], [1062, 2, 136, 16], [1382, 2, 136, 16],   // room names in the top margin
+  [300, 36, 199, 93], [245, 30, 26, 32], [530, 349, 66, 12],                       // break room TV, MVP board, nap room sign
+  [668, 28, 120, 58], [796, 30, 78, 40],                                           // boss's window and title
+  [1030, 24, 200, 24], [1062, 56, 96, 30], [990, 54, 34, 34],                      // help desk sign, NOW SERVING, "restarting?" note
+  [1336, 24, 228, 22], [1330, 52, 240, 98],                                        // mailroom sign, pigeonholes
+  [370, 636, 200, 51], [330, 642, 34, 34], [238, 668, 76, 24],                     // whiteboard, MEETING ROOM sign, SMOKING AREA sign
+  [596, 300, 44, 45], [778, 290, 44, 20], [1108, 290, 44, 20], [1428, 290, 44, 20], [596, 676, 44, 48], [200, 600, 50, 44],   // doorways
+];
+const slipAlert = w => w.job.status === 'waiting' || w.job.status === 'trouble';
+// A slip's text and size: the full card (who · project, then the title) or the compact one-liner (name and a status dot)
+function slipSize(w, compact) {
+  const j = w.job, zz = dozing(w) && w.locKind === 'st';
+  if (compact) { g.font = 'bold 10px system-ui'; const t = w.L.name + (zz ? ' zzz' : ''); return { c: 1, t, cw: Math.ceil(g.measureText(t).width) + 24, ch: 17, zh: 0 }; }
   g.font = 'bold 11px system-ui';
   const lines = wrap(j.title, 128, 2);
   const sub = w.L.name + (j.agent ? ' as ' + j.agent : '') + (j.project ? ' · ' + j.project : '') + (j.kind === 'helper' ? ' · helper' : '');
   g.font = '600 9px system-ui'; const subW = Math.min(g.measureText(sub).width, 128);
   g.font = 'bold 11px system-ui'; const tw = Math.max(subW, ...lines.map(l => g.measureText(l).width));
-  const cw = clamp(tw + 16, 70, 148), ch = 16 + lines.length * 13 + 3;
-  const bx = clamp(w.x - cw / 2, 4, W - cw - 4), by = w.y + headTop(w) - 6 - ch;
-  w.slipBox = { owner: w, x: bx, y: by, w: cw, h: ch };
+  return { c: 0, lines, sub, cw: clamp(tw + 16, 70, 148), ch: 16 + lines.length * 13 + 3, zh: zz ? 14 : 0 };
+}
+// Where a slip may go, as [key, x, y]: over the head (centered, or hanging left/right of it), beside the head, below the
+// feet, and higher or lower tiers of those so slips in a crowd can stack
+function slipSpots(hx, top, feet, bw, bh) {
+  const out = [['L', hx - 16 - bw, top - 4], ['R', hx + 16, top - 4]];
+  for (let t = 0; t < 4; t++) {
+    const yu = top - 6 - bh - t * (bh + 8), yd = feet + 8 + t * (bh + 8);
+    out.push(['u' + t, hx - bw / 2, yu], ['uL' + t, hx - bw + 12, yu], ['uR' + t, hx - 12, yu], ['uLL' + t, hx - 16 - bw, yu], ['uRR' + t, hx + 16, yu],
+      ['d' + t, hx - bw / 2, yd], ['dL' + t, hx - bw + 12, yd], ['dR' + t, hx - 12, yd]);
+  }
+  return out;
+}
+const rectOv = (b, r) => Math.max(0, Math.min(b[0] + b[2], r[0] + r[2]) - Math.max(b[0], r[0])) * Math.max(0, Math.min(b[1] + b[3], r[1] + r[3]) - Math.max(b[1], r[1]));
+// Place every slip, one at a time (hovered/selected first, then the ones that need you, then by worker). Hard: inside the
+// view and clear of the slips placed before. Each spot costs its distance from the head (0.15/px up to 60px, then 3/px, so
+// slips stay by their worker), a little more when it leans right (toward the station art, away from the walkway), plus what it covers (area x weight):
+// its own worker 6, the station they work at 4, signs/boards/TV/doorways/plaques 3, other people and stations 1.5. The full
+// card wins unless the compact one-liner saves more than 12 (40 at a station, where there is room), so crowds shrink; a slip
+// keeps its last spot while that is still allowed and within 10 of the best, or while its worker walks (walkers don't count). Moves ease (offsets from the feet), snapping when the
+// eased box would overlap. w.slipBox (the box incl. the alert badge) is what bubbles avoid; w._sd is what drawSlip draws.
+function layoutSlips(order) {
+  const V = VIEW, placed = [], first = o => o === hovered || o === selected, sts = Object.values(themeStations());
+  const soft = FOCAL.map(r => ({ r, k: 3 })).concat(sts.map(s => ({ r: [s.x0 + 66, s.y0 + 2, 160, 21], k: 3 })));
+  const eq = sts.map(s => ({ s, r: [s.x0 + 92, s.y0 + 26, 142, 160] }));
+  const bodies = workers.filter(o => !o.path.length).map(o => { const at = wpos(o), ht = headTop(o); return { o, r: [at.x - 12, at.y + ht - 2, 24, 6 - ht] }; })
+    .concat([...HIRELINGS, ...(CAST.on ? castCrew() : [])].filter(o => !(o.path && o.path.length)).map(o => ({ o, r: [o.x - 12, o.y - 60, 24, 64] })));   // people walking by don't count
+  const rank = w => first(w) * 2 + (w.job && w.slip && slipAlert(w) ? 1 : 0);
+  for (const w of [...order].sort((a, b) => rank(b) - rank(a) || a.id - b.id)) {
+    w.slipBox = w._sd = null;
+    if (!w.job || !w.slip) { w._sk = w._sp = null; continue; }
+    const at = wpos(w), hx = at.x, top = at.y + headTop(w), feet = at.y, own = w.locKind === 'st' && w.arrived ? stationOf(w.job) : null, al = slipAlert(w) ? 8 : 0;
+    const hit = (x, y, s) => ({ x, y: y - al, w: s.cw + al, h: s.ch + s.zh + al });   // the alert badge pokes out top right
+    const ok = (x, y, s) => { const b = hit(x, y, s); return b.y >= V.y0 + 2 && b.y + b.h <= V.y1 - 2 && !placed.some(p => boxesHit(b, p, 3)); };
+    let best = null, keep = null;
+    for (const c of [0, 1]) {
+      const s = slipSize(w, c), bh = s.ch + s.zh;
+      for (let [k, x, y] of slipSpots(hx, top, feet, s.cw, bh)) {
+        x = clamp(x, V.x0 + 2, V.x1 - s.cw - al - 2);
+        if (!ok(x, y, s)) continue;
+        const box = [x, y, s.cw, bh];
+        const dist = Math.hypot(x + s.cw / 2 - hx, y + bh / 2 - top + 20);   // cheap within reach of the head, steep past 60px
+        let cost = Math.min(dist, 60) * 0.15 + Math.max(0, dist - 60) * 3 + (x + s.cw / 2 > hx + 20 ? 6 : 0) + (c ? (first(w) ? 400 : w.locKind === 'st' ? 40 : 12) : 0);
+        for (const b of bodies) cost += rectOv(box, b.r) * (b.o === w ? 6 : 1.5) / 100;
+        for (const e of eq) cost += rectOv(box, e.r) * (e.s === own ? 4 : 1.5) / 100;
+        for (const f of soft) cost += rectOv(box, f.r) * f.k / 100;
+        const cand = { key: c + k, x, y, s, cost };
+        if (!best || cost < best.cost) best = cand;
+        if (cand.key === w._sk) keep = cand;
+      }
+    }
+    // nowhere free (a packed room): the compact one-liner at the nearest free spot further out (more tiers up and down,
+    // columns either side), and only if even that fails, over the head (kept in view, may touch another)
+    const spare = s => {
+      const bh = s.ch + s.zh, xs = [hx - s.cw / 2, hx - s.cw + 12, hx - 12], ys = [top - 4];
+      for (let n = 0; n < 4; n++) xs.push(hx - 16 - s.cw - n * (s.cw + 8), hx + 16 + n * (s.cw + 8));
+      for (let t = 0; t < 16; t++) ys.push(top - 6 - bh - t * (bh + 8), feet + 8 + t * (bh + 8));
+      let out = null, bd = Infinity;
+      for (let x of xs) for (const y of ys) {
+        x = clamp(x, V.x0 + 2, V.x1 - s.cw - al - 2);
+        const d = Math.hypot(x + s.cw / 2 - hx, y + bh / 2 - top + 20);
+        if (d < bd && ok(x, y, s)) { bd = d; out = { key: 'f', x, y, s }; }
+      }
+      return out || { key: 'f0', x: clamp(hx - s.cw / 2, V.x0 + 2, V.x1 - s.cw - al - 2), y: clamp(top - 6 - bh, V.y0 + 2 + al, V.y1 - bh - 2), s };
+    };
+    const pick = (keep && (w.path.length || keep.cost <= best.cost + 10) ? keep : best) || spare(slipSize(w, 1));
+    const s = pick.s, dx = pick.x - hx, dy = pick.y - feet;
+    let p = w._sp;
+    if (!p || p.c !== s.c || Math.hypot(p.dx - dx, p.dy - dy) > 160) p = { dx, dy };
+    else {
+      p = { dx: lerp(p.dx, dx, 0.25), dy: lerp(p.dy, dy, 0.25) };
+      if (Math.hypot(p.dx - dx, p.dy - dy) < 0.5 || !ok(hx + p.dx, feet + p.dy, s)) p = { dx, dy };
+    }
+    p.c = s.c; w._sp = p; w._sk = pick.key;
+    const x = hx + p.dx, y = feet + p.dy, bh = s.ch + s.zh;
+    w._sd = { x, y, s, hx, top, feet, above: y + bh <= top + 1 && top - (y + bh) < 14 && x + 6 <= hx && hx <= x + s.cw - 6 };
+    w.slipBox = { owner: w, ...hit(x, y, s) };
+    placed.push(w.slipBox);
+  }
+}
+// a slip that is not right over its worker gets a thin line back to them (drawn before the slips, so they cover it)
+function slipLeader(w) {
+  const d = w._sd; if (!d || d.above) return;
+  const px = clamp(d.hx, d.x + 4, d.x + d.s.cw - 4), py = clamp((d.top + d.feet) / 2, d.y, d.y + d.s.ch);
+  const qx = clamp(px, d.hx - 7, d.hx + 7), qy = clamp(py, d.top + 2, d.feet - 4), color = STATUS_COLOR[w.job.status] || '#888';
+  g.globalAlpha = 0.85; L(px, py, qx, qy, color, 1.2); C(qx, qy, 2, color); g.globalAlpha = 1;
+}
+function drawSlip(w) {
+  const d = w._sd; if (!d) return;
+  const j = w.job, color = STATUS_COLOR[j.status] || '#888', { x: bx, y: by, s } = d, { cw, ch } = s;
   RR(bx + 1.5, by + 2, cw, ch, 4, 'rgba(0,0,0,.28)');
   RR(bx, by, cw, ch, 4, '#fffdf4', color, j.status === 'waiting' ? 2 + Math.abs(Math.sin(T * 4)) * 1.5 : 1.6);
   R(bx + 1, by + 1, 4, ch - 2, color);
-  g.font = '600 9px system-ui'; TXT(fitText(sub, cw - 14), bx + 9, by + 8.5, g.font, '#7a7a7a', 'left');
-  lines.forEach((l, i) => TXT(l, bx + 9, by + 21 + i * 13, 'bold 11px system-ui', '#222', 'left'));
+  if (s.c) { TXT(s.t, bx + 9, by + ch / 2 + 0.5, 'bold 10px system-ui', '#222', 'left'); C(bx + cw - 8, by + ch / 2, 3, color); }   // compact: name, status dot
+  else {
+    g.font = '600 9px system-ui'; TXT(fitText(s.sub, cw - 14), bx + 9, by + 8.5, g.font, '#7a7a7a', 'left');
+    s.lines.forEach((l, i) => TXT(l, bx + 9, by + 21 + i * 13, 'bold 11px system-ui', '#222', 'left'));
+  }
   C(bx + cw / 2, by, 2.4, '#e74c3c');
-  if (j.status === 'waiting' || j.status === 'trouble') {
+  if (slipAlert(w)) {
     const pulse = 1 + Math.abs(Math.sin(T * 4)) * 0.25;
     C(bx + cw - 2, by + 2, 8 * pulse, color); TXT(j.status === 'waiting' ? '!' : '?', bx + cw - 2, by + 2.5, 'bold 12px system-ui', '#fff');
   }
-  if (dozing(w) && w.locKind === 'st') TXT('zzz… (no news for a while)', bx + cw / 2, by + ch + 8, 'italic 9px system-ui', '#fff');
-  return by;
+  if (s.zh) TXT('zzz… (no news for a while)', bx + cw / 2, by + ch + 8, 'italic 9px system-ui', '#fff');
 }
 function drawTooltip(w) {
   const lines = [w.L.name + (w.job && w.job.agent ? ' as ' + w.job.agent : '')];
@@ -7965,10 +8080,12 @@ function render() {
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
   const bubs = [];
+  layoutSlips(order);
+  for (const w of order) slipLeader(w);
+  for (const w of order) drawSlip(w);
   for (const w of order) {
-    const top = drawSlip(w);
-    const at = wpos(w);
-    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, at.x, at === w ? top : at.y + headTop(w), w.bubble, { maxW: 150, maxLines: THEME === 'hero' || THEME === 'fantasy' ? 5 : 2 }));   // Hero HQ punchlines and riddle reveals run long
+    const at = wpos(w), d = w._sd;   // a bubble sits on its slip when that is right over the head, else on the head
+    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, at.x, d && d.above ? d.y - 4 : at.y + headTop(w), w.bubble, { maxW: 170, maxLines: THEME === 'hero' || THEME === 'fantasy' ? 5 : 3 }));   // Hero HQ punchlines and riddle reveals run long
     else w._lift = null;
   }
   if (BOSS.bubble && T < BOSS.bubbleUntil) bubs.push(measureBubble(BOSS, BOSS.x, BOSS.y - 70, BOSS.bubble, { bg: '#fff4ee', border: '#d97757' }));
@@ -8006,6 +8123,7 @@ function resize() {
   DPR = window.devicePixelRatio || 1;
   cv.width = Math.max(1, Math.round(r.width * DPR)); cv.height = Math.max(1, Math.round(r.height * DPR));
   SC = Math.min(r.width / W, r.height / H); OX = (r.width - W * SC) / 2; OY = (r.height - H * SC) / 2;
+  VIEW = { x0: Math.max(0, -OX / SC), y0: Math.max(0, -OY / SC), x1: Math.min(W, (r.width - OX) / SC), y1: Math.min(H, (r.height - OY) / SC) };
   bgCanvas.width = cv.width; bgCanvas.height = cv.height;
   g = bgCanvas.getContext('2d'); g.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * OX, DPR * OY);
   drawStatic(); g = mainCtx;
@@ -8047,7 +8165,7 @@ function apply(s) {
       else {
         w.job = j;
         if (old && j.activity && old.activity !== j.activity && j.status === 'working' && T - w.lastActBubble > 3 && w.arrived && w.jobPhase === 'go') {
-          say(w, j.activity, 3); w.lastActBubble = T;
+          say(w, plainMd(j.activity), 3); w.lastActBubble = T;
         }
       }
     }

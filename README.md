@@ -48,7 +48,11 @@ one is back). A failed tool sends the worker to the Troubleshooting desk (staffe
 rubber duck); when Claude stops or needs permission, the worker waits in the mailroom,
 a chime plays and the tab shows a red icon. Say "done" and they go back on break. The work slip
 shows the session's name as the Claude app shows it (your rename, else the app's own title),
-or your first prompt until the session has a name.
+or your first prompt until the session has a name. Slips sit where they don't cover the worker,
+the station they work at or the room's signs, boards, TV and doorways (with a thin line back to
+the worker when they aren't right overhead), never overlap each other or a speech bubble, and
+shrink to a one-line name tag in a crowded room. Speech bubbles stay within three lines (five in
+Hero HQ and Might & Mayhem) and show Claude's Markdown (tables, code, bold) as plain text.
 
 On break, people chat with whoever is nearby: short back-and-forth exchanges about fish in the
 microwave, last night's game, the stock market, reply-all disasters, TPS reports and the

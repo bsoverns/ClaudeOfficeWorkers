@@ -144,13 +144,26 @@ TAG_RE = re.compile(r"</?[A-Za-z][\w:-]*(?:\s[^<>]*)?/?>")
 LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s*|>\s*|[-*+]\s+|\d+[.)]\s+)")
 
 
+FENCE_RE = re.compile(r"^\s*(```|~~~)[^\n]*\n.*?(?:^\s*\1[^\n]*$|\Z)", re.S | re.M)
+RULE_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$|^\s*([-*_])(?:\s*\1){2,}\s*$")
+
+
 def plain_text(text: object) -> str:
     """Markup-free one-liner for a slip or bubble: drops tags Claude Code wraps around
-    prompts (e.g. <pasted_content>) and Markdown (#, **, `, list bullets, links)."""
-    text = TAG_RE.sub(" ", str(text or ""))
-    text = " ".join(LINE_MARK_RE.sub("", line) for line in text.splitlines())
-    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    prompts (e.g. <pasted_content>) and Markdown (#, **, `, list bullets, links, code
+    blocks, table separator rows and rules; table cells are joined with " · ")."""
+    text = FENCE_RE.sub(" ", TAG_RE.sub(" ", str(text or "")))
+    lines = []
+    for line in text.splitlines():
+        if RULE_RE.match(line):
+            continue
+        if line.strip().startswith("|"):
+            lines.append(" · ".join(c.strip() for c in line.strip().strip("|").split("|") if c.strip()))
+        else:
+            lines.append(LINE_MARK_RE.sub("", line))
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", " ".join(lines))
     text = re.sub(r"\*\*|__|~~|`+", "", text)
+    text = re.sub(r"(?<![\w*])\*(?=\S)([^*]+?)(?<=\S)\*(?![\w*])|(?<!\w)_(?=\S)([^_]+?)(?<=\S)_(?!\w)", lambda m: m.group(1) or m.group(2), text)
     return " ".join(text.split())
 
 
