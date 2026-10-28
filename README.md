@@ -163,9 +163,10 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   searchlight out the window and star bunting on the walls; the boss wears a domino mask.
 - **Dev Shop**: the same floor re-skinned as where dev work happens. Three extra characters live
   only here and never take work (the "Dev Shop cast" in `index.html`):
-  - **Gary**, the office manager in glasses, wanders the office with his coffee, talks about his
+  - **Gary**, the office manager in glasses and a pink pinstripe shirt, wanders the office with his coffee, talks about his
     Porsche and complains that someone parked in his spot.
-  - **The two Bobs**, consultants with glasses, suspenders and clipboards, always walk side by side.
+  - **The two Bobs**, consultants with glasses and clipboards (the taller one with hair wears suspenders,
+    the shorter bald one a charcoal suit jacket), always walk side by side.
     While anyone has a job, they shadow that worker and make mostly unflattering notes, following them
     to the help desk and the mailroom too; with several jobs they move on to the next worker about
     every 25 seconds. When that worker's job slip is in the way of their speech bubble, the bubble

@@ -3318,6 +3318,7 @@ function drawPerson(Lk, x, y, st) {
   g.save(); g.translate(x, y);
   if (pose === 'lie') { E(0, 1, 26, 5, 'rgba(0,0,0,.15)'); g.translate(26, -5); g.rotate(-Math.PI / 2); }
   else if (!st.noShadow) E(0, 0, 12, 3.5, 'rgba(0,0,0,.18)');
+  if (Lk.tall) g.scale(Lk.tall, Lk.tall);   // height factor (about 0.92-1.08), scaled from the feet so they stay on the shadow
   if (f === 'left') g.scale(-1, 1);
   if (st.shake) g.translate(Math.sin(T * 47) * 0.9, 0);
   if (Lk.sheet) { drawGhost(Lk, st, pose, view, side); g.restore(); return; }
@@ -3397,7 +3398,7 @@ function drawPerson(Lk, x, y, st) {
   };
   let hand, lhand;
   if (side) {
-    lhand = arm(-1, st.la ?? 0.1, 1, shade(Lk.shirt, -0.16), st.laLen);
+    lhand = arm(-1, st.la ?? 0.1, 1, shade(Lk.jacket || Lk.shirt, -0.16), st.laLen);
     RR(-6, ty, 12, 22, 4, Lk.shirt, outline, 0.8);
   } else {
     RR(-8, ty, 16, 22, 5, Lk.shirt, outline, 0.8);
@@ -3494,6 +3495,24 @@ function drawPerson(Lk, x, y, st) {
     }
     R(-8, ty + 20, 16, 2, '#d4af37'); g.restore();
   }
+  if (Lk.jacket) {                        // suit jacket: open lapels over the shirt and tie, buttons, back seam
+    const jc = Lk.jacket, dk = shade(jc, -0.3);
+    g.save(); g.beginPath(); g.roundRect(side ? -6 : -8, ty, side ? 12 : 16, 22, 4); g.clip();
+    R(-8, ty, 16, 22, jc);
+    if (!back && !side) {
+      poly([-4, ty, 4, ty, 0, ty + 17], Lk.shirt);                           // shirt and tie between the lapels
+      poly([-4, ty, -1.6, ty, -0.3, ty + 16, -2.6, ty + 7], shade(jc, 0.12)); poly([4, ty, 1.6, ty, 0.3, ty + 16, 2.6, ty + 7], shade(jc, 0.12));
+      L(-4, ty, 0, ty + 17, dk, 0.9); L(4, ty, 0, ty + 17, dk, 0.9);
+      C(0, ty + 18.6, 0.9, dk); C(0, ty + 21, 0.9, dk);                         // buttons below the tie
+      L(3.5, ty + 17, 6.5, ty + 17, dk, 0.8);                                   // hip pocket
+    } else if (side) {
+      R(2.6, ty, 3.4, 11, Lk.shirt); L(2.6, ty, 4.4, ty + 11, dk, 0.9);      // shirt at the open front
+      C(4.6, ty + 15.5, 0.8, dk); L(-4.5, ty + 1, -4.5, ty + 22, shade(jc, -0.15), 1.4);
+    } else {
+      L(0, ty + 2, 0, ty + 22, dk, 0.9); L(-8, ty + 1, 8, ty + 1, shade(jc, -0.15), 1.2);
+    }
+    g.restore();
+  }
   if (Lk.sash) {                          // red sash around the waist with a knot and tails on the hip
     R(side ? -6 : -8, ty + 13, side ? 12 : 16, 4, Lk.sash);
     if (!back) { const kx = side ? 0 : 5.5; C(kx, ty + 15, 2, shade(Lk.sash, -0.2)); poly([kx - 1, ty + 16, kx + 1, ty + 16, kx + 0.5 + Math.sin(T * 2 + (Lk.id || 0)) * 0.8, ty + 23], Lk.sash); }
@@ -3572,8 +3591,9 @@ function drawPerson(Lk, x, y, st) {
 
   if (!side && !back) poly([-3, ty, 3, ty, 0, ty + 4], Lk.tie ? '#f1f5f9' : shade(Lk.shirt, -0.2));
   if (Lk.tie && !back) { if (side) L(3, ty + 2, 4, ty + 12, Lk.tie, 1.6); else poly([-1.6, ty + 3, 1.6, ty + 3, 2.2, ty + 14, 0, ty + 17, -2.2, ty + 14], Lk.tie); }
-  if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.metalArm || Lk.shirt, st.raLen);
-  else { lhand = arm(-7.5, st.la ?? 0.12, -1, Lk.shirt, st.laLen); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.metalArm || Lk.shirt, st.raLen); }
+  const sleeve = Lk.jacket || Lk.shirt;
+  if (side) hand = arm(1, st.ra ?? 0.1, 1, Lk.metalArm || sleeve, st.raLen);
+  else { lhand = arm(-7.5, st.la ?? 0.12, -1, sleeve, st.laLen); hand = arm(7.5, st.ra ?? 0.12, 1, Lk.metalArm || sleeve, st.raLen); }
   if (Lk.chromeHands) { C(hand[0], hand[1], 2.5, Lk.chromeHands); C(lhand[0], lhand[1], 2.5, Lk.chromeHands); }
   if (Lk.shoulderPlate) {                  // street samurai: armored shoulder with a neon edge
     if (side) poly([-4, ty - 1, 5, ty, 5, ty + 7, -3, ty + 6], '#3a3a48'); else poly([3, ty - 1, 12, ty + 1, 12, ty + 7, 4, ty + 5], '#3a3a48');
@@ -5299,10 +5319,10 @@ function drawWorker(w) {
 const BOB_LOOK = { skin: '#f0c8a4', shirt: '#f8fafc', glasses: true, suspenders: '#1f2937', mobility: '' };
 const CAST = {
   on: false, fav: null,
-  gary: { L: { name: 'Gary', id: 901, skin: '#e9b993', hair: '#3a2716', hairStyle: 'widow', shirt: '#e3edff', vstripes: '#7aa7e0',
+  gary: { L: { name: 'Gary', id: 901, skin: '#e9b993', hair: '#3a2716', hairStyle: 'widow', shirt: '#f9c6d8', vstripes: '#e07aa3',
     pants: '#2b2f3a', suspenders: '#8b1e2b', glasses: true, mobility: '' }, speed: 70 },
-  bobA: { L: { ...BOB_LOOK, name: 'Bob', id: 902, hair: '#6b5440', hairStyle: 'short', tie: '#b91c1c', pants: '#4b5563' }, speed: 78 },
-  bobB: { L: { ...BOB_LOOK, name: 'Bob', id: 903, hair: '#9a948c', hairStyle: 'balding', tie: '#1d4ed8', pants: '#374151' }, speed: 78 },
+  bobA: { L: { ...BOB_LOOK, name: 'Bob', id: 902, hair: '#6b5440', hairStyle: 'short', tie: '#b91c1c', pants: '#4b5563', tall: 1.08 }, speed: 78 },
+  bobB: { L: { ...BOB_LOOK, name: 'Bob', id: 903, hair: '#9a948c', hairStyle: 'balding', tie: '#1d4ed8', pants: '#374151', tall: 0.92, jacket: '#3f4654' }, speed: 78 },
 };
 // What the Bobs are up to: watch (a worker), toGary/gary (a word with Gary), interview (at the lunch table).
 const BOBS = { mode: 'watch', target: null, switchAt: 0, gx: null, gy: null, repath: 0, next: 0, queue: [], qNext: 0,
@@ -6854,7 +6874,7 @@ function render() {
   if (CAT.bubble && T < CAT.bubbleUntil) bubs.push(measureBubble(CAT, CAT.x, CAT.y - 26, CAT.bubble, { thought: true, maxW: 150, maxLines: 4, font: 'italic 12px system-ui', bg: '#fff7ed', border: '#f39c4a' }));
   else CAT._lift = null;
   for (const n of castCrew()) {
-    if (CAST.on && n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + (castPose(n) === 'sit' ? -52 : -58), n.bubble, { maxW: 150, maxLines: 3, under: true }));
+    if (CAST.on && n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + (castPose(n) === 'sit' ? -52 : -58) * (n.L.tall || 1), n.bubble, { maxW: 150, maxLines: 3, under: true }));
     else n._lift = null;
   }
   layoutBubbles(bubs, workers.map(w => w.slipBox).filter(Boolean));
