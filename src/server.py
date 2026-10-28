@@ -306,7 +306,6 @@ class Office:
         options = [s for s, c in counts.items() if c == low and s != leave] or [leave]
         return random.choice(options)
 
-
     def _staff(self, job: dict) -> None:
         """Give the job a worker: the one who did this session's last task if they're free,
         otherwise the next in the rotation."""
