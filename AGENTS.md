@@ -40,7 +40,6 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
 - Keep the API and the page in step: change an endpoint in `server.py`, update `index.html`
   and `office.py` in the same change. The roster and station list live in `server.py` (roster)
   and `index.html` `STATION_ORDER` (stations), which must match `STATIONS` in `server.py`.
-  Work areas: `AREA_RULES` in `server.py` and `AREA_SLOT` in `index.html` must use the same keys.
   A theme (`THEMES` in `index.html`) is a set of 12 station definitions keyed by those slots
   (`STA` Classic, `DEV` Dev Shop, `SCIFI`, `HORROR`, `CYBER` Neon City, `XMAS` North Pole, `PIRATE` Pirate Cove, `STONE` Stone Age, `HERO` Hero HQ,
   `FANTASY` Might & Mayhem). Classic is hidden from the Theme menu and the clock-in screen (a saved Classic opens Might & Mayhem)
@@ -48,7 +47,7 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
   Dungeon Master, Hirelings; see "Might & Mayhem parties" in `index.html`); every other theme must keep one worker per task.
   Other optional theme fields: `plaque(s, x, y)` (draws the station titles) and `labels` (`{break, boss, trouble, mail}`, the
   room names in the top margin). Plus optional
-  `routed`, `costumes` (see `dress()`), `wash`, `decor`, `blocks` and `rooms` (skins for the troubleshooting room, meeting room
+  `costumes` (see `dress()`), `wash`, `decor`, `blocks` and `rooms` (skins for the troubleshooting room, meeting room
   and mailroom: `{trouble, meeting, mail}`, each with optional `back`/`fx`/`counter`|`table`/`duck`, plus `serving` (trouble: the
   "NOW SERVING" display text) and `tbd` (meeting: the whiteboard's idle text); assigned in the "Themed rooms" section, a missing entry means Classic, and furniture footprints must not change). Station draws use coordinates
   relative to the cell (x, y) and keep their equipment right of x + 92 (that area is blocked for walking).

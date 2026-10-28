@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--project", default="cmd")
     ap.add_argument("--message", "-m")
     ap.add_argument("--activity", "-a")
-    ap.add_argument("--area", help="kind of work, for the Dev Shop theme: ado, azure, github, support, sql, "
+    ap.add_argument("--area", help="kind of work (job info only; stations go by who is free): ado, azure, github, support, sql, "
                                    "dbproj, impl, python, service, qa, hardware, tracking")
     a = ap.parse_args(argv)
     if a.cmd == "demo":

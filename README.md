@@ -296,30 +296,14 @@ the two have a short chat about the talking cat (checked every 6 to 12 seconds, 
 answers with a smug thought. When she is out there while the cat thinks, she often mutters about it.
 Lines: `CAT_THOUGHTS`, `CAT_TALKS` and `CAT_SOLO` in `index.html`.
 
-Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove, Stone Age, Hero HQ and Might & Mayhem all send workers to the station that matches what Claude
-is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
-
-| Station | Work that sends a worker there |
-|---|---|
-| Azure DevOps | work items, `AB#123`, comments, linking PRs, `dev.azure.com`, ADO MCP tools |
-| Azure Portal | `portal.azure.com`, `az` CLI, resource groups, key vaults, Azure SQL |
-| GitHub | `gh`, `git push/pull/merge/rebase/commit`, branches, pull requests |
-| Support Tickets | support tickets, incidents, outages, "broken", "not working" |
-| SQL Server | `.sql` files, stored procedures, T-SQL, `sqlcmd` |
-| DB Projects | dacpacs, `.sqlproj`, `sqlpackage`, publish profiles, scripted deployments |
-| Implementation | rollouts, go-lives, onboarding, client/tenant setup, feature flags, env vars, config files (`appsettings`, `.config`, `.env`) |
-| Python | `.py` files, `python`, `pip` |
-| Service Code | `*.Service` projects, Windows/worker/hosted services, legacy code (it's dark in there) |
-| QA Test Lab | unit/integration tests, `pytest`, `dotnet test`, `npm test` |
-| Hardware | printers, drivers, docks, USB, firmware |
-| Tracking | time tracking, Taskmaskitator, status/daily reports, shipments |
-
-The server scores those keywords from your prompt (strongest), the project folder, and each
-tool call (file paths, commands, URLs, MCP tool names). A new prompt can move the worker
-straight away; tool calls only move them once another area clearly leads and they've been at
-their station 20 seconds, so they don't ping-pong. Until there's a clue, the worker uses
-their usual station. Rules live in `AREA_RULES` in `server.py`.
-Test a station: `py src\office.py start "Fix the sproc" --area sql`.
+Workers spread around the office: in every theme a new task goes to a station nobody is at (a random
+one, so the layout changes from run to run). Only when every station is taken do two share, at the one
+with the fewest workers (the second stands beside the first; in Might & Mayhem, in the quest's party spots). Each new prompt in a session moves its
+worker to a different station (unless theirs is the only one with room), so people rotate instead of
+camping. When someone leaves, nobody else moves; the freed station is free for the next task. A worker in the
+mail room, troubleshooting room or meeting room keeps their station for when they come back. The picking lives in
+`_pick_station()` in `server.py`. The server still guesses the kind of work (`AREA_RULES`, the `area`
+field and `--area` in `office.py`), but it no longer decides the station.
 
 ## Run from source
 

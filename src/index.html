@@ -127,8 +127,7 @@
       help desk, and when Claude stops or needs permission they wait in the mailroom.</p>
       <p>Saying <code>done</code>, <code>thanks</code> or <code>task complete</code> to Claude (or pressing <b>Done ✓</b>)
       sends the worker back to the break room. Closing the session does too.</p>
-      <p>In the <b>Dev Shop</b> theme the office reads your prompt, the project folder and Claude's tool calls to send the
-      worker to the matching station (Azure DevOps, GitHub, SQL Server, Python…).</p>
+      <p>Workers spread out over the stations, and each new prompt moves its worker to another one.</p>
       <p>Test from a command prompt:</p>
       <pre>py src\office.py start "Build the login page"
 py src\office.py trouble
@@ -3461,40 +3460,37 @@ for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE, HERO, FANTASY
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
 });
-// Server work areas (see AREA_RULES in server.py) -> the slot a Dev Shop worker goes to.
-const AREA_SLOT = { ado: 'workbench', azure: 'forge', github: 'dairy', support: 'valet', sql: 'bakery', dbproj: 'garden',
-  impl: 'pizza', python: 'easel', service: 'lumber', qa: 'lab', hardware: 'servers', tracking: 'packing' };
-// A theme: its 12 stations, whether workers follow the work area (routed), optional
+// A theme: its 12 stations, optional
 // costumes, a color wash over the static rooms, animated decor and optional `rooms`
 // (skins for the troubleshooting room, meeting room and mailroom, assigned in the "Themed rooms" section).
 // Also optional: `party` (Might & Mayhem's parties, dice and Dungeon Master), `plaque(s, x, y)` (draws the
 // station titles instead of the plain label bars) and `labels` ({break, boss, trouble, mail}: room names in the top margin).
 const THEMES = {
   classic: { name: 'Classic Office', stations: STA },
-  dev: { name: 'Dev Shop', stations: DEV, routed: true },
-  scifi: { name: 'Sci-Fi Station', stations: SCIFI, routed: true, swaps: { 5: 'cyborg', 9: 'cyborg', 12: 'robot', 15: 'robot' }, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
-  horror: { name: 'Haunted House', stations: HORROR, routed: true,
+  dev: { name: 'Dev Shop', stations: DEV },
+  scifi: { name: 'Sci-Fi Station', stations: SCIFI, swaps: { 5: 'cyborg', 9: 'cyborg', 12: 'robot', 15: 'robot' }, costumes: ['astronaut', 'alien', 'wizard'], wash: ['#10205a', 0.14], decor: () => decorScifi() },
+  horror: { name: 'Haunted House', stations: HORROR,
     swaps: { 2: 'demon', 7: 'zombie', 8: 'slime', 10: 'pumpkin', 11: 'demon', 12: 'slime', 14: 'pumpkin', 15: 'zombie' }, costumes: ['dracula', 'frank', 'wolf', 'mummy', 'witch', 'skeleton', 'ghost'], wash: ['#2a0b3d', 0.22], decor: () => decorHorror() },
-  cyber: { name: 'Neon City', stations: CYBER, routed: true,
+  cyber: { name: 'Neon City', stations: CYBER,
     costumes: ['netrunner', 'samurai', 'ledmask', 'idol', 'corpo', 'ripperdoc', 'courier', 'android'],
     wash: ['#2a0a4a', 0.22], decor: () => decorCyber() },
-  xmas: { name: 'North Pole', stations: XMAS, routed: true,
+  xmas: { name: 'North Pole', stations: XMAS,
     swaps: { 2: 'snowman', 4: 'rudolph', 9: 'santa', 12: 'mrsclaus', 15: 'snowman' },
     costumes: ['elf', 'sweater', 'reindeer', 'gingerbread', 'elf', 'sweater', 'elf', 'sweater'],
     wash: ['#1e3a8a', 0.08], decor: () => decorXmas(),
     blocks: [[658, 230, 62, 36], [114, 706, 28, 22]] },     // the tree in the boss's office, the patio snowman
-  pirate: { name: 'Pirate Cove', stations: PIRATE, routed: true,      // the beach props sit on the patio tree and bushes
+  pirate: { name: 'Pirate Cove', stations: PIRATE,      // the beach props sit on the patio tree and bushes
     swaps: { 9: 'captain', 4: 'skelly', 13: 'skelly' },
     costumes: ['pirate', 'deckhand', 'parrot', 'buccaneer', 'pirate', 'deckhand', 'parrot'],
     wash: ['#d97706', 0.06], decor: () => decorPirate() },
-  stone: { name: 'Stone Age', stations: STONE, routed: true,         // the nest and campfire sit on the patio bushes
+  stone: { name: 'Stone Age', stations: STONE,         // the nest and campfire sit on the patio bushes
     swaps: { 9: 'shaman', 4: 'mammoth', 12: 'mammoth' },
     costumes: ['caveman', 'cavewoman', 'dino', 'hunter', 'caveman', 'cavewoman', 'dino', 'shaman'],
     wash: ['#b45309', 0.05], decor: () => decorStone() },
-  hero: { name: 'Hero HQ', stations: HERO, routed: true,           // costumes alternate hero / villain; POWERS has who can do what
+  hero: { name: 'Hero HQ', stations: HERO,           // costumes alternate hero / villain; POWERS has who can do what
     costumes: ['hero', 'villain'], wash: ['#312e81', 0.08], decor: () => decorHero() },
   // parties: a task's worker leads a party from the Tavern (see "Might & Mayhem parties"); FCAST has who is what
-  fantasy: { name: 'Might & Mayhem', stations: FANTASY, routed: true, party: true, costumes: ['fantasy'], wash: ['#78350f', 0.05],
+  fantasy: { name: 'Might & Mayhem', stations: FANTASY, party: true, costumes: ['fantasy'], wash: ['#78350f', 0.05],
     decor: () => decorFantasy(), plaque: fanPlaque, labels: { break: 'TAVERN', boss: "GUILDMASTER'S KEEP", trouble: 'TEMPLE', mail: 'CROSSROADS' } },
 };
 // Classic stays the base every theme maps onto, but it is no longer offered: a saved Classic (or no pick yet) opens Might & Mayhem.
@@ -5019,10 +5015,10 @@ function desiredKind(j) {
   if (j.status === 'waiting') return 'mail';
   return j.kind !== 'helper' && helpersOf(j.id).length ? 'meet' : 'st';
 }
-// The station a job works at: in the Dev Shop, the one matching the kind of work (if known yet).
+// The station a job works at: the one the server picked (by who is free, not by kind of work).
 function stationOf(j) {
-  const set = themeStations(), slot = (THEMES[THEME].routed && j.area && AREA_SLOT[j.area]) || j.station;
-  return set[slot] || set.workbench;
+  const set = themeStations();
+  return set[j.station] || set.workbench;
 }
 function stationName(s) { return s.name || s.label.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
 function setTheme(name) {
@@ -5170,7 +5166,7 @@ function updateWorker(w, dt) {
       const st = want === 'st' ? stationOf(w.job) : null;
       if (w.locKind !== want && T >= w.dwellUntil) { w.locKind = want; w.stDef = st; goTo(w, jobSpot(w, want)); }
       else if (st && w.locKind === 'st' && w.stDef !== st && T >= (w.stDwell || 0)) {
-        // the kind of work changed (Dev Shop): walk over to the matching station
+        // a new task moved the job to another station: walk over to it
         w.stDef = st; goTo(w, jobSpot(w, 'st')); say(w, 'Off to ' + stationName(st) + '!', 2.5);
       }
       if (w.arrived) {
