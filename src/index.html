@@ -127,7 +127,7 @@
       help desk, and when Claude stops or needs permission they wait in the mailroom.</p>
       <p>Saying <code>done</code>, <code>thanks</code> or <code>task complete</code> to Claude (or pressing <b>Done ✓</b>)
       sends the worker back to the break room. Closing the session does too.</p>
-      <p>Workers spread out over the stations, and each new prompt moves its worker to another one.</p>
+      <p>Workers spread out over the stations: each task starts at a free one and stays there until it's done.</p>
       <p>Test from a command prompt:</p>
       <pre>py src\office.py start "Build the login page"
 py src\office.py trouble
@@ -5166,7 +5166,7 @@ function updateWorker(w, dt) {
       const st = want === 'st' ? stationOf(w.job) : null;
       if (w.locKind !== want && T >= w.dwellUntil) { w.locKind = want; w.stDef = st; goTo(w, jobSpot(w, want)); }
       else if (st && w.locKind === 'st' && w.stDef !== st && T >= (w.stDwell || 0)) {
-        // a new task moved the job to another station: walk over to it
+        // the job's station changed: walk over to it
         w.stDef = st; goTo(w, jobSpot(w, 'st')); say(w, 'Off to ' + stationName(st) + '!', 2.5);
       }
       if (w.arrived) {

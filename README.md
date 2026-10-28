@@ -298,8 +298,9 @@ Lines: `CAT_THOUGHTS`, `CAT_TALKS` and `CAT_SOLO` in `index.html`.
 
 Workers spread around the office: in every theme a new task goes to a station nobody is at (a random
 one, so the layout changes from run to run). Only when every station is taken do two share, at the one
-with the fewest workers (the second stands beside the first; in Might & Mayhem, in the quest's party spots). Each new prompt in a session moves its
-worker to a different station (unless theirs is the only one with room), so people rotate instead of
+with the fewest workers (the second stands beside the first; in Might & Mayhem, in the quest's party spots). A worker keeps their
+station until the task is done; the next task (even the same session coming back, with the same worker)
+starts at a different station unless that one is the only one with room, so people rotate instead of
 camping. When someone leaves, nobody else moves; the freed station is free for the next task. A worker in the
 mail room, troubleshooting room or meeting room keeps their station for when they come back. The picking lives in
 `_pick_station()` in `server.py`. The server still guesses the kind of work (`AREA_RULES`, the `area`
