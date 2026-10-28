@@ -150,8 +150,8 @@ the URL in it too).
 
 Pick a theme on the clock-in screen: **Dev Shop**, **Sci-Fi Station**, **Haunted House**, **Neon City**,
 **North Pole**, **Pirate Cove**, **Stone Age**, **Hero HQ** or **Might & Mayhem** (the default; there a party of
-4 or 5 goes on each task). In every theme workers go to the station for the kind of work (Azure DevOps, GitHub,
-SQL Server, Python…); see README. Classic Office is no longer offered; a saved Classic opens Might & Mayhem.
+4 or 5 goes on each task). In every theme workers spread out over the stations and
+move to another one with each new prompt; see README. Classic Office is no longer offered; a saved Classic opens Might & Mayhem.
 
 
 | Claude is…                                 | The worker…                                     |

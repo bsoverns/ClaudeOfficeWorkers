@@ -19,7 +19,6 @@ import re
 import sys
 import threading
 import time
-from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -94,9 +93,8 @@ PUBLIC_JOB_KEYS = ("id", "title", "project", "kind", "parent", "status", "messag
                    "waited", "wait_since")
 
 # Work areas: what kind of work a job is doing, guessed from the prompt, the project folder
-# and the tools Claude uses. Themes that label their stations by kind of work (Dev Shop) send
-# the worker to the matching station; the Classic theme ignores it. Keep the keys in step with
-# AREA_SLOT in index.html.
+# and the tools Claude uses. Only job info now: stations go by who is free, not by kind of work
+# (see _pick_station), so workers spread around the office and rotate with each new task.
 AREA_RULES = {
     "support": r"\bsupport (?:ticket|case|request)s?\b|\bincidents?\b|\boutages?\b|\bprod(?:uction)? (?:issue|is down|down)\b"
                r"|\bhot ?fix\b|\bnot working\b|\bbroken\b|\bcustomer (?:issue|complaint)\b",
@@ -123,7 +121,7 @@ AREA_RULES = {
                 r"|\bstatus reports?\b|\bdaily reports?\b|\btrack (?:time|hours|shipments?|packages?)\b",
 }
 AREA_RES = {k: re.compile(v, re.I) for k, v in AREA_RULES.items()}
-AREA_MIN_SECONDS = 20      # a worker stays at a station at least this long before tools move them
+AREA_MIN_SECONDS = 20      # the guessed area holds this long before tool calls change it
 AREA_TEXT_MAX = 6000
 
 
@@ -225,7 +223,6 @@ class Office:
         self.jobs: dict[str, dict] = {}
         self.seq = 0
         self.used: set[int] = set()            # workers who have had a turn this rotation
-        self.recent_stations: deque[str] = deque(maxlen=6)
         self.helpers_done: dict[str, float] = {}   # "sid:agent_id" -> when it stopped, to ignore late starts
         # each subagent's character, so it keeps it within the session (freed when the session ends):
         # "<session>:name:<name>" or "<session>:<agent id>" -> {"w": worker, "sid", "name", "desc"}
@@ -234,7 +231,7 @@ class Office:
         self.closed: set[str] = set()          # sessions marked done while their turn finishes
         self.cli_n = 0
         self.state_path = ""                   # set by load(); empty means don't save
-        # who did each session's last task, so the same task keeps the same worker and station:
+        # who did each session's last task, so the same task keeps the same worker (at a new station):
         # key (session id, or "<session>:<agent type>" for helpers) -> [worker, station]
         self.affinity: dict[str, list] = {}
 
@@ -298,17 +295,25 @@ class Office:
         self.used.add(pick)
         return pick
 
-    def _pick_station(self) -> str:
+    def _pick_station(self, job: dict | None = None, leave: str | None = None) -> str:
+        """A station nobody else holds (a random one), else the one with the fewest workers.
+        leave: the station the worker is at; they move off it unless it's the only one with room."""
         counts = {s: 0 for s in STATIONS}
         for j in self.jobs.values():
-            if j["station"] in counts:
+            if j is not job and j["worker"] is not None and j["station"] in counts:
                 counts[j["station"]] += 1
         low = min(counts.values())
-        options = [s for s, c in counts.items() if c == low]
-        prefer = [s for s in options if s not in self.recent_stations]
-        pick = random.choice(prefer or options)
-        self.recent_stations.append(pick)
-        return pick
+        options = [s for s, c in counts.items() if c == low and s != leave] or [leave]
+        return random.choice(options)
+
+    def _rotate(self, job: dict) -> None:
+        """A new task for a staffed job: its worker moves to another station (rule: keep rotating)."""
+        if job["worker"] is None:
+            return
+        job["station"] = self._pick_station(job, job["station"])
+        key = job.get("key") or job["id"]
+        if key in self.affinity:
+            self.affinity[key] = [job["worker"], job["station"]]
 
     def _staff(self, job: dict) -> None:
         """Give the job a worker: the one who did this session's last task if they're free,
@@ -321,7 +326,7 @@ class Office:
         key = job.get("key") or job["id"]
         pref = self.affinity.get(key)
         if pref and pref[0] not in self._busy() and 0 <= pref[0] < len(ROSTER):
-            job["worker"], job["station"] = pref[0], pref[1] if pref[1] in STATIONS else self._pick_station()
+            job["worker"], job["station"] = pref[0], self._pick_station(job, pref[1])   # same worker, next station
             self.used.add(pref[0])
         else:
             job["worker"] = self._pick_worker()
@@ -452,9 +457,9 @@ class Office:
                     break
 
     def _signal(self, job: dict, text: str, weight: float, fresh: bool = False) -> None:
-        """Score the work areas named in text and move the job to the leader. A new prompt
+        """Score the work areas named in text and set the job's area to the leader. A new prompt
         (fresh) is a new focus: old scores mostly fade and the area may change at once; tool
-        calls only move it once the new area clearly leads and the worker has settled in."""
+        calls only move it once the new area clearly leads and the area has held a while."""
         hits = classify(text)
         scores = job.setdefault("scores", {})
         if not hits and not fresh:
@@ -542,8 +547,10 @@ class Office:
                     self.closed.discard(sid)
                     if not job:
                         job = self._new_job(sid, prompt, project, ts=ts)
-                    elif job["title"].startswith("(picking up"):
-                        job["title"] = clip(prompt, 120)
+                    else:
+                        self._rotate(job)
+                        if job["title"].startswith("(picking up"):
+                            job["title"] = clip(prompt, 120)
                     job["prompt"] = clip(prompt, 200)
                     job["pending_agents"] = []         # Agent calls from an earlier turn that never started
                     job["activity"] = "Reading your message"
