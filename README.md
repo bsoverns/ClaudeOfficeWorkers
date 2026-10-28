@@ -88,11 +88,14 @@ What it does cost is a moment of CPU: each hook starts a short-lived Python proc
 
 ## Themes
 
-Pick one on the clock-in screen; your pick becomes the default (change it under Settings).
+Pick one on the clock-in screen; your pick becomes the default (change it under Settings). With no
+pick yet the office opens in Might & Mayhem.
 
-- **Classic Office**: carpentry, blacksmith, dairy barn, beekeeper (hives, bees and honey; the
-  keeper works a smoker in a veiled hat), bakery, greenhouse, pizzeria, art studio, valet parking
-  (cars come and go from the lot), chem lab, server room, shipping. Stations are random.
+- **Classic Office** (hidden): carpentry, blacksmith, dairy barn, beekeeper, bakery, greenhouse,
+  pizzeria, art studio, valet parking, chem lab, server room, shipping. It is no longer in the
+  Theme menu or on the clock-in screen, but it stays in the code as the base every theme maps onto:
+  its 12 station slots (`STA`, `STATION_ORDER`) are what the other themes re-skin. A saved Classic
+  pick opens Might & Mayhem instead. (In the browser console, `setTheme('classic')` still shows it.)
 - **Sci-Fi Station**: the staff become astronauts, aliens (including xenomorph-style ones), robots, cyborgs and space wizards with laser
   swords; stations are Mission Control, Orbital Cloud, Wormhole, Hull Breach, Data Core,
   Launch Pad, Engine Room, Xeno Lab, Alien Nest, Simulation Deck, Robot Bay and Cargo Bay.
@@ -161,6 +164,8 @@ Pick one on the clock-in screen; your pick becomes the default (change it under 
   Forge, Portal Gate, Hero Hotline, Data Vault, Bio Lab, Danger Room, Comic Press, Cape
   Cleaners, Containment, Hero Supercomputer and Evidence Locker. A night skyline with a
   searchlight out the window and star bunting on the walls; the boss wears a domino mask.
+- **Might & Mayhem** (fantasy): the office is an adventurers' guild, the stations are quests and work
+  is done by parties. See [Might & Mayhem parties](#might--mayhem-parties) below.
 - **Dev Shop**: the same floor re-skinned as where dev work happens. Three extra characters live
   only here and never take work (the "Dev Shop cast" in `index.html`):
   - **Gary**, the office manager in glasses and a pink pinstripe shirt, wanders the office with his coffee, talks about his
@@ -191,8 +196,93 @@ footprints so nobody walks differently. Troubleshooting room / meeting room / ma
 | Pirate Cove | ship's surgeon corner with bottles | captain's chart table with a treasure map | bottle post with a parrot |
 | Stone Age | shaman's cave fire | stone circle round a flat rock table | carved tablets and a pterodactyl perch |
 | Hero HQ | med bay with a heartbeat monitor and triage desk | team-up room with a hologram table and a truce scoreboard | distress signals and a signal lamp |
+| Might & Mayhem | Temple of Resurrection: stained glass, an altar counter, "NOW RESURRECTING: 41" | War Table: a campaign map with minis, "NEXT CAMPAIGN SESSION: TBD." | the Crossroads: a quest board, crossing roads, a "WHICH WAY?" signpost and, while someone waits on you, a "THE PARTY AWAITS YOUR COMMAND" banner |
 
-The rubber duck stays in every theme, usually in a matching hat.
+The boss's office isn't re-skinned (a theme's `rooms` only cover these three). In Might & Mayhem it is
+labelled GUILDMASTER'S KEEP (the theme's `labels`) and decorated: the boss wears a Guildmaster's crown
+and a castle sits out the window.
+
+The rubber duck stays in every theme, usually in a matching hat (a wizard hat in Might & Mayhem).
+
+### Might & Mayhem parties
+
+Only this theme does any of this; every other theme sends one worker per task, with no dice and no
+Dungeon Master.
+
+- **The cast** (`FCAST` in `index.html`, costumes in `fanLook()`): everyone keeps their name, skin
+  tone and mobility aid (the wheelchair and crutch users keep them in costume); race shows as ears,
+  horns, tusks, scales, tails and size, class as armor, robes and weapons. No helm, hat or horns go
+  over a turban or hijab, so Raj (Minotaur) shows his snout, nose ring and tail and Fatima (Demonkin)
+  her glowing eyes and tail.
+
+  | Worker | Race and class | Alignment | Role |
+  |---|---|---|---|
+  | Marcus | Human Knight | LG | front line |
+  | Jake | Gnome Paladin (rides a corgi) | LG | front line |
+  | Wei | Dwarf Cleric | NG | healer |
+  | Raj | Minotaur Monk | NG | front line |
+  | Haruto | Half-Orc Bard | CG | specialist |
+  | Tasha | Wood Elf Ranger | CG | specialist |
+  | Emily | Dragonkin Sorcerer | CG | magic |
+  | Priya | High Elf Wizard | LN | magic |
+  | Rosa | Catfolk Druid | TN | healer |
+  | Arjun | Satyr Artificer | TN | specialist |
+  | Maria | Halfling Barbarian | CN | front line |
+  | Sam | Ogre Warrior | CN | front line |
+  | Jamal | Lizardfolk Rogue | CN | specialist |
+  | Mei | Dark Elf Warlock | LE | magic |
+  | Fatima | Demonkin Necromancer | NE | magic |
+  | Kenji | Goblin Alchemist | CE | specialist |
+
+  The sidebar shows each name with an alignment badge, blue for Lawful Good through red for Chaotic
+  Evil (`AL_COLOR`).
+- **A task starts**: a d20 and a d6 roll in the middle of the office. The worker the server assigned
+  (assignment and the API are unchanged) leads; the d6 sets the party size, 1-3 = 4 and 4-6 = 5,
+  leader included. Companions are idle workers in the Tavern: a front-liner, a healer and a magic
+  user first (unless the leader is one), then anyone. If the Tavern runs short, Hirelings (generic
+  NPCs with a spear, never in the roster, sidebar or Tavern; at most 8 at once) fill the party; they
+  wait out in the hall by the Tavern door and join the march from there.
+  Companions gather inside the Tavern door; the leader gets the slip from the boss as usual, picks
+  them up at the door and they walk to the quest together, leader first, at the slowest member's
+  pace. Companions are only visual: the task is the leader's.
+- **The quest** (12 quests on the same slots, in order: Slay the Dragon, Defeat the Evil Wizard,
+  Rescue the Captive, Retrieve the Lost Artifact, Clear the Goblin Caves, Lift the Curse, Escort the
+  Caravan, Slay the Lich, Tame the Hydra, Answer the Sphinx, Storm the Bandit Fort, Escape the
+  Labyrinth): arrival (they look around), then the battle loop while the task runs (attacks, spells,
+  arrows, songs, heals, the monster hits back), then on completion the victory (the monster falls or
+  the goal is reached, the chest opens, a QUEST COMPLETE banner), and the whole party walks back to
+  the Tavern. Party spots are a fixed grid of 10 on free floor inside the quest room, left of the
+  scenery (`QUEST_GRID`): room for two parties at one quest. A third party there takes free floor
+  cells nearby (`questOverflow`), and anyone who still doesn't fit goes back to the Tavern. A task that
+  ends while the party is still on the way: they arrive, claim the win, then walk home.
+- **Waiting on you / a failed tool**: the leader goes alone to the Crossroads or the Temple as usual
+  (the chime still plays); the party holds the quest room until the leader is back.
+- **Called away**: if a companion gets a task, they leave their party ("Called away to another
+  quest!") and that party carries on smaller. Helpers (subagents, team-lead helpers) stay one worker
+  each, with no dice and no party.
+- **The Dungeon Master**: a small figure in red robes, hood, long beard and staff, never in the roster.
+  On about 4 in 10 quests he appears in a puff of smoke once the party arrives and reads a riddle
+  from a scroll (`RIDDLES`, 3 per quest). Lawful members write it down, Good ones thank him and are
+  confused, Chaotic ones charge in, Evil ones ask how much for a straight answer, True Neutral
+  shrugs. During the battle they grumble about it; on victory the reveal plays, then a "why didn't
+  he just say it" line (from a Lawful member when there is one). Without him, normal victory chatter.
+- **Chatter**: opposite alignments argue (Lawful vs Chaotic, Good vs Evil), matching ones agree, and
+  everyone has signature lines; victory loot lines follow alignment (Lawful Good donates it, Chaotic
+  Neutral pockets something first, Lawful Evil hands out invoices, Chaotic Evil fakes a mimic).
+- **The Tavern** (the break room): a bar on the kitchen counter, ale barrels on the wall right of
+  the TV, the dining table as the dice table, candles and a hanging sign; nothing new on the floor,
+  so the TV, couch, rug, signs and walkways are untouched. Lawful folk sit properly at the table,
+  Chaotic folk sit on it, Evil folk like the dark corner (the nap room), and Kenji is usually at the bar.
+- **Sidebar**: "On the job" reads "On quest" and each card gets a party line, quest name then
+  members, leader first (Hirelings left out); "Break room" reads "Tavern"; recently finished reads
+  "Tasha's party completed the quest ..." (a helper with no party, or a finish from before a page reload: "Tasha completed the quest ...").
+  The dice and parties for several tasks that arrive in one update are rolled after all of them have
+  their workers, so nobody is drafted and then called away at once.
+- **Switching themes**: leaving Might & Mayhem mid-quest sends the companions back to the break room
+  (Hirelings vanish); coming back gives the running tasks parties again, with no dice.
+- **Testing** (URL parameters, not in the UI): `?dm=always` or `?dm=never` forces the Dungeon
+  Master on or off, `?party=4` or `?party=5` forces the party size, e.g.
+  `http://127.0.0.1:8790/?dm=always&party=5`.
 
 The orange cat on the patio bench stays too, and has opinions. When nobody is sitting on its bench it now
 and then thinks out loud in a thought bubble (puffy box, trail of little circles): lasagna, fish in the
@@ -206,7 +296,7 @@ the two have a short chat about the talking cat (checked every 6 to 12 seconds, 
 answers with a smug thought. When she is out there while the cat thinks, she often mutters about it.
 Lines: `CAT_THOUGHTS`, `CAT_TALKS` and `CAT_SOLO` in `index.html`.
 
-Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove, Stone Age and Hero HQ all send workers to the station that matches what Claude
+Dev Shop, Sci-Fi, Haunted House, Neon City, North Pole, Pirate Cove, Stone Age, Hero HQ and Might & Mayhem all send workers to the station that matches what Claude
 is doing (each themed station sits in the same slot, e.g. GitHub = Wormhole = Branching Woods):
 
 | Station | Work that sends a worker there |
