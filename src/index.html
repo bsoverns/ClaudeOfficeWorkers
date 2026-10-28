@@ -52,6 +52,8 @@
   .chip i { width:8px; height:8px; border-radius:50%; display:inline-block; }
   .recent { font-size:12px; color:var(--dim); padding:3px 0; border-bottom:1px solid var(--line); }
   .recent b { color:var(--text); font-weight:600; }
+  .party { font-size:12px; color:#e9d5a1; margin-top:3px; word-break:break-word; }
+  .ab { font-size:9px; font-weight:700; color:#fff; border-radius:6px; padding:0 4px; margin-left:3px; vertical-align:1px; letter-spacing:.03em; }
   .controls label { display:flex; align-items:center; gap:8px; font-size:13px; margin:6px 0; cursor:pointer; }
   .controls .row { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   details { margin-top:16px; font-size:12px; color:var(--dim); }
@@ -90,10 +92,10 @@
     <h2>Waiting on you <span id="nWait"></span></h2>
     <div id="listWaiting"></div>
 
-    <h2>On the job</h2>
+    <h2 id="hWorking">On the job</h2>
     <div id="listWorking"></div>
 
-    <h2>Break room</h2>
+    <h2 id="hIdle">Break room</h2>
     <div id="listIdle" class="chips"></div>
 
     <h2>Recently finished</h2>
@@ -102,11 +104,11 @@
     <h2>Settings</h2>
     <div class="controls">
       <label>Theme <select id="optTheme" name="office-theme" autocomplete="off">
-        <option value="classic">Classic Office</option><option value="dev">Dev Shop</option>
+        <option value="dev">Dev Shop</option>
         <option value="scifi">Sci-Fi Station</option><option value="horror">Haunted House</option>
         <option value="cyber">Neon City (cyberpunk)</option><option value="xmas">North Pole (Christmas)</option>
         <option value="pirate">Pirate Cove</option><option value="stone">Stone Age</option>
-        <option value="hero">Hero HQ (superheroes)</option></select></label>
+        <option value="hero">Hero HQ (superheroes)</option><option value="fantasy">Might &amp; Mayhem (fantasy)</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
@@ -140,7 +142,6 @@ py src\office.py demo</pre>
   <h3>Welcome to the office</h3>
   <p>Pick a theme to clock in. (Browsers only allow sound after a click, and the chime is how you'll hear that Claude is done.)</p>
   <div class="themes">
-    <button class="theme" data-theme="classic"><b>🏭 Classic Office</b><span>Carpentry, blacksmith, dairy barn, beekeeper, pizzeria… Workers pick a station at random.</span></button>
     <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python… Workers go to the station that matches what Claude is doing.</span></button>
     <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad… (also follows the work)</span></button>
     <button class="theme" data-theme="horror"><b>🎃 Haunted House</b><span>Dracula, Frankenstein, the Wolfman, mummies, witches, skeletons and ghosts. The Crypt, the Cauldron, the Dungeon… (also follows the work)</span></button>
@@ -149,6 +150,7 @@ py src\office.py demo</pre>
     <button class="theme" data-theme="pirate"><b>🦜 Pirate Cove</b><span>Pirates with eyepatches and parrots, buccaneers, a captain and a few cursed skeletons. The Treasure Map, the Cannon Deck, Parrot Review, the Kraken, Walk the Plank… (also follows the work)</span></button>
     <button class="theme" data-theme="stone"><b>🦖 Stone Age</b><span>Cave people, hunters, shamans and coworkers in dino and mammoth onesies; real dinosaurs do the heavy lifting. The Stone Tablets, Pterodactyl Airlift, the Wheel (reinvented), the T-Rex Den, Volcano Testing… (also follows the work)</span></button>
     <button class="theme" data-theme="hero"><b>🦸 Hero HQ</b><span>Eight heroes and eight villains, each with a power: fire, ice, lightning, flight, teleporting, portals, super speed… They squabble and duel on break, use their powers to get around, and call a truce when work comes in. The Gadget Lab, the Portal Gate, the Danger Room, Containment… (also follows the work)</span></button>
+    <button class="theme" data-theme="fantasy"><b>🐉 Might &amp; Mayhem</b><span>An adventurers' guild: knights, elves, dwarves, an ogre and a goblin who swaps the potions. Dice decide the party, a party of 4 or 5 leaves the Tavern for each task, and a small Dungeon Master pops in with riddles. Slay the Dragon, the Goblin Caves, the Sphinx… (also follows the work)</span></button>
   </div>
   <p class="hint">Your pick becomes the default next time. Change it any time under Settings.</p>
 </div></div>
@@ -3146,7 +3148,315 @@ const HERO = {
       if (Math.random() < dt * 0.3) popText(x + 165, y + 26, ['evidence tagged ✓', 'tracked: in transit', 'custody signed', 'sock logged 🧦'], '#78350f');
     } },
 };
-for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE, HERO]) STATION_ORDER.forEach(id => {
+// ---- Might & Mayhem (fantasy): the same 12 slots as quests for an adventurers' guild ----------
+// A quest's scenery follows its party: fanQ(slot).ph is idle (nobody there: the monster dozes), arrive,
+// dm, battle (the loop while the task runs), hold (the leader stepped out) or victory, k = seconds into it.
+function fanQ(id) {
+  const q = questPhase(id);
+  q.fight = q.ph === 'battle'; q.won = q.ph === 'victory'; q.sleep = q.ph === 'idle';
+  q.down = q.won ? Math.min(1, q.k / 1.1) : 0;
+  return q;
+}
+function fanFall(cx, cy, k, fn) {             // topple a monster about its feet (k 0..1), fading it a little
+  if (!k) return fn();
+  g.save(); g.translate(cx, cy); g.rotate(k * 1.35); g.translate(-cx, -cy); g.globalAlpha = 1 - k * 0.35; fn(); g.restore();
+}
+function fanEyes(x, y, q, c, gap, r = 1.8) {  // monster eyes: open, asleep or knocked out (X); gap 0 = one eye (side view)
+  for (const ex of gap ? [x - gap / 2, x + gap / 2] : [x]) {
+    if (q.down > 0.5) { L(ex - 1.6, y - 1.6, ex + 1.6, y + 1.6, '#111', 1); L(ex + 1.6, y - 1.6, ex - 1.6, y + 1.6, '#111', 1); }
+    else if (q.sleep) L(ex - 1.6, y, ex + 1.6, y, '#111', 1);
+    else { C(ex, y, r, c); C(ex - 0.4, y, r * 0.45, '#111'); }
+  }
+}
+function fanZzz(x, y, q, t) {
+  if (q.sleep) for (let i = 0; i < 2; i++) { const k = (t * 0.5 + i * 0.5) % 1; g.globalAlpha = 1 - k; TXT('z', x + k * 10, y - k * 22, 'bold ' + (8 + k * 5).toFixed(1) + 'px system-ui', '#fff'); g.globalAlpha = 1; }
+}
+function fanEnd(x, y, q) {                    // every quest: the reward chest (it opens on victory) and the QUEST COMPLETE banner
+  const open = q.won ? clamp((q.k - 0.6) / 0.8, 0, 1) : 0, cx = x + 98, cy = y + 182;
+  RR(cx, cy - 12, 26, 12, 2, '#8a5a36', '#4b2e17', 1); R(cx, cy - 7, 26, 1.6, '#d4af37'); R(cx + 11, cy - 12, 4, 6, '#facc15');
+  if (open > 0) { g.globalAlpha = open * 0.5; C(cx + 13, cy - 16, 12, '#fde047'); g.globalAlpha = 1; for (let i = 0; i < 5; i++) C(cx + 5 + i * 4, cy - 13 - (i % 2) * 2, 2, '#facc15'); }
+  g.save(); g.translate(cx, cy - 12); g.rotate(-open * 1.2); RR(0, -8, 26, 8, [6, 6, 1, 1], '#a0703d', '#4b2e17', 1); R(11, -8, 4, 8, '#d4af37'); g.restore();
+  if (!q.won) return;
+  const d = Math.min(1, q.k * 2.5), by = y + 30 - 14 * (1 - d);
+  g.globalAlpha = d;
+  poly([x + 100, by + 2, x + 112, by + 2, x + 112, by + 20, x + 100, by + 20, x + 105, by + 11], '#991b1b');
+  poly([x + 218, by + 2, x + 230, by + 2, x + 225, by + 11, x + 230, by + 20, x + 218, by + 20], '#991b1b');
+  RR(x + 108, by, 114, 20, 3, '#facc15', '#7c2d12', 1.5);
+  TXT('QUEST COMPLETE', x + 165, by + 10.5, 'bold 10.5px Georgia, serif', '#7c2d12');
+  g.globalAlpha = 1;
+}
+function fanPlaque(s, x, y) {                 // the quest's title on a wooden plaque over the cell (drawStatic)
+  RR(x + 66, y + 2, 160, 21, 4, '#5b3a1e', '#d4af37', 1.5);
+  g.font = 'bold 9.5px Georgia, serif'; const tw = g.measureText(s.label).width, sz = tw > 140 ? 9.5 * 140 / tw : 9.5;
+  TXT(s.label, x + 146, y + 13, 'bold ' + sz.toFixed(2) + 'px Georgia, serif', '#fde68a');
+  C(x + 72, y + 12.5, 2, '#d4af37'); C(x + 220, y + 12.5, 2, '#d4af37');
+}
+const FAN_NPC = {                             // quest-giver looks drawn with drawPerson (not workers)
+  wizard: { name: 'Evil Wizard', id: 991, skin: '#d6d3d1', hair: '#e5e7eb', hairStyle: 'none', bigBeard: '#e5e7eb', shirt: '#581c87', pants: '#581c87',
+    skirt: true, robe: true, robeStars: '#22c55e', wizHat: '#3b0764', hatBand: '#22c55e', gem: '#22c55e', mobility: '' },
+  captive: { name: 'Captive', id: 992, skin: '#fbe1cc', hair: '#a16207', hairStyle: 'long', shirt: '#fef3c7', pants: '#fde68a', skirt: true, tall: 0.72, mobility: '' },
+};
+const FAN_MAZE = [[0, 0, 6, 0], [0, 6, 6, 6], [0, 0, 0, 5], [6, 0, 6, 1], [6, 2, 6, 6], [1, 1, 1, 5], [1, 1, 3, 1], [2, 2, 2, 6], [3, 1, 3, 4],
+  [4, 0, 4, 2], [4, 4, 4, 6], [5, 1, 5, 5], [3, 4, 4, 4]];
+const FAN_MAZE_PATH = [[-0.3, 5.5], [0.5, 5.5], [0.5, 0.5], [3.5, 0.5], [3.5, 2.5], [4.5, 2.5], [4.5, 0.5], [5.5, 0.5], [5.5, 1.5], [6.3, 1.5]];
+const FANTASY = {
+  workbench: { label: 'SLAY THE DRAGON', name: 'Slay the Dragon', tint: '#e8d8c4', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('workbench');
+      poly([x + 96, y + 160, x + 148, y + 44, x + 178, y + 84, x + 200, y + 58, x + 234, y + 112, x + 234, y + 160], '#78716c');        // the mountain
+      poly([x + 148, y + 44, x + 160, y + 66, x + 150, y + 62, x + 140, y + 64], '#e7e5e4');
+      g.globalAlpha = 0.85; R(x + 212, y + 72, 16, 86, '#7dd3fc'); g.globalAlpha = 1;                                                 // the waterfall (the riddle's weeping mountain)
+      for (let i = 0; i < 4; i++) { const k = (t * 50 + i * 21) % 76; L(x + 215 + i * 3.5, y + 74 + k, x + 215 + i * 3.5, y + 82 + k, '#e0f2fe', 1); }
+      E(x + 220, y + 160, 18, 5, '#7dd3fc');
+      E(x + 160, y + 172, 54, 9, '#ca8a04'); for (let i = 0; i < 10; i++) C(x + 116 + i * 9.5, y + 170 - (i % 3) * 2.5, 2.4, '#facc15');   // the hoard
+      fanFall(x + 172, y + 168, q.down, () => {
+        const flap = q.fight ? Math.sin(t * 6) * 8 : 0, nap = q.sleep ? 24 : 0;
+        poly([x + 178, y + 128, x + 206, y + 88 - flap, x + 214, y + 126], '#991b1b'); poly([x + 166, y + 128, x + 182, y + 82 - flap, x + 196, y + 130], '#b91c1c');
+        g.beginPath(); g.moveTo(x + 202, y + 152); g.quadraticCurveTo(x + 230, y + 160, x + 222, y + 178); g.strokeStyle = '#dc2626'; g.lineWidth = 6; g.lineCap = 'round'; g.stroke();
+        poly([x + 216, y + 176, x + 230, y + 174, x + 222, y + 186], '#7f1d1d');
+        E(x + 176, y + 148, 30, 17, '#dc2626'); E(x + 172, y + 155, 20, 8, '#fca5a5');
+        const hx = x + 134 + (q.fight ? Math.sin(t * 3) * 4 : 0), hy = y + 108 + nap;
+        L(x + 160, y + 140, hx + 8, hy + 3, '#dc2626', 9);
+        E(hx, hy, 13, 9, '#dc2626'); E(hx - 11, hy + 3, 7, 5, '#ef4444'); C(hx - 15, hy + 2, 1, '#111');
+        poly([hx + 3, hy - 7, hx + 12, hy - 18, hx + 9, hy - 5], '#fde68a'); poly([hx + 8, hy - 5, hx + 18, hy - 13, hx + 13, hy - 2], '#fde68a');
+        fanEyes(hx - 3, hy - 2, q, '#facc15', 0);
+      });
+      fanZzz(x + 122, y + 124, q, t);
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt, t) {
+      if (fanQ('workbench').fight && (t % 4) < 1.2 && Math.random() < dt * 30)
+        puff(x + 120, y + 112, { vx: rand(-120, -70), vy: rand(-10, 25), grow: 3, life: 0.6, size: 3, color: pick(['#f97316', '#facc15', '#ef4444']) });
+    } },
+  forge: { label: 'DEFEAT THE EVIL WIZARD', name: 'Defeat the Evil Wizard', tint: '#ddd3e8', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('forge'), lit = q.fight ? 0.6 + Math.sin(t * 7) * 0.3 : 0.25;
+      RR(x + 178, y + 44, 48, 134, 2, '#a8a29e', '#78716c', 1.5);                                                                     // his tower
+      for (let i = 0; i < 4; i++) R(x + 178 + i * 13, y + 34, 9, 12, '#a8a29e');
+      for (let r = 0; r < 9; r++) L(x + 179, y + 58 + r * 13, x + 225, y + 58 + r * 13, 'rgba(0,0,0,.12)', 1);
+      R(x + 194, y + 62, 14, 20, '#1c1917'); g.globalAlpha = lit; R(x + 196, y + 64, 10, 16, '#c084fc'); g.globalAlpha = 1;
+      g.beginPath(); g.arc(x + 202, y + 166, 12, Math.PI, 0); g.lineTo(x + 214, y + 178); g.lineTo(x + 190, y + 178); g.closePath(); g.fillStyle = '#44403c'; g.fill();
+      for (let i = 0; i < 3; i++) { const a = t * (q.fight ? 2 : 0.6) + i * 2.1; C(x + 202 + Math.cos(a) * 30, y + 52 + Math.sin(a) * 8, 2, '#a855f7'); }
+      fanFall(x + 146, y + 176, q.down, () => drawPerson(FAN_NPC.wizard, x + 146, y + 176 - (q.fight ? Math.abs(Math.sin(t * 2)) * 6 : 0),
+        { facing: 'left', pose: 'stand', ra: q.fight ? 2.5 + Math.sin(t * 4) * 0.3 : 0.5, la: 0.3, item: 'staff', open: q.fight, eyesClosed: q.sleep || q.down > 0.5 }));
+      fanZzz(x + 152, y + 112, q, t);
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('forge').fight && Math.random() < dt * 2.5) puff(x + 132, y + 128, { kind: 'spark', vx: rand(-190, -140), vy: rand(-25, 25), life: 0.45, color: pick(['#c084fc', '#22c55e']) }); } },
+  dairy: { label: 'RESCUE THE CAPTIVE', name: 'Rescue the Captive', tint: '#dbe0c8', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('dairy');
+      R(x + 216, y + 30, 7, 150, '#78350f'); R(x + 150, y + 30, 73, 7, '#78350f'); L(x + 176, y + 37, x + 176, y + 50, '#57534e', 1.5);   // the gibbet and its cage
+      g.save(); g.translate(x + 176, y + 50); g.rotate(Math.sin(t * 1.2) * 0.04);
+      if (!q.won) drawPerson(FAN_NPC.captive, 0, 50, { facing: 'down', pose: 'stand', ra: q.fight ? 2.7 + Math.sin(t * 8) * 0.25 : 0.3, la: 0.2, open: q.fight && Math.sin(t * 3) > 0, eyesClosed: q.sleep, noShadow: true });
+      RR(-17, 0, 34, 52, 4, null, '#57534e', 2); for (let i = 1; i < 6; i++) L(-17 + i * 5.7, 0, -17 + i * 5.7, 52, '#57534e', 1.4);
+      if (q.won) L(-17, 0, -30, 40, '#57534e', 2);
+      g.restore();
+      fanFall(x + 128, y + 178, q.down, () => {                         // the troll jailer
+        const sw = q.fight ? Math.sin(t * 4) : 0;
+        R(x + 118, y + 160, 8, 18, '#3f6212'); R(x + 132, y + 160, 8, 18, '#3f6212');
+        E(x + 129, y + 146, 19, 22, '#4d7c0f'); R(x + 112, y + 150, 34, 8, '#78350f');
+        C(x + 127, y + 116, 11, '#65a30d'); E(x + 118, y + 119, 5, 4, '#84cc16');
+        fanEyes(x + 127, y + 113, q, '#fde047', 6);
+        poly([x + 121, y + 124, x + 123, y + 124, x + 122, y + 119], '#f5f0e1'); poly([x + 129, y + 124, x + 131, y + 124, x + 130, y + 119], '#f5f0e1');
+        g.save(); g.translate(x + 114, y + 134); g.rotate(0.2 + sw * 0.45); RR(-4, -30, 8, 30, 4, '#92400e'); g.restore();
+      });
+      if (q.won) drawPerson(FAN_NPC.captive, x + 204, y + 180, { facing: 'left', pose: 'stand', ra: 2.9 + Math.sin(t * 6) * 0.2, la: 2.9, happy: true });
+      fanZzz(x + 140, y + 104, q, t);
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('dairy').fight && Math.random() < dt * 0.4) popText(x + 176, y + 44, ['Help!', 'Over here!', 'Hurry!'], '#fff'); } },
+  valet: { label: 'RETRIEVE THE LOST ARTIFACT', name: 'Retrieve the Lost Artifact', tint: '#d6dde6', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('valet'), glow = 0.35 + Math.sin(t * 2) * 0.15 + (q.won ? 0.3 : 0);
+      R(x + 194, y + 118, 30, 54, '#a8a29e'); R(x + 188, y + 112, 42, 7, '#d6d3d1'); R(x + 188, y + 170, 42, 7, '#d6d3d1');           // the pedestal
+      for (let i = 0; i < 3; i++) L(x + 200 + i * 9, y + 130, x + 204 + i * 9, y + 160, '#78716c', 1.2);
+      g.globalAlpha = glow; C(x + 209, y + 98, 16, '#38bdf8'); g.globalAlpha = 1;
+      C(x + 209, y + 100, 8, '#0ea5e9'); C(x + 206, y + 97, 2.5, '#e0f2fe');
+      for (let i = 0; i < 4; i++) { const a = t * 1.5 + i * 1.57; C(x + 209 + Math.cos(a) * 14, y + 100 + Math.sin(a) * 5, 1.1, '#bae6fd'); }
+      fanFall(x + 140, y + 178, q.down, () => {                         // its stone golem
+        const sw = q.fight ? Math.sin(t * 3.5) * 0.45 : 0;
+        R(x + 124, y + 156, 12, 22, '#57534e'); R(x + 144, y + 156, 12, 22, '#57534e');
+        RR(x + 116, y + 112, 48, 46, 4, '#78716c', '#44403c', 1.5); L(x + 124, y + 124, x + 136, y + 140, '#44403c', 1); L(x + 150, y + 118, x + 146, y + 150, '#44403c', 1);
+        RR(x + 128, y + 90, 26, 22, 3, '#a8a29e', '#57534e', 1);
+        fanEyes(x + 141, y + 100, q, '#67e8f9', 9, 2);
+        g.save(); g.translate(x + 118, y + 118); g.rotate(-0.05 + sw); RR(-8, 0, 12, 36, 4, '#78716c', '#44403c', 1); g.restore();
+      });
+      fanZzz(x + 150, y + 86, q, t);
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt, t) {
+      if (fanQ('valet').fight && (t % 2.4) < 0.1 && Math.random() < dt * 20) for (let i = 0; i < 6; i++) puff(x + 108, y + 166, { vx: rand(-60, 10), vy: rand(-50, -10), ay: 160, life: 0.6, size: 2, color: '#a8a29e' });
+    } },
+  bakery: { label: 'CLEAR THE GOBLIN CAVES', name: 'Clear the Goblin Caves', tint: '#d9cfbf', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('bakery');
+      poly([x + 98, y + 182, x + 108, y + 70, x + 146, y + 38, x + 200, y + 40, x + 232, y + 72, x + 234, y + 182], '#57534e');
+      for (let i = 0; i < 10; i++) E(x + 112 + hh(i * 5) % 110, y + 52 + hh(i * 7) % 110, 6, 3.5, 'rgba(0,0,0,.15)');
+      g.beginPath(); g.ellipse(x + 172, y + 182, 40, 82, 0, Math.PI, 0); g.fillStyle = '#0c0a09'; g.fill();                     // the cave mouth
+      for (const tx of [x + 120, x + 224]) { R(tx - 2, y + 108, 4, 20, '#78350f'); flame(tx, y + 108, 0.8, t + tx); }
+      const flee = q.won ? Math.min(1, q.k / 1.6) : 0;
+      for (let i = 0; i < 3; i++) {                                       // goblins: eyes in the dark, popping out to fight, gone on victory
+        const gx = x + 152 + i * 20, pop = q.fight ? Math.max(0, Math.sin(t * 3 + i * 2.1)) : 0, gy = y + 170 - pop * 14 - i * 6;
+        if (flee >= 1) break;
+        g.globalAlpha = 1 - flee;
+        if (pop > 0.2) {
+          C(gx, gy - 8, 7, '#65a30d'); poly([gx - 6, gy - 10, gx - 14, gy - 14, gx - 6, gy - 6], '#65a30d'); poly([gx + 6, gy - 10, gx + 14, gy - 14, gx + 6, gy - 6], '#65a30d');
+          R(gx - 5, gy - 2, 10, 10, '#78350f'); L(gx + 7, gy + 8, gx + 9, gy - 18, '#a16207', 1.5); poly([gx + 7, gy - 18, gx + 11, gy - 18, gx + 9, gy - 23], '#d1d5db');
+          C(gx - 2.5, gy - 9, 1.4, '#fde047'); C(gx + 2.5, gy - 9, 1.4, '#fde047');
+        } else if (!q.sleep || (t + i) % 5 > 0.3) { C(gx - 2.5, gy - 9 - flee * 20, 1.4, '#fde047'); C(gx + 2.5, gy - 9 - flee * 20, 1.4, '#fde047'); }
+        g.globalAlpha = 1;
+      }
+      if (q.won && q.k < 2) TXT('Eep!', x + 176, y + 120 - q.k * 10, 'bold 10px system-ui', '#fde047');
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('bakery').fight && Math.random() < dt * 0.5) popText(x + 172, y + 110, ['Hee hee!', 'Shinies!', 'Get them!', 'Nyah!'], '#bef264'); } },
+  garden: { label: 'LIFT THE CURSE', name: 'Lift the Curse', tint: '#d4dccb', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('garden'), cure = q.won ? Math.min(1, q.k / 2) : 0, bark = mix('#3b2f2f', '#78350f', cure);
+      E(x + 168, y + 174, 66, 9, mix('#3f3f46', '#4d7c0f', cure));
+      L(x + 182, y + 176, x + 178, y + 104, bark, 12);                                                                                // the cursed tree
+      for (const [a, b, c2, d] of [[178, 120, 150, 84], [180, 110, 214, 74], [160, 92, 138, 80], [204, 82, 224, 66], [178, 104, 186, 60]]) L(x + a, y + b, x + c2, y + d, bark, 4);
+      if (cure > 0) {
+        g.globalAlpha = cure; for (const [cx, cy, r] of [[150, 80, 16], [184, 62, 20], [214, 74, 16], [168, 92, 14], [200, 96, 13]]) C(x + cx, y + cy, r, '#4d7c0f');
+        for (let i = 0; i < 8; i++) C(x + 140 + hh(i * 3) % 84, y + 52 + hh(i * 9) % 48, 2.2, '#f9a8d4'); g.globalAlpha = 1;
+      } else { C(x + 175, y + 128, 2, '#a855f7'); C(x + 185, y + 128, 2, '#a855f7'); g.beginPath(); g.arc(x + 180, y + 140, 4, Math.PI, 0); g.strokeStyle = '#a855f7'; g.lineWidth = 1.2; g.stroke(); }
+      const mist = (1 - cure) * (q.fight ? 0.5 : 0.3);
+      if (mist > 0) { g.globalAlpha = mist; for (let i = 0; i < 6; i++) { const a = t * (q.fight ? 1.4 : 0.5) + i * 1.05; E(x + 178 + Math.cos(a) * 38, y + 120 + Math.sin(a * 1.3) * 26, 14, 6, '#7e22ce'); } g.globalAlpha = 1; }
+      R(x + 116, y + 164, 22, 12, '#78350f'); E(x + 127, y + 164, 11, 3.5, '#a16207');                                                  // a stump with the frog
+      const hop = q.fight ? Math.abs(Math.sin(t * 4)) * 4 : 0;
+      E(x + 127, y + 158 - hop, 8, 6, '#16a34a'); C(x + 123, y + 152 - hop, 2.4, '#16a34a'); C(x + 131, y + 152 - hop, 2.4, '#16a34a'); C(x + 123, y + 152 - hop, 1, '#111'); C(x + 131, y + 152 - hop, 1, '#111');
+      if (cure > 0.5) poly([x + 121, y + 149, x + 133, y + 149, x + 134, y + 143, x + 130, y + 146, x + 127, y + 142, x + 124, y + 146, x + 120, y + 143], '#facc15');   // the frog prince
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('garden').fight && Math.random() < dt * 3) puff(x + rand(150, 200), y + rand(100, 150), { vx: rand(-70, -40), vy: rand(-10, 10), grow: 2, life: 0.9, size: 2.5, color: 'rgba(168,85,247,.6)' }); } },
+  pizza: { label: 'ESCORT THE CARAVAN', name: 'Escort the Caravan', tint: '#e3d6bd', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('pizza'), roll = q.won ? q.k * 3 : 0;
+      poly([x + 96, y + 146, x + 234, y + 126, x + 234, y + 166, x + 96, y + 184], '#c2a37a');                                          // the road
+      for (let i = 0; i < 6; i++) E(x + 110 + i * 22, y + 162 - i * 3, 5, 1.5, 'rgba(0,0,0,.1)');
+      const wx = x + 176 + Math.min(roll * 6, 24);
+      R(wx - 26, y + 118, 54, 24, '#92400e'); L(wx - 26, y + 130, wx + 28, y + 130, '#78350f', 1);                                       // the wagon
+      g.beginPath(); g.moveTo(wx - 24, y + 118); g.quadraticCurveTo(wx - 22, y + 84, wx + 1, y + 84); g.quadraticCurveTo(wx + 24, y + 84, wx + 26, y + 118); g.closePath();
+      g.fillStyle = '#f5f0e1'; g.fill(); g.strokeStyle = '#d6c3a1'; g.lineWidth = 1; g.stroke();
+      for (let i = -1; i <= 1; i++) L(wx + i * 12, y + 87, wx + i * 13, y + 118, '#d6c3a1', 1);
+      for (const kx of [wx - 16, wx + 18]) { C(kx, y + 144, 9, '#57534e'); C(kx, y + 144, 7, '#a16207');
+        for (let i = 0; i < 4; i++) { const a = roll + i * 0.785; L(kx - Math.cos(a) * 7, y + 144 - Math.sin(a) * 7, kx + Math.cos(a) * 7, y + 144 + Math.sin(a) * 7, '#57534e', 1); } }
+      const gone = q.won ? Math.min(1, q.k / 1.2) : 0;
+      if (gone < 1) for (let i = 0; i < 2; i++) {                          // the wolves
+        const lunge = q.fight ? Math.max(0, Math.sin(t * 3.4 + i * 2)) * 10 : 0, gx = x + 134 + i * 24 - lunge, gy = y + 178 - i * 16;
+        g.globalAlpha = 1 - gone;
+        L(gx + 12, gy - 10, gx + 20, gy - 16, '#6b7280', 2.5);
+        for (const lx of [-8, -3, 5, 10]) L(gx + lx, gy - 6, gx + lx + (q.fight ? Math.sin(t * 9 + lx) * 2 : 0), gy, '#4b5563', 2);
+        E(gx, gy - 9, 13, 6, '#6b7280'); C(gx - 12, gy - 13, 5, '#6b7280'); E(gx - 17, gy - 11, 4, 2.4, '#9ca3af');
+        poly([gx - 14, gy - 17, gx - 12, gy - 23, gx - 9, gy - 17], '#4b5563');
+        if (q.sleep) L(gx - 14, gy - 14, gx - 11, gy - 14, '#111', 1); else C(gx - 13, gy - 14, 1.1, '#ef4444');
+        g.globalAlpha = 1;
+      }
+      if (q.won && q.k < 1.8) TXT('yip!', x + 140, y + 150 - q.k * 12, 'bold 9px system-ui', '#f8fafc');
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('pizza').fight && Math.random() < dt * 0.5) popText(x + 128, y + 150, ['Grrr!', 'Awoo!', 'Snap!'], '#e5e7eb'); } },
+  easel: { label: 'SLAY THE LICH', name: 'Slay the Lich', tint: '#cfd2dc', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('easel'), bob = q.down ? 0 : Math.sin(t * 2) * 4, fall = q.down;
+      E(x + 166, y + 176, 66, 8, '#3f3f46');
+      for (const [tx, ty] of [[104, 150], [208, 146]]) { RR(x + tx, y + ty, 18, 26, [8, 8, 1, 1], '#9ca3af', '#6b7280', 1); TXT('RIP', x + tx + 9, y + ty + 10, 'bold 5px system-ui', '#4b5563'); }
+      R(x + 208, y + 116, 22, 6, '#57534e'); g.globalAlpha = 0.4 + Math.sin(t * 3) * 0.2; C(x + 219, y + 104, 11, '#4ade80'); g.globalAlpha = 1;   // the phylactery
+      RR(x + 213, y + 94, 12, 22, 3, 'rgba(187,247,208,.7)', '#166534', 1); C(x + 219, y + 106, 3, q.won ? '#14532d' : '#22c55e');
+      if (q.won) L(x + 214, y + 98, x + 224, y + 112, '#111', 1);
+      g.globalAlpha = 1 - fall;
+      const ly = y + bob;
+      poly([x + 150, ly + 100, x + 178, ly + 100, x + 188, ly + 158, x + 180, ly + 150, x + 174, ly + 162, x + 166, ly + 150, x + 158, ly + 162, x + 152, ly + 150, x + 142, ly + 158], '#4c1d95');
+      L(x + 152, ly + 106, x + 140, ly + 120 - (q.fight ? 10 : 0), '#4c1d95', 4); C(x + 140, ly + 120 - (q.fight ? 10 : 0), 3, '#f5f0e1');
+      g.globalAlpha = (1 - fall) * (q.fight ? 0.7 : 0.35); C(x + 140, ly + 116 - (q.fight ? 10 : 0), 6, '#4ade80'); g.globalAlpha = 1 - fall;
+      C(x + 164, ly + 90, 9, '#f5f0e1'); fanEyes(x + 164, ly + 89, q, '#4ade80', 6, 1.6);
+      for (let i = -1; i <= 1; i++) L(x + 164 + i * 2, ly + 95, x + 164 + i * 2, ly + 98, '#1f2937', 0.8);
+      poly([x + 155, ly + 83, x + 157, ly + 74, x + 160, ly + 80, x + 164, ly + 72, x + 168, ly + 80, x + 171, ly + 74, x + 173, ly + 83], '#facc15');
+      g.globalAlpha = 1;
+      if (fall > 0.3) { g.globalAlpha = Math.min(1, (fall - 0.3) * 2);                  // a pile of bones and the crown
+        for (const [a, b, c2, d] of [[146, 176, 168, 170], [156, 178, 178, 174], [150, 172, 172, 178]]) L(x + a, y + b, x + c2, y + d, '#f5f0e1', 2.4);
+        C(x + 176, y + 168, 5, '#f5f0e1'); poly([x + 170, y + 164, x + 172, y + 158, x + 176, y + 162, x + 180, y + 158, x + 182, y + 164], '#facc15'); g.globalAlpha = 1; }
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('easel').fight && Math.random() < dt * 1.5) puff(x + 140, y + 108, { kind: 'text', text: '☠', vx: rand(-130, -90), vy: rand(-15, 15), life: 0.6, color: '#4ade80', font: 'bold 11px system-ui' }); } },
+  lumber: { label: 'TAME THE HYDRA', name: 'Tame the Hydra', tint: '#c9dccf', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('lumber'), tame = q.won ? Math.min(1, q.k / 1.5) : 0;
+      E(x + 172, y + 164, 62, 18, '#065f46'); E(x + 172, y + 162, 54, 13, '#047857');                                                  // the swamp
+      for (let i = 0; i < 5; i++) L(x + 112 + i * 4, y + 172, x + 110 + i * 5, y + 146 - (i % 2) * 8, '#4d7c0f', 1.4);
+      E(x + 182, y + 152, 30, 12, '#15803d');
+      for (let i = 0; i < 3; i++) {
+        const bx = x + 166 + i * 14, by = y + 146, sn = q.fight && Math.sin(t * 4 + i * 2) > 0.7 ? 16 : 0;
+        const hx = x + 136 + i * 34 - sn + Math.sin(t * 1.5 + i) * 5, hy = y + 74 + i * 6 + Math.cos(t * 1.3 + i) * 5 + tame * 40 + (q.sleep ? 46 : 0);
+        g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx - 4, (by + hy) / 2, hx + 6, hy + 4); g.strokeStyle = '#16a34a'; g.lineWidth = 7; g.lineCap = 'round'; g.stroke();
+        E(hx, hy, 10, 6.5, '#16a34a'); E(hx - 8, hy + 2, 5, 3.5, '#22c55e');
+        if (sn) for (let k = 0; k < 3; k++) poly([hx - 12 + k * 3, hy + 4, hx - 10 + k * 3, hy + 4, hx - 11 + k * 3, hy + 7], '#fff');
+        if (tame) L(hx - 3, hy - 2, hx + 1, hy - 2, '#111', 1); else fanEyes(hx - 1, hy - 2, q, '#fde047', 0);
+      }
+      if (tame) for (let i = 0; i < 3; i++) { const k = (q.k * 0.6 + i * 0.33) % 1; g.globalAlpha = 1 - k; TXT('♥', x + 150 + i * 26, y + 80 - k * 30, 'bold 12px system-ui', '#f472b6'); g.globalAlpha = 1; }
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('lumber').fight && Math.random() < dt * 4) puff(x + rand(130, 200), y + 150, { vy: rand(-50, -20), vx: rand(-20, 20), ay: 120, life: 0.6, size: 1.6, color: '#6ee7b7' }); } },
+  lab: { label: 'ANSWER THE SPHINX', name: 'Answer the Sphinx', tint: '#ece0bf', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('lab');
+      poly([x + 116, y + 128, x + 182, y + 38, x + 202, y + 128], '#e3c27a'); poly([x + 182, y + 38, x + 234, y + 110, x + 234, y + 128, x + 202, y + 128], '#c9a35a');   // the pyramid
+      R(x + 118, y + 150, 112, 26, '#a8a29e'); R(x + 118, y + 150, 112, 4, '#d6d3d1');                                                    // the plinth
+      const flick = Math.sin(t * (q.fight ? 4 : 1)) * 6;
+      g.beginPath(); g.moveTo(x + 220, y + 142); g.quadraticCurveTo(x + 232, y + 130, x + 228, y + 116 + flick); g.strokeStyle = '#b7852f'; g.lineWidth = 2.5; g.stroke(); C(x + 228, y + 116 + flick, 3, '#78350f');
+      E(x + 190, y + 140, 34, 12, '#d4a24c'); R(x + 146, y + 142, 28, 7, '#d4a24c'); C(x + 146, y + 146, 4, '#d4a24c');
+      poly([x + 140, y + 104, x + 164, y + 104, x + 170, y + 138, x + 134, y + 138], '#1d4ed8');                                           // the nemes headdress
+      for (let i = 0; i < 4; i++) L(x + 137 + i * 1.5, y + 112 + i * 7, x + 167 - i * 1.5, y + 112 + i * 7, '#facc15', 1.6);
+      C(x + 152, y + 118, 9, '#e8b77a'); fanEyes(x + 152, y + 116, q, '#1f2937', 6, 1.3);
+      g.beginPath(); g.arc(x + 152, y + 121, 3, q.won ? 0.2 : Math.PI + 0.4, q.won ? Math.PI - 0.2 : -0.4); g.strokeStyle = '#7c2d12'; g.lineWidth = 1; g.stroke();
+      if (q.fight || q.ph === 'dm') for (let i = 0; i < 3; i++) { const k = (t * 0.6 + i * 0.33) % 1; g.globalAlpha = 1 - k; TXT('?', x + 122 + i * 34, y + 86 - k * 30, 'bold 14px Georgia, serif', '#7c2d12'); g.globalAlpha = 1; }
+      fanZzz(x + 162, y + 100, q, t);
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('lab').fight && Math.random() < dt * 0.35) popText(x + 152, y + 96, ['What has keys but no locks?', 'Wrong!', 'Try again, mortal.', 'Closer...'], '#7c2d12'); } },
+  servers: { label: 'STORM THE BANDIT FORT', name: 'Storm the Bandit Fort', tint: '#d9d0c1', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('servers'), gate = q.won ? Math.min(1, q.k) : 0;
+      for (let i = 0; i < 11; i++) if (i % 3 === 1 && !q.won) {          // bandits peeking over the palisade
+        const lx = x + 100 + i * 12, top = y + 62 + (i % 2) * 4, pk = q.fight ? Math.max(0, Math.sin(t * 2.5 + i)) * 8 : 1;
+        C(lx + 6, top - 3 - pk, 6.5, '#57534e'); C(lx + 6, top - 1 - pk, 4, '#e0ac69'); C(lx + 4.5, top - 2 - pk, 0.8, '#111'); C(lx + 7.5, top - 2 - pk, 0.8, '#111');
+      }
+      for (let i = 0; i < 11; i++) {
+        const lx = x + 100 + i * 12, top = y + 62 + (i % 2) * 4;
+        R(lx, top, 11, y + 178 - top, '#92400e'); poly([lx, top, lx + 11, top, lx + 5.5, top - 9], '#92400e'); L(lx + 1.5, top + 4, lx + 1.5, y + 176, '#78350f', 1);
+      }
+      R(x + 100, y + 96, 132, 4, '#78350f');
+      R(x + 150, y + 118, 36, 60, '#1c1917');                                                                                              // the gate
+      g.save(); g.translate(x + 150, y + 178); g.rotate(-gate * Math.PI / 2);
+      R(0, -60, 36, 60, '#5b3a1e'); for (let i = 1; i < 4; i++) L(i * 9, -60, i * 9, 0, '#3b2410', 1); L(2, -56, 34, -4, '#3b2410', 2.5); L(34, -56, 2, -4, '#3b2410', 2.5);
+      g.restore();
+      if (q.won) { L(x + 206, y + 26, x + 206, y + 60, '#57534e', 1.5); const fw = Math.sin(t * 6) * 2; poly([x + 206, y + 26, x + 224, y + 29 + fw, x + 222, y + 37 + fw, x + 206, y + 36], '#f8fafc'); }
+      fanEnd(x, y, q);
+    },
+    tick(x, y, w, dt) { if (fanQ('servers').fight && Math.random() < dt * 2) puff(x + rand(110, 200), y + 56, { kind: 'spark', vx: rand(-170, -120), vy: rand(40, 80), life: 0.5, color: '#e7e5e4' }); } },
+  packing: { label: 'ESCAPE THE LABYRINTH', name: 'Escape the Labyrinth', tint: '#cfdcc9', anim: 'point',
+    draw(x, y, t) {
+      const q = fanQ('packing'), ox = x + 100, oy = y + 40, S = 22, MP = (a, b) => [ox + a * S, oy + b * S];
+      R(ox, oy, 132, 132, '#c8c3a3');
+      const prog = q.won ? 1 : q.fight ? (t * 0.07) % 1 : 0.08;                                    // the thread unwinding through the maze
+      const segs = FAN_MAZE_PATH.slice(1).map((p, i) => [FAN_MAZE_PATH[i], p]), tot = segs.reduce((a, [p, r]) => a + Math.hypot(r[0] - p[0], r[1] - p[1]), 0);
+      let left = prog * tot;
+      for (const [p, r] of segs) { const d = Math.hypot(r[0] - p[0], r[1] - p[1]), k = Math.min(1, left / d); if (k <= 0) break;
+        const [ax, ay] = MP(...p), [bx, by] = MP(p[0] + (r[0] - p[0]) * k, p[1] + (r[1] - p[1]) * k); L(ax, ay, bx, by, '#dc2626', 1.4); left -= d; }
+      for (const [a, b, c2, d] of FAN_MAZE) { const [x1, y1] = MP(a, b), [x2, y2] = MP(c2, d); L(x1, y1, x2, y2, '#166534', 6); L(x1, y1 - 1.5, x2, y2 - 1.5, '#22c55e', 1.5); }
+      const [ex, ey] = MP(6, 1);
+      if (q.won) { g.globalAlpha = 0.5; C(ex + 2, ey + S / 2, 14, '#fde047'); g.globalAlpha = 1; }
+      R(ex - 1, ey + 2, 6, S - 4, q.won ? '#fde047' : '#422006');
+      const [cx0, cy0] = MP(3, 4.15), cb = q.fight ? Math.sin(t * 1.1) * 14 : 0, cx = cx0 + 11, cy = cy0 + 18 + cb;   // the gelatinous cube
+      if (q.won) { g.globalAlpha = 0.6; E(cx, cy0 + 40, 13, 3, '#4ade80'); g.globalAlpha = 1; }
+      else { const wob = 1 + Math.sin(t * 5) * 0.06; g.globalAlpha = 0.6; RR(cx - 9 * wob, cy - 18 / wob, 18 * wob, 18 / wob, 3, '#4ade80', '#15803d', 1); g.globalAlpha = 1;
+        RR(cx - 4, cy - 9, 6, 4, 1, '#78350f'); fanEyes(cx, cy - 13, q, '#14532d', 6, 1.4); }
+      fanEnd(x, y, q);
+    },
+    tick() {} },
+};
+for (const set of [DEV, SCIFI, HORROR, CYBER, XMAS, PIRATE, STONE, HERO, FANTASY]) STATION_ORDER.forEach(id => {
   const c = STA[id], d = set[id];
   d.id = id; d.x0 = c.x0; d.y0 = c.y0;
   d.spot = { x: c.x0 + (d.dx || 78), y: c.y0 + 150, face: 'right', area: c.spot.area, pose: d.sit ? 'sit' : 'stand', by: null };
@@ -3157,6 +3467,8 @@ const AREA_SLOT = { ado: 'workbench', azure: 'forge', github: 'dairy', support: 
 // A theme: its 12 stations, whether workers follow the work area (routed), optional
 // costumes, a color wash over the static rooms, animated decor and optional `rooms`
 // (skins for the troubleshooting room, meeting room and mailroom, assigned in the "Themed rooms" section).
+// Also optional: `party` (Might & Mayhem's parties, dice and Dungeon Master), `plaque(s, x, y)` (draws the
+// station titles instead of the plain label bars) and `labels` ({break, boss, trouble, mail}: room names in the top margin).
 const THEMES = {
   classic: { name: 'Classic Office', stations: STA },
   dev: { name: 'Dev Shop', stations: DEV, routed: true },
@@ -3181,9 +3493,13 @@ const THEMES = {
     wash: ['#b45309', 0.05], decor: () => decorStone() },
   hero: { name: 'Hero HQ', stations: HERO, routed: true,           // costumes alternate hero / villain; POWERS has who can do what
     costumes: ['hero', 'villain'], wash: ['#312e81', 0.08], decor: () => decorHero() },
+  // parties: a task's worker leads a party from the Tavern (see "Might & Mayhem parties"); FCAST has who is what
+  fantasy: { name: 'Might & Mayhem', stations: FANTASY, routed: true, party: true, costumes: ['fantasy'], wash: ['#78350f', 0.05],
+    decor: () => decorFantasy(), plaque: fanPlaque, labels: { break: 'TAVERN', boss: "GUILDMASTER'S KEEP", trouble: 'TEMPLE', mail: 'CROSSROADS' } },
 };
-let THEME = 'classic';
-try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved]) THEME = saved; } catch (e) {}
+// Classic stays the base every theme maps onto, but it is no longer offered: a saved Classic (or no pick yet) opens Might & Mayhem.
+let THEME = 'fantasy';
+try { const saved = localStorage.getItem('office-theme'); if (THEMES[saved] && saved !== 'classic') THEME = saved; } catch (e) {}
 function themeStations() { return THEMES[THEME].stations; }
 
 // ============================================================================================
@@ -3275,6 +3591,12 @@ function drawItem(it, hx, hy, ang, st) {
       L(1, 5, 3.5, 10, '#c9c9c9', 1.5); L(-1, 5, -3, 10, '#c9c9c9', 1.5); break;
     case 'smoker': RR(-3, -9, 7, 10, 1.5, '#b8bec6', '#7b828c', 0.8); poly([-2, -9, 5, -9, 6, -14, 3, -14], '#9aa3ad');
       R(-6, -6, 3, 6, '#8b5a2b'); break;
+    case 'lute': g.rotate(-0.5); E(0, 3, 4.2, 3.4, '#b45309'); C(0, 3, 1.1, '#3b2410'); L(0, 0.5, 0, -9, '#78350f', 1.4); R(-1.3, -11.5, 2.6, 3, '#3b2410'); break;
+    case 'bow': g.beginPath(); g.arc(-4, 0, 12, -1.15, 1.15); g.strokeStyle = '#78350f'; g.lineWidth = 2; g.stroke();
+      L(-4 + Math.cos(1.15) * 12, -Math.sin(1.15) * 12, -4 + Math.cos(1.15) * 12, Math.sin(1.15) * 12, '#e5e7eb', 0.6); break;
+    case 'orb': g.globalAlpha = 0.35 + Math.sin(T * 6) * 0.15; C(0, -4, 6, st.saberColor || '#f97316'); g.globalAlpha = 1; C(0, -4, 3, st.saberColor || '#f97316'); C(-1, -5, 1, '#fff7ed'); break;
+    case 'book': RR(-5, -7, 10, 8, 1, '#3b0764', '#a855f7', 0.8); L(0, -7, 0, 1, '#a855f7', 0.6); g.globalAlpha = 0.5 + Math.sin(T * 4) * 0.3; C(0, -9, 2.5, st.saberColor || '#a855f7'); g.globalAlpha = 1; break;
+    case 'potion': C(0, -2, 3.4, st.saberColor || '#ef4444'); R(-1, -8, 2, 4, 'rgba(226,232,240,.9)'); R(-1.3, -9, 2.6, 1.5, '#78350f'); C(-1, -3, 0.9, '#fff'); break;
     case 'can': RR(-1, -3, 12, 9, 2, '#3c9a5f'); L(10, -1, 17, -5, '#3c9a5f', 2); g.beginPath(); g.arc(4, -3, 4, Math.PI, 0); g.strokeStyle = '#2d7a48'; g.lineWidth = 1.5; g.stroke(); break;
     default:
       g.rotate(-ang);
@@ -3304,6 +3626,15 @@ function drawItem(it, hx, hy, ang, st) {
       else if (it === 'pointer') { L(0, -2, 0, 22, '#3b2a1a', 1.4); C(0, 22, 1.4, '#e74c3c'); }
       else if (it === 'wrench') { L(0, -2, 0, 13, '#9aa3ad', 2.4); C(0, 15, 3.6, '#9aa3ad'); R(-1.1, 14, 2.2, 5, '#6b7280'); }
       else if (it === 'magnifier') { L(0, -1, 0, 7, '#5b3a1a', 2.2); C(0, 12, 5, 'rgba(190,230,255,.55)'); g.beginPath(); g.arc(0, 12, 5, 0, TAU); g.strokeStyle = '#333'; g.lineWidth = 1.4; g.stroke(); }
+      else if (it === 'sword') { L(0, -3, 0, 2, '#78350f', 2.2); R(-3.5, 2, 7, 1.6, '#d4af37'); L(0, 4, 0, 21, '#e5e7eb', 2.4); L(0.5, 5, 0.5, 20, '#fff', 0.6); }
+      else if (it === 'staff') { L(0, -12, 0, 20, '#78350f', 2); g.globalAlpha = 0.4; C(0, 22, 4.5, st.saberColor || '#60a5fa'); g.globalAlpha = 1; C(0, 22, 2.4, st.saberColor || '#60a5fa'); }
+      else if (it === 'bonestaff') { L(0, -12, 0, 19, '#e7e5e4', 2); C(0, 22, 3.6, '#f5f0e1'); C(-1.2, 22.5, 0.8, st.saberColor || '#4ade80'); C(1.2, 22.5, 0.8, st.saberColor || '#4ade80'); }
+      else if (it === 'mace') { L(0, -2, 0, 12, '#78350f', 2.2); C(0, 14, 3.8, '#9ca3af'); for (let i = 0; i < 6; i++) { const a = i * 1.05; L(Math.cos(a) * 3.5, 14 + Math.sin(a) * 3.5, Math.cos(a) * 5.5, 14 + Math.sin(a) * 5.5, '#6b7280', 1.2); } }
+      else if (it === 'warhammer') { L(0, -2, 0, 14, '#78350f', 2.2); RR(-6, 12, 12, 6, 1, '#9ca3af', '#4b5563', 0.8); R(-1, 12, 2, 6, '#facc15'); }
+      else if (it === 'greataxe') { L(0, -6, 0, 22, '#78350f', 2.4); poly([0, 13, -8, 10, -9, 22, 0, 19], '#cbd5e1'); poly([0, 13, 7, 11, 8, 20, 0, 18], '#cbd5e1'); }
+      else if (it === 'club') { L(0, -2, 0, 6, '#78350f', 2.4); RR(-3.5, 5, 7, 17, 3.5, '#92400e', '#5b3a1e', 0.8); C(-1.5, 12, 0.9, '#5b3a1e'); C(1.5, 17, 0.9, '#5b3a1e'); }
+      else if (it === 'dagger') { L(0, -1, 0, 2.5, '#3f2a1a', 1.8); R(-2, 2.5, 4, 1.2, '#9ca3af'); L(0, 4, 0, 11, '#e5e7eb', 1.6); }
+      else if (it === 'spear') { L(0, -12, 0, 26, '#92400e', 1.6); poly([-2, 26, 2, 26, 0, 33], '#cbd5e1'); }
       else if (it === 'flashlight') { RR(-2, -2, 4, 12, 1, '#374151'); RR(-3, 9, 6, 4, 1, '#4b5563'); C(0, 13, 2.4, '#fde68a'); }
   }
   g.restore();
@@ -3342,8 +3673,13 @@ function drawPerson(Lk, x, y, st) {
   if (Lk.tail) {                          // xeno tail with a pointed tip, swishing
     const sw = Math.sin(T * 2 + (Lk.id || 0)) * 3, dir = side ? -1 : 1;
     g.beginPath(); g.moveTo(0, -15); g.quadraticCurveTo(dir * 14, -4 + sw, dir * 20, -16 + sw);
-    g.strokeStyle = Lk.skin; g.lineWidth = 3; g.lineCap = 'round'; g.stroke();
-    poly([dir * 18, -15 + sw, dir * 25, -22 + sw, dir * 21, -13 + sw], Lk.skin);
+    g.strokeStyle = Lk.tailC || Lk.skin; g.lineWidth = 3; g.lineCap = 'round'; g.stroke();
+    poly([dir * 18, -15 + sw, dir * 25, -22 + sw, dir * 21, -13 + sw], Lk.tailC || Lk.skin);
+  }
+  if (Lk.ftail) {                         // Might & Mayhem: a cat's or a bull's tail with a tuft
+    const sw = Math.sin(T * 2.2 + (Lk.id || 0)) * 3, dir = side ? -1 : 1;
+    g.beginPath(); g.moveTo(0, -17); g.quadraticCurveTo(dir * 15, -12 + sw, dir * 14, -30 + sw);
+    g.strokeStyle = Lk.ftail; g.lineWidth = 2.4; g.lineCap = 'round'; g.stroke(); C(dir * 14, -31 + sw, 2.6, shade(Lk.ftail, -0.15));
   }
   const wing = (ty0, flip) => {
     const f = Math.sin(T * 5 + (Lk.id || 0)) * 2;
@@ -3368,7 +3704,7 @@ function drawPerson(Lk, x, y, st) {
       if (mob === 'crutches') R(0.5, -9 - l2, 4.5, 7, '#f4f4f4');
     }
     if (Lk.skirt) {
-      const sb = Lk.hood ? -1 : -8;     // a wizard's robe goes to the floor
+      const sb = Lk.hood || Lk.robe ? -1 : -8;     // a wizard's robe goes to the floor
       if (side) poly([-5, -18, 5, -18, 6.5, sb, -6.5, sb], pants); else poly([-7, -18, 7, -18, 8.5, sb, -8.5, sb], pants);
     }
   } else if (pose === 'sit' || pose === 'chair') {
@@ -3586,6 +3922,7 @@ function drawPerson(Lk, x, y, st) {
     g.globalAlpha = pulse; C(nx, ty + 8, 4.2, Lk.pendant); g.globalAlpha = 1;
     poly([nx, ty + 5.4, nx + 2.2, ty + 8, nx, ty + 10.6, nx - 2.2, ty + 8], Lk.pendant); L(nx - 0.8, ty + 6.6, nx - 0.2, ty + 7.6, '#fff', 0.7);
   }
+  fanBody(Lk, side, back, ty);
   if (Lk.heroBelt && !(back && Lk.cape)) { R(side ? -6 : -8, ty + 16, side ? 12 : 16, 2.5, Lk.heroBelt); if (!back && !side) R(-2, ty + 15.5, 4, 3.5, shade(Lk.heroBelt, -0.3)); }
   if (Lk.emblem && !back) heroEmblem(Lk.emblem, side ? 1.5 : 0, ty + 8, Lk.emblemC);
 
@@ -3599,6 +3936,7 @@ function drawPerson(Lk, x, y, st) {
     if (side) poly([-4, ty - 1, 5, ty, 5, ty + 7, -3, ty + 6], '#3a3a48'); else poly([3, ty - 1, 12, ty + 1, 12, ty + 7, 4, ty + 5], '#3a3a48');
     if (side) L(-4, ty - 1, 5, ty, Lk.trim, 1.2); else L(3, ty - 1, 12, ty + 1, Lk.trim, 1.2);
   }
+  fanArms(Lk, side, back, ty, lhand);
   if (Lk.spikes) for (const d of side ? [1] : [-1, 1]) poly([d * 4, ty + 1, d * 6, ty - 4, d * 8, ty + 1], '#d1d5db');
   if (Lk.metalArm) {                      // cyborg: chrome hand and a blinking shoulder light
     C(hand[0], hand[1], 2.5, Lk.metalArm); C(side ? 1 : 7.5, sh, 1.1, Math.floor(T * 2 + (Lk.id || 0)) % 2 ? '#ff3b3b' : '#7f1d1d');
@@ -3666,9 +4004,9 @@ function drawPerson(Lk, x, y, st) {
   hairFront(Lk, view, hy);
   costumeTop(Lk, view, hy, side);
   // signature props when the hands are free: laser sword, neon katana, glowing syringe; a corpo always has the briefcase
-  const idle = mob === 'cane' ? null : Lk.saber ? 'saber' : Lk.katana ? 'katana' : Lk.syringe ? 'syringe' : null;   // a cane takes the hand
+  const idle = mob === 'cane' ? null : Lk.saber ? 'saber' : Lk.katana ? 'katana' : Lk.syringe ? 'syringe' : Lk.weapon || null;   // a cane takes the hand
   const item = st.item || (!st.moving ? idle : null) || (Lk.briefcase ? 'briefcase' : null);
-  if (item) { st.saberColor = Lk.saber || Lk.katana || Lk.syringe; drawItem(item, hand[0], hand[1], st.ra ?? 0, st); }
+  if (item) { st.saberColor = Lk.saber || Lk.katana || Lk.syringe || Lk.gem; drawItem(item, hand[0], hand[1], st.ra ?? 0, st); }
   g.restore();
 }
 
@@ -3686,7 +4024,94 @@ function stoneHood(view, hy, hc) {
   g.closePath(); g.fillStyle = hc; g.fill(); g.strokeStyle = hd; g.lineWidth = 0.8; g.stroke();
   if (view !== 'side') { g.beginPath(); g.arc(0, hy, 9.6, Math.PI * 0.9, Math.PI * 2.1); g.strokeStyle = hc; g.lineWidth = 2.6; g.stroke(); }
 }
+// ---- Might & Mayhem costume pieces (fanLook sets the flags) ----
+function fanMark(m, x, y, c, s) {             // a tabard or shield device: a cross or a sun
+  if (m === 'cross') { R(x - s * 0.35, y - s, s * 0.7, s * 2, c); R(x - s, y - s * 0.35, s * 2, s * 0.7, c); }
+  else { C(x, y, s * 0.6, c); for (let i = 0; i < 8; i++) { const a = i * TAU / 8; L(x + Math.cos(a) * s * 0.85, y + Math.sin(a) * s * 0.85, x + Math.cos(a) * s * 1.3, y + Math.sin(a) * s * 1.3, c, 0.7); } }
+}
+function fanShield(x, y, c, mark, small) {
+  const k = small ? 0.8 : 1;
+  poly([x - 6 * k, y - 7 * k, x + 6 * k, y - 7 * k, x + 6 * k, y + k, x, y + 8 * k, x - 6 * k, y + k], c); g.strokeStyle = '#d4af37'; g.lineWidth = 1; g.stroke();
+  if (!small) fanMark(mark, x, y - 1.5, '#f8fafc', 2.6);
+}
+function fanBody(Lk, side, back, ty) {        // over the torso: armor, chain mail, starry robes, tabard, apron, quiver, gear pack, skull pendant
+  const x0 = side ? -6 : -8, wd = side ? 12 : 16;
+  if (Lk.mail || Lk.armor || Lk.robeStars) {
+    g.save(); g.beginPath(); g.roundRect(x0, ty, wd, 22, 4); g.clip();
+    if (Lk.armor) { R(x0, ty, wd, 22, Lk.armor); for (let j = 6; j < 22; j += 5) L(x0, ty + j, x0 + wd, ty + j, shade(Lk.armor, -0.25), 0.8); if (!back) R(side ? 1 : -5, ty + 2, 3, 10, 'rgba(255,255,255,.45)'); }
+    if (Lk.mail) for (let j = 2; j < 22; j += 3) for (let i = x0 + 1 + (j % 2); i < x0 + wd; i += 3) C(i, ty + j, 0.6, 'rgba(255,255,255,.35)');
+    if (Lk.robeStars) for (const [px, py] of [[-5, 5], [3, 9], [-2, 15], [5, 18], [-6, 19]]) C(side ? px * 0.6 : px, ty + py, 0.9, Lk.robeStars);
+    g.restore();
+  }
+  if (Lk.tabard) {
+    if (back) R(-5, ty + 2, 10, 22, Lk.tabard); else if (side) R(1, ty + 2, 5, 22, Lk.tabard);
+    else { poly([-5, ty + 2, 5, ty + 2, 5, ty + 23, 0, ty + 26, -5, ty + 23], Lk.tabard); fanMark(Lk.mark, 0, ty + 10, Lk.markC, 3); }
+  }
+  if (Lk.apron && !back) { const ax = side ? 0 : -6, aw = side ? 6 : 12; R(ax, ty + 6, aw, 18, Lk.apron); R(ax + aw / 2 - 2, ty + 13, 4, 4, shade(Lk.apron, -0.2)); }
+  if (Lk.quiver && back) { g.save(); g.translate(0, ty + 10); g.rotate(0.4); R(-2.5, -10, 5, 18, '#78350f'); for (let i = 0; i < 3; i++) L(-1.5 + i * 1.5, -10, -2 + i * 1.5, -14, '#f8fafc', 1); g.restore(); }
+  else if (Lk.quiver && side) { R(-8, ty + 1, 4, 14, '#78350f'); L(-7, ty + 1, -8, ty - 3, '#f8fafc', 1); }
+  if (Lk.gearPack && (back || side)) { RR(side ? -10 : -6, ty + 3, side ? 5 : 12, 13, 2, '#57534e'); gear(side ? -7.5 : 0, ty + 9, 3, 6, T * 2, '#d4af37'); }
+  if (Lk.skullPendant && !back) {
+    const nx = side ? 2 : 0; L(nx - 3, ty, nx, ty + 6, '#d4d4d8', 0.7); L(nx + 3, ty, nx, ty + 6, '#d4d4d8', 0.7);
+    C(nx, ty + 8, 2.4, '#f5f0e1'); C(nx - 0.9, ty + 7.6, 0.6, '#111'); C(nx + 0.9, ty + 7.6, 0.6, '#111');
+  }
+}
+function fanArms(Lk, side, back, ty, lhand) { // after the arms: shoulder plates and the shield (on the off hand, or on the back)
+  if (Lk.pauldrons) for (const d of side ? [1] : [-1, 1]) { const px = side ? 1 : d * 7.5; E(px, ty + 2, 4.6, 3.2, Lk.pauldrons); L(px - 4, ty + 3, px + 4, ty + 3, shade(Lk.pauldrons, -0.3), 0.7); }
+  if (Lk.shield) { const onBack = back || side; fanShield(onBack ? (side ? -5 : 0) : lhand[0] - 2, onBack ? ty + 10 : lhand[1] - 2, Lk.shield, Lk.mark, onBack); }
+}
+function fanHead(Lk, view, hy, side) {        // ears, horns, tusks, snout bits, beards, brows, hats and helms
+  const back = view === 'back';
+  if (Lk.longEars || Lk.goblinEars || Lk.smallEars) {
+    const k = Lk.goblinEars ? 1.6 : Lk.smallEars ? 0.65 : 1.15;
+    for (const d of side ? [-1] : [-1, 1]) poly([d * 7.5, hy - 1, d * (8 + 6 * k), hy - 3 - 5 * k, d * 8, hy + 3], Lk.skin);
+  }
+  if (Lk.catEars) for (const d of [-1, 1]) {
+    const ex = side ? d * 4 - 1 : d * 6; poly([ex - 3.5, hy - 6, ex + 3.5, hy - 6, ex + d, hy - 14], Lk.catEars);
+    if (!back) poly([ex - 1.8, hy - 7, ex + 1.8, hy - 7, ex + d * 0.6, hy - 11.5], '#f9a8d4');
+  }
+  if (Lk.bullHorns) for (const d of side ? [1] : [-1, 1]) {
+    const bx = side ? 0 : d * 7; g.beginPath(); g.moveTo(bx, hy - 5); g.quadraticCurveTo(bx + d * (side ? 6 : 9), hy - 8, bx + d * (side ? 8 : 11), hy - 16);
+    g.strokeStyle = '#f5f0e1'; g.lineWidth = 2.6; g.lineCap = 'round'; g.stroke();
+  }
+  if (Lk.goatHorns) for (const d of side ? [-1] : [-1, 1]) { g.beginPath(); g.moveTo(d * 3.5, hy - 7); g.quadraticCurveTo(d * 7, hy - 16, d * 9.5, hy - 7); g.strokeStyle = Lk.goatHorns; g.lineWidth = 2.2; g.lineCap = 'round'; g.stroke(); }
+  if (Lk.smallHorns) for (const d of side ? [1] : [-1, 1]) { const bx = side ? d : d * 3; poly([bx, hy - 7, bx + d * 2.6, hy - 7.5, bx + d * 2, hy - 12.5], Lk.smallHorns); }
+  if (!back) {
+    if (Lk.scales) for (const [sx, sy] of side ? [[1, 3], [-2, 0], [-1, 5]] : [[-6, 2], [6, 2], [-5, 5], [5, 5], [0, -6]]) {
+      g.beginPath(); g.arc(sx, hy + sy, 1.3, 0, Math.PI); g.strokeStyle = Lk.scales; g.lineWidth = 0.8; g.stroke();
+    }
+    if (Lk.whiskers) for (const d of side ? [1] : [-1, 1]) for (const k of [-1, 1]) L(side ? 6 : d * 3, hy + 2.5, side ? 12 : d * 10, hy + 2.5 + k * 1.6, 'rgba(30,30,30,.6)', 0.5);
+    if (Lk.tusks) for (const d of side ? [1] : [-1, 1]) { const tx = side ? 5 : d * 2.6; poly([tx - 0.9, hy + 5.4, tx + 0.9, hy + 5.4, tx + d * 0.3, hy + 2.4], '#f5f0e1'); }
+    if (Lk.noseRing) { g.beginPath(); g.arc(side ? 10 : 0, hy + 5.4, 1.6, 0, TAU); g.strokeStyle = '#facc15'; g.lineWidth = 0.8; g.stroke(); }
+    if (Lk.gnomeNose) C(side ? 8.2 : 0, hy + 1.8, 2.3, shade(Lk.skin, -0.06));
+    if (Lk.angry) for (const e of side ? [4.5] : [-3, 3]) { const d = side || e > 0 ? 1 : -1; L(e + d * 2, hy - 4.2, e - d * 1.6, hy - 2.4, '#3b2a1a', 1.1); }
+    if (Lk.bigBeard) { const bc = Lk.bigBeard; poly(side ? [0, hy + 3, 8.5, hy + 2, 6, hy + 16, 1, hy + 12] : [-7, hy + 2, 7, hy + 2, 5, hy + 15, 0, hy + 19, -5, hy + 15], bc); R(side ? 3 : -3, hy + 2.6, side ? 5 : 6, 1.4, shade(bc, -0.15)); }
+  }
+  if (Lk.goggles) {
+    R(-9, hy - 6.5, 18, 2, '#3f2a1a');
+    if (!back) for (const e of side ? [4] : [-3.2, 3.2]) { C(e, hy - 6, 2.5, '#3f2a1a'); C(e, hy - 6, 1.7, Lk.goggles); }
+  }
+  if (Lk.circlet) { R(-9, hy - 5.5, 18, 1.6, Lk.circlet); for (let i = -7; i <= 7; i += 3.5) E(i, hy - 6, 1.6, 1, shade(Lk.circlet, 0.15)); }
+  if (Lk.featherCap) {
+    g.beginPath(); g.ellipse(0, hy - 6.5, 10, 5, side ? -0.15 : 0, Math.PI, 0); g.fillStyle = Lk.featherCap; g.fill(); R(-10, hy - 7, 20, 1.6, shade(Lk.featherCap, -0.25));
+    g.beginPath(); g.moveTo(-3, hy - 10); g.quadraticCurveTo(-8, hy - 20, -13, hy - 19); g.strokeStyle = Lk.feather; g.lineWidth = 1.8; g.lineCap = 'round'; g.stroke();
+  }
+  if (Lk.wizHat) {
+    const c = Lk.wizHat; E(0, hy - 6.5, 13, 3, c); poly([-7, hy - 7, 7, hy - 7, 3, hy - 21, 8, hy - 26, 0, hy - 22], c);
+    R(-6.5, hy - 10.5, 13, 2.4, Lk.hatBand); TXT('★', 0, hy - 15, 'bold 5px system-ui', Lk.hatBand);
+  }
+  if (Lk.helm) {
+    const c = Lk.helm, dk = shade(c, -0.3);
+    if (Lk.kettle) { g.beginPath(); g.arc(0, hy - 6, 8.5, Math.PI, 0); g.fillStyle = c; g.fill(); E(0, hy - 6, 13, 3, c); L(-13, hy - 6, 13, hy - 6, dk, 0.8); }
+    else {
+      g.beginPath(); g.arc(0, hy - 1.5, 9.8, Math.PI, 0); g.lineTo(9.8, hy - 2.5); g.lineTo(-9.8, hy - 2.5); g.closePath(); g.fillStyle = c; g.fill(); g.strokeStyle = dk; g.lineWidth = 0.8; g.stroke();
+      if (view === 'front') { R(-1, hy - 3, 2, 5.5, dk); R(-9.8, hy - 2.5, 2.4, 7, c); R(7.4, hy - 2.5, 2.4, 7, c); } else if (side) { R(6.5, hy - 3, 2, 5.5, dk); R(-9.8, hy - 2.5, 5, 7, c); }
+      if (Lk.plume) { const sw = Math.sin(T * 3 + (Lk.id || 0)) * 1.2; g.beginPath(); g.moveTo(0, hy - 10); g.quadraticCurveTo(-4 + sw, hy - 20, -11 + sw, hy - 15); g.strokeStyle = Lk.plume; g.lineWidth = 3.4; g.lineCap = 'round'; g.stroke(); }
+    }
+  }
+}
 function costumeTop(Lk, view, hy, side) {
+  fanHead(Lk, view, hy, side);
   if (Lk.cowl) {                           // villain cowl over the head (face left open), with two little horns
     const c = Lk.cowl;
     if (view === 'back') C(0, hy, 9.4, c);
@@ -4031,6 +4456,53 @@ function mix(a, b, k) {           // blend two #rrggbb colors
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join('');
 }
 const XENO_IDS = [4, 7, 10];   // Maria, Raj, Mei: xenomorph-style aliens in the Sci-Fi theme
+// Might & Mayhem: race, class, alignment, party role (front / healer / magic / spec) and attack style, by roster id.
+const FCAST = [
+  { race: 'Human', cls: 'Knight', al: 'LG', role: 'front', atk: 'front' },                         // Marcus
+  { race: 'High Elf', cls: 'Wizard', al: 'LN', role: 'magic', atk: 'magic', fx: '#60a5fa' },       // Priya
+  { race: 'Dwarf', cls: 'Cleric', al: 'NG', role: 'healer', atk: 'healer' },                       // Wei
+  { race: 'Half-Orc', cls: 'Bard', al: 'CG', role: 'spec', atk: 'lute' },                          // Haruto
+  { race: 'Halfling', cls: 'Barbarian', al: 'CN', role: 'front', atk: 'front' },                   // Maria
+  { race: 'Gnome', cls: 'Paladin', al: 'LG', role: 'front', atk: 'front' },                        // Jake
+  { race: 'Wood Elf', cls: 'Ranger', al: 'CG', role: 'spec', atk: 'bow' },                         // Tasha
+  { race: 'Minotaur', cls: 'Monk', al: 'NG', role: 'front', atk: 'fists' },                        // Raj
+  { race: 'Dragonkin', cls: 'Sorcerer', al: 'CG', role: 'magic', atk: 'magic', fx: '#f97316' },    // Emily
+  { race: 'Goblin', cls: 'Alchemist', al: 'CE', role: 'spec', atk: 'throw' },                      // Kenji
+  { race: 'Dark Elf', cls: 'Warlock', al: 'LE', role: 'magic', atk: 'magic', fx: '#a855f7' },      // Mei
+  { race: 'Lizardfolk', cls: 'Rogue', al: 'CN', role: 'spec', atk: 'dagger' },                     // Jamal
+  { race: 'Catfolk', cls: 'Druid', al: 'TN', role: 'healer', atk: 'healer' },                      // Rosa
+  { race: 'Ogre', cls: 'Warrior', al: 'CN', role: 'front', atk: 'front' },                         // Sam
+  { race: 'Demonkin', cls: 'Necromancer', al: 'NE', role: 'magic', atk: 'magic', fx: '#4ade80' },  // Fatima
+  { race: 'Satyr', cls: 'Artificer', al: 'TN', role: 'spec', atk: 'fix' },                         // Arjun
+];
+const AL_NAME = { LG: 'Lawful Good', NG: 'Neutral Good', LN: 'Lawful Neutral', CG: 'Chaotic Good', TN: 'True Neutral', LE: 'Lawful Evil', CN: 'Chaotic Neutral', NE: 'Neutral Evil', CE: 'Chaotic Evil' };
+const AL_COLOR = { LG: '#2563eb', NG: '#0284c7', LN: '#0d9488', CG: '#16a34a', TN: '#65a30d', LE: '#ca8a04', CN: '#d97706', NE: '#ea580c', CE: '#dc2626' };   // blue (LG) to red (CE)
+// Their costumes: race (ears, horns, tusks, scales, tails, size) and class (armor, robes, weapons). Name, skin, gender
+// and mobility aid stay; no hat, helm or horns over a turban or hijab.
+function fanLook(L0, id, covered) {
+  const hat = c => covered ? null : c;
+  switch (id % 16) {
+    case 0: return { shirt: '#94a3b8', pants: '#64748b', boots: '#475569', armor: '#cbd5e1', pauldrons: '#e2e8f0', tabard: '#1d4ed8', mark: 'cross', markC: '#facc15',
+      weapon: 'sword', shield: '#1d4ed8', helm: hat('#cbd5e1'), plume: '#dc2626', hairStyle: covered ? L0.hairStyle : 'none' };
+    case 1: return { shirt: '#1e3a8a', pants: '#1e3a8a', skirt: true, robe: true, robeStars: '#facc15', longEars: true, wizHat: hat('#1e3a8a'), hatBand: '#facc15', weapon: 'staff', gem: '#60a5fa' };
+    case 2: return { tall: 0.84, shirt: '#9ca3af', pants: '#4b5563', boots: '#3f2a1a', mail: true, tabard: '#f8fafc', mark: 'sun', markC: '#ca8a04', bigBeard: L0.hair, weapon: 'mace', belt: true };
+    case 3: return { tall: 1.1, tusks: true, shirt: '#be185d', vstripes: '#fde047', pants: '#4c1d95', boots: '#78350f', featherCap: hat('#7c3aed'), feather: '#facc15', weapon: 'lute', belt: true };
+    case 4: return { tall: 0.78, shirt: '#92400e', pants: '#78350f', boots: L0.skin, furTunic: '#92400e', furOneShoulder: true, facePaint: '#dc2626', angry: true, weapon: 'greataxe', glasses: false };
+    case 5: return { tall: 0.8, shirt: '#e5e7eb', pants: '#9ca3af', boots: '#a16207', armor: '#f1f5f9', pauldrons: '#facc15', tabard: '#f8fafc', mark: 'sun', markC: '#ca8a04',
+      weapon: 'warhammer', shield: '#facc15', gnomeNose: true, smallEars: true, corgi: true };
+    case 6: return { shirt: '#166534', pants: '#3f3f1f', boots: '#78350f', cape: '#14532d', capeLining: '#365314', longEars: true, circlet: hat('#65a30d'), weapon: 'bow', quiver: true, belt: true };
+    case 7: return { tall: 1.12, shirt: '#ea580c', pants: '#9a3412', boots: '#3f2a1a', sash: '#7c2d12', snout: true, noseRing: true, bullHorns: !covered, ftail: '#78350f' };
+    case 8: return { shirt: '#b91c1c', pants: '#7f1d1d', skirt: true, robe: true, robeStars: '#fbbf24', scales: '#b45309', smallHorns: hat('#78350f'), dinoTail: '#b91c1c', wings: '#7f1d1d', weapon: 'orb', gem: '#f97316' };
+    case 9: return { tall: 0.82, shirt: '#4d7c0f', pants: '#3f3f46', apron: '#78350f', goblinEars: true, goggles: hat('#f59e0b'), weapon: 'potion', gem: '#ef4444' };
+    case 10: return { shirt: '#1f1235', pants: '#1f1235', skirt: true, robe: true, robeStars: '#a855f7', hair: '#e5e7eb', longEars: true, pendant: '#a855f7', weapon: 'book', gem: '#a855f7' };
+    case 11: return { shirt: '#1f2937', pants: '#111827', boots: '#0f172a', cape: '#111827', capeLining: '#374151', scales: '#65a30d', snout: true, dinoTail: '#4d7c0f', weapon: 'dagger', belt: true };
+    case 12: return { shirt: '#65a30d', pants: '#3f6212', leafCloak: '#4d7c0f', catEars: hat(L0.hair), whiskers: true, ftail: L0.hair, weapon: 'staff', gem: '#86efac' };
+    case 13: return { tall: 1.15, tusks: true, shirt: '#78350f', pants: '#44403c', boots: '#292524', spikes: true, pauldrons: '#57534e', belt: true, weapon: 'club' };
+    case 14: return { shirt: '#18181b', pants: '#18181b', skirt: true, robe: true, robeStars: '#4ade80', tail: true, tailC: '#7f1d1d', glowEyes: '#f87171', smallHorns: hat('#3f0d12'),
+      skullPendant: true, weapon: 'bonestaff', gem: '#4ade80' };
+    default: return { shirt: '#a16207', pants: '#78350f', boots: '#1c1917', goatHorns: hat('#a8a29e'), goggles: hat('#38bdf8'), gearPack: true, belt: true, weapon: 'wrench' };
+  }
+}
 function dress(L0, kind, id) {
   const o = { ...L0, costume: kind };
   const plain = { beard: false, mustache: false, glasses: false, plaid: false, skirt: false };
@@ -4137,6 +4609,7 @@ function dress(L0, kind, id) {
         cape: p.cape, capeLining: shade(p.cape, -0.22), capeSign: kind, boots: kind === 'hero' ? shade(p.cape, -0.15) : '#111827',
         emblem: p.power, emblemC: p.fx, heroBelt: kind === 'hero' ? '#facc15' : '#3f3f46', heroMask: p.mask,
         cowl: cowl ? p.mask : null, hairStyle: cowl ? 'none' : L0.hairStyle, beard: cowl ? false : L0.beard }); break; }
+    case 'fantasy': Object.assign(o, { plaid: false }, fanLook(L0, id, covered)); break;
   }
   return o;
 }
@@ -4523,6 +4996,7 @@ function chooseIdle(w, instant) {
     if (s.smoke) k = 2.2;
     if (s.partner && SPOT_BY_ID[s.partner].by !== null) k = 6;
     if (s.act === w.lastAct) k *= 0.25;
+    if (THEME === 'fantasy') k *= fanIdleK(w, s);
     return k;
   });
   let r = Math.random() * wts.reduce((a, b) => a + b, 0), s = opts[0];
@@ -4556,8 +5030,11 @@ function setTheme(name) {
   try { localStorage.setItem('office-theme', name); } catch (e) {}
   const sel = document.getElementById('optTheme'); if (sel) sel.value = name;
   if (name === THEME) return;
+  const wasFan = fanOn();
+  if (wasFan && !THEMES[name].party) fanDisband();   // leaving Might & Mayhem: companions back to normal
   THEME = name; navGrid = null;
-  for (const w of workers) if (w.mode === 'job' && w.locKind === 'st') { w.locKind = null; w.stDwell = 0; }
+  for (const w of workers) if (w.mode === 'job' && (w.locKind === 'st' || w.locKind === 'door')) { w.locKind = null; w.stDwell = 0; }
+  if (!wasFan && fanOn()) for (const w of workers) if (w.mode === 'job' && w.job) formParty(w, 'walk');   // back in: current tasks get parties, no dice
   resize(); renderPanel();
 }
 function jobSpot(w, kind) {
@@ -4566,10 +5043,17 @@ function jobSpot(w, kind) {
   // Leads prefer the far side of the table (so their slips stay off the whiteboard video), then the ends, then the near side.
   if (kind === 'meet') return firstFree(SEATS.slice(5).concat(SEATS.slice(3, 5), SEATS.slice(0, 3), LEAD_STAND), w);
   const sp = stationOf(w.job).spot;
+  if (fanOn()) {                               // a free spot in the quest cell (a leader keeps the one their party reserved)
+    const id = stationOf(w.job).id, qs = questSpots(id), p = w.party;
+    const own = p && p.leader === w && p.ls && p.ls.area === 'st:' + id ? p.ls : null;
+    const s = own || qs.find(s => s.by === w.id) || qs.find(s => s.by === null && !fanClaimed(s, w)) || questOverflow(id, w);
+    if (s) return s;
+  }
   if (sp.by !== null && sp.by !== w.id) return { ...sp, x: sp.x - 30, y: sp.y + 14, temp: true };
   return sp;
 }
 function assignJob(w, j, instant) {
+  fanLeave(w);                                // Might & Mayhem: called away from a party
   w.job = j; w.mode = 'job'; w.locKind = null; w.dwellUntil = 0; w.paperSent = false; w._p = undefined;
   if (instant) { w.slip = true; w.jobPhase = 'go'; w.locKind = desiredKind(j); w.stDef = stationOf(j); teleport(w, jobSpot(w, w.locKind)); }
   else {
@@ -4583,7 +5067,9 @@ function assignJob(w, j, instant) {
     play('page');
     puff(w.x, w.y + headTop(w) - 8, { kind: 'text', text: '!', vy: -12, life: 1.3, color: '#ffd23f', font: 'bold 18px system-ui' });
   }
+  if (!instant) FAN_PENDING.push(w);           // Might & Mayhem only: apply() rolls the dice for a party once every task in this poll has its worker
 }
+const FAN_PENDING = [], FAN_PARTY_DONE = {};     // FAN_PARTY_DONE: finished job ids whose worker led a party (Recently finished wording)
 // Called once the page has sunk in: head to the boss, or to the meeting room for a helper.
 function answerPage(w) {
   const lead = w.job && w.job.kind === 'helper' ? leaderOf(w.job) : null;
@@ -4613,11 +5099,12 @@ function finishJob(w, celebrate, old) {
   if (celebrate && lead && lead.locKind === 'meet') say(lead, 'Thanks, ' + w.L.name + '!', 2.5);
   w.job = null; w.slip = false; w.mode = 'returning'; w.jobPhase = null; w.locKind = null;
   if (BOSS.visitor === w) BOSS.visitor = null;
+  if (fanPartyDone(w, celebrate)) { play('done'); bossSay(`Nice work, ${w.L.name}'s party!`); return; }   // Might & Mayhem: the victory, then home together
   if (celebrate) { say(w, pick(DONE_LINES), 3); confetti(w.x, w.y - 50); play('done'); bossSay(`Nice work, ${w.L.name}!`); }
   chooseIdle(w);
 }
 function arrive(w) {
-  w.arrived = true; w.facing = (w.spot && w.spot.face) || 'down'; w.arrivedAt = T;
+  w.pace = 0; w.arrived = true; w.facing = (w.spot && w.spot.face) || 'down'; w.arrivedAt = T;
   if (w.mode === 'idle' || w.mode === 'returning') { w.mode = 'idle'; w.actUntil = T + rand(12, 28); w.food = pick(['pizza', 'sandwich']); }
   else if (w.mode === 'job') {
     if (w.jobPhase === 'toBoss') { w.jobPhase = 'brief'; w.briefStart = T; BOSS.visitor = w; bossSay(pick(BRIEF_LINES)); }
@@ -4631,7 +5118,7 @@ function arrive(w) {
 function stepMove(w, dt) {
   if (THEME === 'hero') { if (w.rewind && heroRewind(w, dt)) return; if (heroTravel(w)) return; heroCrumb(w, null); }
   const boost = THEME === 'hero' ? (powerOf(w).power === 'speed' ? 2.5 : isFlier(w) ? 2 : 1) : 1;   // Hero HQ speedster, fliers
-  let budget = w.speed * dt * boost;
+  let budget = (w.pace || w.speed) * dt * boost;   // w.pace: a Might & Mayhem party walks at its slowest member's speed
   while (budget > 0 && w.path.length) {
     const tgt = w.path[0], dx = tgt.x - w.x, dy = tgt.y - w.y, d = Math.hypot(dx, dy);
     if (d > 0.5) w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
@@ -4653,7 +5140,7 @@ function updateWorker(w, dt) {
   if (w.mode === 'idle') {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
     else if (w.arrived && T > w.nextChat && !w.talk && !w.duel) {
-      const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : CHAT[w.spot.act]);
+      const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : (THEME === 'fantasy' && FAN_CHAT[w.spot.act]) || CHAT[w.spot.act]);
       if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
     }
@@ -4675,6 +5162,10 @@ function updateWorker(w, dt) {
       if (!w.slip && T - w.briefStart > 1.4) w.slip = true;
       if (T - w.briefStart > 2.6) w.jobPhase = 'go';
     } else if (w.jobPhase === 'go') {
+      if (w.party && w.party.leader === w && w.party.state === 'gather' && desiredKind(w.job) === 'st') {   // Might & Mayhem: pick the party up at the Tavern door first
+        if (w.locKind !== 'door') { w.locKind = 'door'; goTo(w, { ...TAVERN_DOOR, y: TAVERN_DOOR.y + (PARTIES.indexOf(w.party) % 3 - 1) * 12 }); say(w, pick(FAN_TO_DOOR), 2.5); }
+        return;
+      }
       const want = desiredKind(w.job);
       const st = want === 'st' ? stationOf(w.job) : null;
       if (w.locKind !== want && T >= w.dwellUntil) { w.locKind = want; w.stDef = st; goTo(w, jobSpot(w, want)); }
@@ -4685,7 +5176,7 @@ function updateWorker(w, dt) {
       if (w.arrived) {
         if (w.locKind === 'st' && w.job.status === 'working' && !dozing(w)) {
           const s = stationOf(w.job); s.tick(s.x0, s.y0, w, dt, t);
-          if (s.lines && T > w.nextChat) { if (Math.random() < 0.5) say(w, pick(s.lines), 3); w.nextChat = T + rand(25, 45); }
+          if (s.lines && !w.party && T > w.nextChat) { if (Math.random() < 0.5) say(w, pick(s.lines), 3); w.nextChat = T + rand(25, 45); }
         }
         if (w.locKind === 'st' && dozing(w) && Math.random() < dt * 0.7) puff(w.x + 8, w.y - 58, { kind: 'text', text: 'z', vx: 8, vy: -14, life: 1.6, color: '#fff', font: 'bold 11px system-ui' });
         if (w.locKind === 'meet') {
@@ -4723,7 +5214,7 @@ function startTalk() {
   const [a, b] = pick(pairs);
   const rival = THEME === 'hero' && isVillain(a) !== isVillain(b);      // a hero and a villain: they bicker (and may duel)
   const list = rival && Math.random() < 0.85 ? HERO_BANTER : THEME === 'xmas' ? BANTER.concat(XMAS_BANTER, XMAS_BANTER) : THEME === 'pirate' ? BANTER.concat(PIRATE_BANTER, PIRATE_BANTER)
-    : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER)
+    : THEME === 'stone' ? BANTER.concat(STONE_BANTER, STONE_BANTER) : THEME === 'fantasy' ? BANTER.concat(FAN_BANTER, FAN_BANTER)
     : THEME === 'dev' && CAST.on && awayFromBobs(a) && awayFromBobs(b) ? BANTER.concat(DEV_NERVOUS, DEV_NERVOUS) : BANTER;
   const c = pick(workers.filter(w => w !== a && w !== b)) || null;
   // skip a recent script, one that needs a third person ({c}) when there's none, or one about {f} when {f} is talking
@@ -5278,6 +5769,7 @@ function poseFor(w) {
     return st;
   }
   if (w.spot && w.spot.pose) st.pose = w.spot.pose;
+  if (w.party && fanOn() && (w.mode === 'party' || (w.mode === 'job' && w.locKind === 'st' && fanHere(w, w.party)))) return fanPartyPose(w, st, t);
   if (w.mode === 'job' && w.job) {
     st.busyHands = true;
     if (['paged', 'brief', 'toBoss', 'toMeet', 'meetWait', 'meetBrief'].includes(w.jobPhase)) { st.ra = w.slip ? 0.5 : 1.25; st.item = w.slip ? 'slip' : null; st.busyHands = false; return st; }
@@ -5287,7 +5779,7 @@ function poseFor(w) {
     if (w.locKind === 'mail') { st.ra = 2.8 + Math.sin(t * 5) * 0.3; st.la = 0.25; st.item = 'envelope'; st.open = Math.sin(t * 2) > 0; return st; }
     if (w.locKind === 'st') {
       if (dozing(w)) { st.eyesClosed = true; st.ra = st.la = 0.15; return st; }
-      if (w.job.status === 'working') Object.assign(st, WORK_ANIM[stationOf(w.job).anim](t, w));
+      if (w.job.status === 'working') Object.assign(st, fanOn() ? fanAtkPose(w, t) : WORK_ANIM[stationOf(w.job).anim](t, w));
       return st;
     }
     return st;
@@ -5297,16 +5789,18 @@ function poseFor(w) {
 }
 function headTop(w) {
   const lift = w.lift || 0;                // Hero HQ fliers float above their feet
-  if (w.path.length) return -58 - lift;
-  const pose = w.L.mobility === 'wheelchair' ? 'chair' : (w.spot && w.spot.pose) || 'stand';
-  return (pose === 'lie' ? -22 : pose === 'sit' ? -52 : pose === 'chair' ? -54 : -58) - lift;
+  const Lk = w.hire ? w.L : lookOf(w), k = Lk.tall || 1;   // costume height (Might & Mayhem's halflings, ogres...)
+  const pose = w.path.length ? 'stand' : w.L.mobility === 'wheelchair' ? 'chair' : (w.spot && w.spot.pose) || 'stand';   // walking: as before, -58
+  const corgi = Lk.corgi && pose === 'stand' && fanOn() ? 9 : 0;   // Jake rides his corgi
+  return (pose === 'lie' ? -22 : pose === 'sit' ? -52 : pose === 'chair' ? -54 : -58) * k - lift - corgi;
 }
 function drawWorker(w) {
   if (selected === w || hovered === w) {
-    g.globalAlpha = 0.6 + Math.sin(T * 6) * 0.3; g.beginPath(); g.ellipse(w.x, w.y, 17, 6, 0, 0, TAU);
+    const at = wpos(w); g.globalAlpha = 0.6 + Math.sin(T * 6) * 0.3; g.beginPath(); g.ellipse(at.x, at.y, 17, 6, 0, 0, TAU);
     g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
   }
   if (THEME === 'hero') return drawHeroWorker(w);
+  if (fanOn()) return fanDrawWorker(w);
   drawPerson(lookOf(w), w.x, w.y, poseFor(w));
 }
 
@@ -5546,6 +6040,496 @@ const DEV_NERVOUS = [
 // ============================================================================================
 // Boss, duck, break room toys
 // ============================================================================================
+// ============================================================================================
+// Might & Mayhem parties. When a task starts, a d20 and a d6 roll in the middle of the office and the
+// worker the server assigned leads a party of 4 or 5 (d6 1-3 = 4, 4-6 = 5, leader included): idle Tavern
+// workers (a front-liner, a healer and a magic user first, then anyone), topped up with Hirelings. They
+// gather at the Tavern door, the leader picks them up after the Guildmaster's slip and they walk to the
+// quest together: arrive, sometimes a Dungeon Master riddle, the battle loop while the task runs, victory,
+// home. Companions are visual only (mode 'party', no job): the task stays the leader's. The leader goes
+// alone to the Temple or the Crossroads while the party holds the quest. Other themes never get here.
+// Testing only (not in the UI): ?dm=always|never forces the Dungeon Master, ?party=4|5 the party size.
+// ============================================================================================
+const QS = new URLSearchParams(location.search);
+const FORCE_DM = QS.get('dm'), FORCE_PARTY = [4, 5].includes(Number(QS.get('party'))) ? Number(QS.get('party')) : 0;
+const PARTIES = [], HIRELINGS = [], DICE = [];
+let hireSeq = 0;
+const fanOn = () => !!THEMES[THEME].party;
+const HIRE_FAN = { race: 'Human', cls: 'Hireling', al: 'TN', role: 'front', atk: 'front' };
+const fanOf = w => w.hire ? HIRE_FAN : FCAST[w.id % FCAST.length];
+const fanLaw = w => { const a = fanOf(w).al; return a === 'TN' ? 'N' : a[0]; };
+const fanMoral = w => { const a = fanOf(w).al; return a === 'TN' ? 'N' : a[1]; };
+const TAVERN_DOOR = { x: 628, y: 322, face: 'right', area: 'hall', temp: true };   // the leader picks the party up here (in the doorway)
+const HIRE_DOOR = { x: 724, y: 322, face: 'left', area: 'hall', temp: true };      // Hirelings come and go here, out in the hall
+const HIRE_WAIT = [690, 714, 738, 762].flatMap(x => [312, 334].map(y => ({ x, y, face: 'left', area: 'hirewait', by: null })));   // they never enter the Tavern
+const GATHER = [582, 556, 530, 504, 478].flatMap(x => [298, 328].map(y => ({ x, y, face: 'right', area: 'gather', by: null })));
+// Standing spots in a quest cell (relative to it, on free floor inside the tinted room, left of the scenery): the station spot
+// first, room for two parties. A third party at one quest gets free floor cells nearby (questOverflow) or goes home short.
+const QUEST_GRID = [[78, 150], [48, 150], [78, 182], [48, 182], [78, 122], [48, 122], [78, 94], [48, 94], [78, 66], [48, 66]];
+const QSPOTS = {};
+function questSpots(slot) {
+  const s = FANTASY[slot];
+  return QSPOTS[slot] || (QSPOTS[slot] = QUEST_GRID.map(([dx, dy], i) => i ? { x: s.x0 + dx, y: s.y0 + dy, face: 'right', area: s.spot.area, pose: 'stand', by: null } : s.spot));
+}
+function questOverflow(slot, w) {            // a free floor cell in the quest room, else in the walkway lanes left of and below it (the lane under
+                                              // the cell runs past the next row's plaque); 22px clear of every claim and person
+  if (!navGrid) buildNav();
+  const s = FANTASY[slot], taken = questSpots(slot).filter(q => q.by !== null && q.by !== w.id)
+    .concat(PARTIES.flatMap(p => p.claims || []).filter(c => c[1] !== w).map(c => c[0]), [...workers, ...HIRELINGS].filter(o => o !== w).map(o => o.spot || o));
+  const ok = (x, y) => navFreeAt(x, y) && taken.every(q => Math.hypot(q.x - x, q.y - y) >= 22);
+  for (const [xa, xb, ya, yb] of [[40, 84, 40, 184], [4, 86, 28, 214]])
+    for (let y = s.y0 + yb; y >= s.y0 + ya; y -= 8) for (let x = s.x0 + xb; x >= s.x0 + xa; x -= 8)
+      if (ok(x, y)) return { x, y, face: 'right', area: s.spot.area, pose: 'stand', temp: true };
+  return null;
+}
+const partyAll = p => [p.leader, ...p.members].filter(o => o && o.party === p);
+const fanHere = (o, p) => o.arrived && !o.path.length && !!o.spot && o.spot.area === 'st:' + p.slot;
+function partyFighting(p) { const L = p.leader; return L.party === p && !!L.job && L.locKind === 'st' && fanHere(L, p) && L.job.status === 'working' && !dozing(L); }
+function questPhase(id) {                     // what a quest's scenery shows: see fanQ()
+  let best = null, rank = -1;                  // two parties at one quest: show the victory, else the one fighting
+  for (const p of PARTIES) if (p.slot === id && ['arrive', 'dm', 'battle', 'victory'].includes(p.state)) {
+    const r = p.state === 'victory' ? 3 : p.state === 'battle' && partyFighting(p) ? 2 : 1;
+    if (r > rank) { best = p; rank = r; }
+  }
+  if (best) return { ph: best.state === 'battle' && !partyFighting(best) ? 'hold' : best.state, k: T - best.t0, p: best };
+  const w = stationWorker(FANTASY[id]);          // a helper (no party) working there still fights
+  return { ph: w && !w.party && w.job.status === 'working' && !dozing(w) ? 'battle' : 'idle', k: T };
+}
+function formParty(w, how) {                  // how: 'dice' (a new task), 'walk' (switched to this theme), 'instant' (page load)
+  if (!fanOn() || !w.job || w.job.kind === 'helper' || w.party) return;
+  const d6 = FORCE_PARTY ? (FORCE_PARTY === 4 ? 1 : 4) + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 6);
+  const p = { leader: w, members: [], size: d6 <= 3 ? 4 : 5, d6, d20: 1 + Math.floor(Math.random() * 20), slot: null, state: 'gather', t0: T, queue: [],
+    dm: how === 'dice' && (FORCE_DM === 'always' || (FORCE_DM !== 'never' && Math.random() < 0.4)), dmSeen: false, nextChat: T + rand(5, 9) };
+  PARTIES.push(p); w.party = p;
+  const pool = workers.filter(o => o !== w && o.mode === 'idle' && !o.job && !o.party && o.spot && (o.spot.area === 'break' || o.spot.area === 'patio')), crew = [];
+  const take = o => { pool.splice(pool.indexOf(o), 1); crew.push(o); };
+  for (const r of ['front', 'healer', 'magic']) if (fanOf(w).role !== r && crew.length < p.size - 1) { const c = pool.filter(o => fanOf(o).role === r); if (c.length) take(pick(c)); }
+  while (crew.length < p.size - 1 && pool.length) take(pick(pool));
+  crew.forEach((o, i) => joinParty(p, o, how === 'dice' ? T + 2.6 + i * 0.3 : 0));
+  while (p.members.length < p.size - 1 && HIRELINGS.length < 8) addHireling(p, how === 'dice' ? T + 3 + p.members.length * 0.3 : 0);
+  if (how === 'dice') { DICE.push({ p, t0: T, name: w.L.name }); while (DICE.length > 4) DICE.shift(); }
+  else fanMarch(p, how === 'instant');
+  renderPanel();
+}
+function joinParty(p, o, go) {
+  if (o.talk && TALKS.includes(o.talk)) endTalk(o.talk);
+  o.mode = 'party'; o.party = p; o.partyGo = go; o.partySpot = null; p.members.push(o);
+}
+function addHireling(p, go) {                 // a generic NPC: never in the roster, the sidebar or the Tavern
+  const i = hireSeq++;
+  const n = { hire: true, id: 1000 + i, x: HIRE_DOOR.x, y: HIRE_DOOR.y, facing: 'left', path: [], walk: 0, speed: 90, mode: 'party', party: p, spot: null, arrived: true,
+    seed: rand(0, 100), bubble: null, bubbleUntil: 0, partyGo: go, partySpot: null,
+    L: { name: 'Hireling', id: 1000 + i, skin: ['#f2d4b8', '#c8915f', '#7a4a2a', '#e0ac69'][i % 4], hair: '#3b2a1a', hairStyle: 'short', shirt: ['#92400e', '#57534e', '#7c2d12'][i % 3],
+      pants: '#44403c', boots: '#292524', helm: '#9ca3af', kettle: true, weapon: 'spear', shield: '#a16207', mark: 'cross', belt: true, mobility: '' } };
+  HIRELINGS.push(n); p.members.push(n);
+  for (let k = 0; k < 10; k++) puff(n.x, n.y - 24, { vx: rand(-30, 30), vy: rand(-30, 10), grow: 3, life: 0.6, size: 2, color: 'rgba(214,211,209,.7)' });
+  return n;
+}
+function fanFree(p) {                         // let go of the spots this party claimed (and nobody stands on yet), leaving any new party's claims alone
+  for (const [s, o] of p.claims || []) if (!s.temp && s.by === o.id && o.spot !== s && !(o.party && o.party !== p)) s.by = null;
+  p.claims = []; p.ls = null;
+}
+function fanClaimed(s, w) {                   // a spot some party has reserved for someone else (a leader away at the Temple keeps theirs)
+  return PARTIES.some(p => (p.claims || []).some(([c, o]) => c === s && o !== w && o.party === p));
+}
+function fanMarch(p, instant) {               // to the quest (or after the leader to a new one): claim spots next to the leader's
+  const L = p.leader; if (!L.job) return;
+  fanFree(p);
+  p.slot = stationOf(L.job).id; p.state = 'march'; p.t0 = T;
+  const spots = questSpots(p.slot), ls = spots.includes(L.spot) || (L.spot && L.spot.temp && L.spot.area === 'st:' + p.slot) ? L.spot : jobSpot(L, 'st');
+  if (!ls.temp && ls.by === null) ls.by = L.id;   // keep the leader's place while the party fans out around it
+  p.ls = ls; p.claims.push([ls, L]);
+  const crew = p.members.filter(o => o.party === p), pace = Math.min(L.speed, ...crew.map(o => o.speed));
+  crew.forEach((o, i) => {
+    if (o.partySpot && o.partySpot.by === o.id) o.partySpot.by = null;
+    const s = spots.filter(s => s.by === null && s !== ls && !fanClaimed(s, o)).sort((a, b) => Math.hypot(a.x - ls.x, a.y - ls.y) - Math.hypot(b.x - ls.x, b.y - ls.y))[0] || questOverflow(p.slot, o);
+    if (!s) { fanDrop(p, o, 'No room at this quest. Back to the Tavern!'); return; }   // the room is full: the party goes in short
+    if (!s.temp) s.by = o.id;
+    p.claims.push([s, o]);
+    if (instant) { o.partyGo = 0; o.partySpot = null; teleport(o, s); }
+    else { o.partySpot = s; o.partyGo = T + 0.3 + i * 0.45; o.pace = pace; }
+  });
+  if (instant) { p.state = 'battle'; p.t0 = T; } else L.pace = pace;   // walk together: everyone at the slowest member's pace, leader first
+  if (L.locKind === 'door') L.locKind = null;
+}
+function fanDrop(p, o, line) {                // one member leaves a party that keeps going
+  p.members.splice(p.members.indexOf(o), 1); o.party = null; o.pace = 0; o.partyGo = 0; o.partySpot = null;
+  if (o.hire) { o.leaving = true; goTo(o, HIRE_DOOR); } else { if (line) say(o, line, 3); if (o.mode === 'party') { o.mode = 'returning'; chooseIdle(o); } }
+}
+function updParties(dt) {
+  for (let i = HIRELINGS.length - 1; i >= 0; i--) {
+    const n = HIRELINGS[i]; if (n.path.length) stepMove(n, dt);
+    if (n.leaving && n.arrived) { for (let k = 0; k < 10; k++) puff(n.x, n.y - 24, { vx: rand(-30, 30), vy: rand(-30, 10), grow: 3, life: 0.6, size: 2, color: 'rgba(214,211,209,.7)' }); HIRELINGS.splice(i, 1); }
+  }
+  for (let i = DICE.length - 1; i >= 0; i--) if (T - DICE[i].t0 > 4.6) DICE.splice(i, 1);
+  for (const p of [...PARTIES]) updParty(p, dt);
+}
+function fanSay(p, lines, at = T + 0.3) {     // queue lines, spoken in turn
+  for (const [who, text] of lines) { p.queue.push({ who, text, at }); at += 2.6 + text.length * 0.035; }
+}
+function updParty(p, dt) {
+  const L = p.leader, crew = p.members.filter(o => o.party === p), k = T - p.t0;
+  for (const o of crew) if (o.partyGo && T >= o.partyGo) {
+    o.partyGo = 0;
+    if (p.state === 'gather') { goTo(o, firstFree(o.hire ? HIRE_WAIT : GATHER, o)); if (Math.random() < 0.5) say(o, pick(o.hire ? FAN_HIRE_IN : FAN_JOIN), 2.5); }
+    else if (o.partySpot) { goTo(o, o.partySpot); o.partySpot = null; }
+  }
+  while (p.queue.length && T >= p.queue[0].at) {
+    const q = p.queue.shift();
+    if (q.who && (q.who === p.dmo || q.who.party === p)) say(q.who, q.text, Math.max(3.4, q.text.length * 0.06));
+  }
+  if (p.state === 'gather') {
+    if (!L.job) return;
+    if (L.jobPhase === 'go' && desiredKind(L.job) !== 'st') return fanMarch(p);   // the leader is needed elsewhere first: the party goes ahead and holds the quest
+    if (L.locKind === 'door' && L.arrived && (crew.every(o => !o.partyGo && o.arrived) || T - L.arrivedAt > 12)) { say(L, pick(FAN_MARCH), 2.5); fanMarch(p); }
+    return;
+  }
+  if (L.party === p && L.job && L.locKind === 'st' && stationOf(L.job).id !== p.slot && ['march', 'arrive', 'dm', 'battle'].includes(p.state)) {   // the task moved to another quest
+    if (p.dmo) dmSmoke(p.dmo); p.dmo = null; return fanMarch(p);
+  }
+  if (p.state === 'march') {
+    const leaderOk = L.party !== p || !L.job || desiredKind(L.job) !== 'st' || fanHere(L, p);
+    if ((crew.every(o => !o.partyGo && fanHere(o, p)) && leaderOk) || k > (p.done ? 20 : 45)) {
+      for (const o of partyAll(p)) o.pace = 0;
+      if (p.done) return fanVictory(p);          // the task ended on the way: straight to the victory
+      p.state = 'arrive'; p.t0 = T;
+      const here = partyAll(p).filter(o => fanHere(o, p));
+      if (here.length) fanSay(p, [[pick(here), pick(FAN_ARRIVE)]]);
+    }
+  } else if (p.state === 'arrive') { if (k > 2.6) { if (p.dm) dmStart(p); else { p.state = 'battle'; p.t0 = T; } } }
+  else if (p.state === 'dm') {
+    if (p.dmo && k > 0.35) p.dmo.vis = 1;
+    if (T > p.dmEnd) { if (p.dmo) dmSmoke(p.dmo); p.dmo = null; p.state = 'battle'; p.t0 = T; p.nextChat = T + rand(4, 7); }
+  } else if (p.state === 'battle') {
+    if (partyFighting(p)) fanBattleFx(p, dt);
+    if (T > p.nextChat && !p.queue.length) { fanChatter(p); p.nextChat = T + rand(8, 13); }
+  } else if (p.state === 'victory' && k > 4 && !p.queue.length) endParty(p, true);
+}
+function fanBattleFx(p, dt) {                 // attacks, spells, arrows, songs and heals at the monster (right of the party)
+  const s = FANTASY[p.slot], tx = s.x0 + 168, ty = s.y0 + 112;
+  for (const o of partyAll(p)) {
+    if (!fanHere(o, p) || Math.random() > dt * 1.2) continue;
+    const f = fanOf(o), hx = o.x + 10, hy = o.y - 40, fly = (c, size, kind, text) => puff(hx, hy, { kind: kind || 'dot', text, vx: (tx - hx) / 0.55, vy: (ty - hy) / 0.55, life: 0.55, size, color: c, font: 'bold 10px system-ui' });
+    if (f.atk === 'front' || f.atk === 'fists' || f.atk === 'dagger') {
+      for (let i = 0; i < 5; i++) puff(tx - 20 + rand(-8, 8), ty + rand(-14, 14), { kind: 'spark', vx: rand(-80, 80), vy: rand(-90, -10), ay: 200, life: 0.35, color: '#fde68a' });
+      if (Math.random() < 0.3) puff(tx - 16, ty - 22, { kind: 'text', text: pick(['CLANG!', 'WHACK!', 'SMASH!', 'POW!']), vy: -18, life: 0.9, color: '#fde047', font: 'bold 10px Georgia, serif' });
+    } else if (f.atk === 'magic') fly(f.fx, 3);
+    else if (f.atk === 'bow') fly('#e7e5e4', 0, 'spark');
+    else if (f.atk === 'throw') puff(hx, hy, { vx: (tx - hx) / 0.7, vy: (ty - hy) / 0.7 - 120, ay: 340, life: 0.7, size: 2.6, color: '#ef4444' });
+    else if (f.atk === 'lute') puff(hx, hy - 6, { kind: 'text', text: pick(['♪', '♫']), vx: rand(-10, 20), vy: -22, life: 1.2, color: '#f9a8d4', font: 'bold 12px system-ui' });
+    else if (f.atk === 'fix') for (let i = 0; i < 3; i++) puff(hx + 4, hy + 6, { kind: 'spark', vx: rand(-40, 60), vy: rand(-60, -10), ay: 160, life: 0.4, color: '#fbbf24' });
+    else if (f.atk === 'healer') { const a = pick(partyAll(p)); puff(a.x, a.y - 60, { kind: 'text', text: '+', vy: -16, life: 1, color: '#4ade80', font: 'bold 13px system-ui' }); }
+  }
+}
+function fanChatter(p) {                      // bickering by alignment: opposites argue, matches agree, or a signature line
+  const here = partyAll(p).filter(o => fanHere(o, p)); if (!here.length) return;
+  const crew = here.filter(o => !o.hire), L = p.leader;
+  if (!partyFighting(p) && L.job && L.party === p && ['trouble', 'mail', 'meet'].includes(L.locKind) && Math.random() < 0.5)
+    return fanSay(p, [[pick(here), pick(L.locKind === 'meet' ? FAN_HOLD_MEET : FAN_HOLD).replace('{l}', L.L.name)]]);
+  if (p.dmSeen && Math.random() < 0.3) return fanSay(p, [[pick(here), pick(FAN_GRUMBLE)]]);
+  const pairs = [];
+  for (const a of crew) for (const b of crew) if (a !== b) {
+    if (fanLaw(a) === 'L' && fanLaw(b) === 'C') pairs.push([a, b, FAN_ARGUE_LC]);
+    if (fanMoral(a) === 'G' && fanMoral(b) === 'E') pairs.push([a, b, FAN_ARGUE_GE]);
+    if (a.id < b.id && fanLaw(a) === fanLaw(b) && fanLaw(a) !== 'N') pairs.push([a, b, FAN_AGREE[fanLaw(a)]]);
+    if (a.id < b.id && fanMoral(a) === fanMoral(b) && fanMoral(a) !== 'N') pairs.push([a, b, FAN_AGREE[fanMoral(a)]]);
+  }
+  if (pairs.length && Math.random() < 0.65) { const [a, b, list] = pick(pairs); return fanSay(p, pick(list).map((t, i) => [i % 2 ? b : a, t])); }
+  const o = pick(here); fanSay(p, [[o, pick(o.hire ? FAN_HIRE_LINES : FAN_SOLO[o.id % 16])]]);
+}
+// ---- the Dungeon Master: a small figure in red robes who pops in with a riddle before the battle ----
+const DM_LOOK = { name: 'Dungeon Master', id: 990, skin: '#f2d4b8', hair: '#991b1b', hairStyle: 'hood', bigBeard: '#f4f4f5', shirt: '#b91c1c', pants: '#b91c1c',
+  skirt: true, robe: true, tall: 0.7, gem: '#fde047', mobility: '' };
+function dmSmoke(d) {
+  for (let i = 0; i < 22; i++) puff(d.x + rand(-6, 6), d.y - rand(4, 30), { vx: rand(-40, 40), vy: rand(-40, 10), grow: 5, life: rand(0.7, 1.2), size: rand(2, 4),
+    color: pick(['rgba(214,211,209,.8)', 'rgba(168,162,158,.7)', 'rgba(220,38,38,.35)']) });
+}
+function dmStart(p) {
+  const s = FANTASY[p.slot], here = partyAll(p).filter(o => fanHere(o, p));
+  p.state = 'dm'; p.t0 = T; p.dmSeen = true; p.riddle = pick(RIDDLES[p.slot]);
+  p.dmo = { x: s.x0 + 50, y: s.y0 + 44, vis: 0, bubble: null, bubbleUntil: 0 };   // left of the plaque, 22px+ from the party spots
+  dmSmoke(p.dmo);
+  p.queue = [{ who: p.dmo, text: p.riddle.r, at: T + 0.6 }];
+  here.forEach((o, i) => p.queue.push({ who: o, text: dmReact(o), at: T + 3.4 + i * 1.4 }));
+  p.dmEnd = T + Math.max(8.5, 5 + here.length * 1.4);
+}
+function dmReact(o) {                         // Lawful writes it down, Good thanks him, Chaotic charges, Evil haggles, True Neutral shrugs
+  const law = fanLaw(o), mor = fanMoral(o), opts = [law, mor].filter(a => a !== 'N');
+  return pick(FAN_REACT[opts.length ? pick(opts) : 'N']);
+}
+function drawDM(d) {
+  drawPerson(DM_LOOK, d.x, d.y, { facing: 'down', pose: 'stand', ra: 2.6 + Math.sin(T * 2) * 0.1, la: 0.4, item: 'staff', blink: T % 3 < 0.1, open: T < d.bubbleUntil && Math.sin(T * 9) > 0 });
+}
+function fanVictory(p) {
+  const s = FANTASY[p.slot]; p.state = 'victory'; p.t0 = T; p.queue = [];
+  if (p.dmo) dmSmoke(p.dmo); p.dmo = null;
+  const here = partyAll(p).filter(o => fanHere(o, p)), crew = here.length ? here : partyAll(p);
+  confetti(s.x0 + 111, s.y0 + 168);
+  if (!crew.length) return;
+  const lines = [];
+  if (p.dmSeen && p.riddle) {                 // the riddle finally makes sense
+    const a = pick(crew), law = crew.filter(o => o !== a && fanLaw(o) === 'L'), b = law.length ? pick(law) : crew.find(o => o !== a) || a;
+    lines.push([a, p.riddle.a], [b, fanLaw(b) === 'L' ? pick(FAN_WHY_L) : pick(FAN_WHY)]);
+  } else lines.push([pick(crew), pick(FAN_CHEER)]);
+  for (const o of crew.filter(o => !o.hire).sort(() => Math.random() - 0.5).slice(0, p.dmSeen ? 1 : 2)) lines.push([o, pick(FAN_LOOT[fanOf(o).al])]);
+  fanSay(p, lines, T + 0.8);
+}
+function fanPartyDone(w, celebrate) {         // the leader's task ended: true when the party plays its victory (the leader stays with it)
+  const p = w.party;
+  if (!p || p.leader !== w) return false;
+  if (celebrate && ['arrive', 'dm', 'battle'].includes(p.state)) { w.mode = 'party'; fanVictory(p); return true; }
+  if (celebrate && p.state === 'march') {     // ended on the way: they still reach the quest and claim the win, then go home
+    w.mode = 'party'; p.done = true;
+    if (!fanHere(w, p) && p.ls && w.spot !== p.ls) goTo(w, p.ls);
+    return true;
+  }
+  endParty(p); return false;
+}
+function endParty(p, home) {                  // everyone back to the Tavern (home: together, at the slowest pace); Hirelings leave by the door
+  const all = partyAll(p), pace = home && all.length ? Math.min(...all.map(o => o.speed)) : 0;
+  fanFree(p);
+  for (const o of all) {
+    if (o.partySpot && o.partySpot.by === o.id) o.partySpot.by = null;
+    o.party = null; o.partyGo = 0; o.partySpot = null; o.pace = 0;
+    if (o.hire) { o.leaving = true; goTo(o, HIRE_DOOR); o.pace = pace; }
+    else if (o.mode === 'party') { o.mode = 'returning'; chooseIdle(o); o.pace = pace; }
+  }
+  const i = PARTIES.indexOf(p); if (i >= 0) PARTIES.splice(i, 1);
+  renderPanel();
+}
+function fanLeave(w) {                        // w got a task of their own: called away (that party carries on smaller)
+  const p = w.party; if (!p) return;
+  if (p.leader === w) { if (p.state !== 'victory') fanPartyDone(w, true); w.party = null; return; }
+  p.members.splice(p.members.indexOf(w), 1); w.party = null; w.pace = 0; w.partyGo = 0;
+  if (w.partySpot && w.partySpot.by === w.id) w.partySpot.by = null;
+  w.partySpot = null; say(w, 'Called away to another quest!', 3); renderPanel();
+}
+function fanDisband() {                       // leaving the theme: companions go back to normal, Hirelings and dice vanish
+  for (const p of [...PARTIES]) endParty(p, false);
+  for (const n of HIRELINGS) release(n);
+  HIRELINGS.length = 0; DICE.length = 0;
+}
+// poses: class attacks in battle, looking around on arrival, up at the Dungeon Master, cheering on victory
+const FAN_ATK = {
+  front: t => ({ ra: 2.0 + Math.sin(t * 6) * 0.95, la: 0.9 }),
+  magic: t => ({ ra: 2.5 + Math.sin(t * 2.5) * 0.3, la: 1.1 + Math.sin(t * 5) * 0.2, open: Math.sin(t * 3) > 0.5 }),
+  healer: t => ({ ra: 2.85 + Math.sin(t * 2) * 0.15, la: 0.4 }),
+  bow: t => ({ ra: 1.6, la: 1.5 - ((t % 1.6) < 0.25 ? 0.4 : 0) }),
+  lute: t => ({ ra: 1.25 + Math.sin(t * 12) * 0.2, la: 1.5, happy: true }),
+  dagger: t => ({ ra: 1.5 + Math.sin(t * 9) * 0.5, la: 1.5 + Math.cos(t * 9) * 0.5 }),
+  throw: t => ({ ra: 2.3 + Math.sin(t * 4) * 0.7, la: 0.5 }),
+  fix: t => ({ ra: 2.0 + Math.sin(t * 6) * 0.95, la: 1.0 }),
+  fists: t => ({ ra: 1.6 + Math.max(0, Math.sin(t * 7)) * 0.6, la: 1.6 + Math.max(0, Math.cos(t * 7)) * 0.6 }),
+};
+function fanAtkPose(w, t) {
+  const Lk = w.hire ? w.L : lookOf(w), o = { ...FAN_ATK[fanOf(w).atk](t), item: Lk.mobility === 'cane' ? null : Lk.weapon || null };
+  if (Lk.mobility === 'cane') { o.la = o.ra; o.ra = 0.25; }   // the cane hand stays on the cane: attack with the other one
+  return o;
+}
+function fanPartyPose(w, st, t) {
+  const p = w.party, Lk = w.hire ? w.L : lookOf(w);
+  st.item = Lk.mobility === 'cane' ? null : Lk.weapon || null; st.ra = 0.35; st.la = 0.2;
+  if (p.state === 'arrive') st.facing = ['right', 'up', 'left', 'right', 'down'][Math.floor(t * 1.2) % 5];
+  else if (p.state === 'dm') { st.facing = 'up'; st.open = Math.sin(t * 2) > 0.7; }
+  else if (p.state === 'victory') { if (Math.sin(t * 5) > -0.4 && Lk.mobility !== 'cane') st.ra = st.la = 2.9; st.happy = true; }
+  else if (p.state === 'battle' && partyFighting(p)) Object.assign(st, fanAtkPose(w, t));
+  return st;
+}
+// ---- the Tavern: perches, Jake's corgi, who sits where ----
+const FAN_PERCH = { eat1: 84, eat2: 188, eat3: 108, eat4: 162, eat5: 135 };     // Chaotic folk sit ON the table, along its front edge
+function wpos(w) { return (fanOn() && fanPerch(w)) || w; }   // where a worker is drawn (perched folk sit on the table edge)
+function fanPerch(w) {
+  return w.mode === 'idle' && w.arrived && !w.path.length && w.spot && FAN_PERCH[w.spot.id] && fanLaw(w) === 'C' && w.L.mobility !== 'wheelchair' ? { x: FAN_PERCH[w.spot.id], y: 263 } : null;
+}
+function fanIdleK(w, s) {                     // Kenji leans on the bar, Evil likes the dark corner (the nap room), Lawful and Chaotic like the table
+  if (w.id === 9 && ['fridge', 'coffee', 'micro'].includes(s.act)) return 6;
+  if (fanMoral(w) === 'E' && (s.id === 'bean' || s.act === 'nap')) return 5;
+  if (s.act === 'eat' && fanLaw(w) !== 'N') return 3;
+  return 1;
+}
+function drawCorgi(x, y, st) {               // Jake rides a corgi
+  const f = st.facing, side = f === 'left' || f === 'right', run = st.moving ? Math.sin(st.walk * 1.4) : 0;
+  g.save(); g.translate(x, y); if (f === 'left') g.scale(-1, 1);
+  E(0, 0, 14, 3.5, 'rgba(0,0,0,.18)');
+  if (side) {
+    for (const lx of [-8, -4, 5, 9]) L(lx, -6, lx + run * (lx % 2 ? 2 : -2), -1, '#c2410c', 2.4);
+    E(0, -9, 12, 6, '#ea580c'); E(1, -6.5, 8, 3, '#fff7ed'); C(11, -13, 5, '#ea580c'); E(14, -11.5, 3.5, 2.4, '#fff7ed'); C(16.5, -12.5, 1, '#111');
+    poly([8, -16, 9, -22, 12, -17], '#ea580c'); poly([11, -17, 14, -22, 15, -16], '#ea580c'); C(12, -14, 0.9, '#111'); E(-12, -11, 2.4, 2, '#fff7ed');
+  } else {
+    for (const lx of [-6, 6]) L(lx, -5, lx, -1, '#c2410c', 2.6);
+    E(0, -8, 9, 6.5, '#ea580c');
+    if (f === 'down') { C(0, -14, 5, '#ea580c'); E(0, -12, 3, 2.2, '#fff7ed'); C(-2, -15, 0.9, '#111'); C(2, -15, 0.9, '#111'); C(0, -12.5, 0.8, '#111');
+      poly([-5, -17, -5, -23, -1, -18], '#ea580c'); poly([5, -17, 5, -23, 1, -18], '#ea580c'); }
+    else E(0, -12, 2.4, 2, '#fff7ed');
+  }
+  g.restore();
+}
+function fanDrawWorker(w) {
+  const Lk = lookOf(w), st = poseFor(w), pc = fanPerch(w);
+  if (pc) return drawPerson(Lk, pc.x, pc.y, { ...st, facing: 'down' });
+  if (Lk.corgi && Lk.mobility !== 'wheelchair') {
+    if (st.pose === 'stand') { drawCorgi(w.x, w.y, st); return drawPerson(Lk, w.x, w.y - 9, { ...st, noShadow: true, moving: false }); }
+    drawCorgi(w.x + 18, w.y + 4, { facing: 'down', moving: false });
+  }
+  drawPerson(Lk, w.x, w.y, st);
+}
+// ---- the dice in the middle of the office ----
+const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+function drawDice() {
+  DICE.forEach((d, i) => {
+    const k = T - d.t0, cx = 800 + (i - (DICE.length - 1) / 2) * 150, cy = 470, p = d.p;
+    g.globalAlpha = k < 0.3 ? k / 0.3 : k > 4.1 ? Math.max(0, (4.6 - k) / 0.5) : 1;
+    RR(cx - 66, cy - 48, 132, 102, 10, 'rgba(20,16,12,.88)', '#d4af37', 1.5);
+    g.font = 'bold 10px Georgia, serif'; TXT(fitText(d.name + ' rolls for the quest', 122), cx, cy - 36, 'bold 10px Georgia, serif', '#fde68a');
+    const r20 = k < 1.4, v = r20 ? 1 + (Math.floor(k * 18) % 20) : p.d20;
+    g.save(); g.translate(cx - 26, cy + 2); g.rotate(r20 ? k * 12 : 0);
+    const hex = []; for (let j = 0; j < 6; j++) hex.push(Math.cos(j * Math.PI / 3 + Math.PI / 6) * 20, Math.sin(j * Math.PI / 3 + Math.PI / 6) * 20);
+    poly(hex, '#991b1b'); poly([0, -20, 17.3, 10, -17.3, 10], '#dc2626'); g.strokeStyle = '#fca5a5'; g.lineWidth = 0.8; g.stroke();
+    g.restore();
+    TXT(String(v), cx - 26, cy + 5, 'bold 13px Georgia, serif', '#fff');
+    if (k > 1.6) {
+      const r6 = k < 2.6, v6 = r6 ? 1 + (Math.floor(k * 14) % 6) : p.d6;
+      g.save(); g.translate(cx + 28, cy + 2); g.rotate(r6 ? k * 10 : 0); RR(-14, -14, 28, 28, 5, '#f8fafc', '#94a3b8', 1);
+      for (const [px, py] of PIPS[v6]) C(px * 7, py * 7, 2.6, '#111'); g.restore();
+    }
+    const msg = r20 ? 'Rolling...' : k < 2.7 ? (p.d20 === 20 ? 'CRITICAL!' : p.d20 === 1 ? 'Oof. A 1.' : 'Rolled a ' + p.d20 + '!') : 'Party of ' + p.size + '!';
+    TXT(msg, cx, cy + 40, 'bold 11px Georgia, serif', k >= 2.7 ? '#facc15' : '#e7e5e4');
+    g.globalAlpha = 1;
+  });
+}
+function alBadge(w) {                         // the alignment badge next to a name in the sidebar
+  if (!fanOn() || !w || w.hire) return '';
+  const a = fanOf(w).al;
+  return `<span class="ab" style="background:${AL_COLOR[a]}" title="${AL_NAME[a]}">${a}</span>`;
+}
+// ---- what they say ----
+const FAN_JOIN = ['Count me in!', 'Adventure!', "Fine. I'll come.", 'Grabbing my gear!', 'Another quest? Yes!'];
+const FAN_HIRE_IN = ['Hireling, reporting.', 'Paid in advance, right?', 'Where do I stand?'];
+const FAN_HIRE_LINES = ['I get paid by the hour, right?', 'Is there dental?', 'Just here for the gold.', 'Nobody said dragons.'];
+const FAN_TO_DOOR = ['To the Tavern! Grab your gear!', 'Party, assemble!', 'Rounding up the party!'];
+const FAN_MARCH = ['Follow me!', 'Onward!', 'Single file, everyone.', 'To the quest!'];
+const FAN_ARRIVE = ['So this is the place.', 'Smells like trouble.', 'Watch your step.', 'Nobody touch anything.', 'I have a bad feeling about this.', 'Is it always this damp?'];
+const FAN_HOLD = ['Holding position until {l} gets back!', 'Where did {l} go?', 'Nobody move until {l} returns.', '{l} said wait here. So we wait.'];
+const FAN_HOLD_MEET = ['{l} is at the War Table. Planning. Again.', 'Nobody move. {l} is briefing the helpers.', '{l} called a council. We hold here.', 'How long can one war council take, {l}?'];
+const FAN_CHEER = ['Huzzah!', 'Victory!', 'Another one for the ballads!', 'Easy. Mostly.', 'Quest complete!'];
+const FAN_REACT = {
+  L: ['*writes it down word for word*', 'Noted. Verbatim.', 'Could you repeat that slower?'],
+  G: ['Thank you, wise one! ...What?', 'How kind of you! I have no idea what that means.', 'Thanks! ...Thanks?'],
+  C: ['Cool. CHARGE!', 'Riddles? Nah. Charging in.', "I'm just gonna hit it."],
+  E: ['How much for a straight answer?', 'I will pay you to just say it.', 'Is there a cheaper riddle?'],
+  N: ['*shrugs*', 'Sure. Whatever.', 'Mm-hm.'],
+};
+const FAN_GRUMBLE = ['What did he MEAN by that?', 'Still thinking about that riddle...', 'Riddles. Always riddles.', 'Who talks like that?', 'Was that a clue or a threat?', 'I hate rhyming wizards.'];
+const FAN_WHY_L = ['It was in my notes the whole time.', 'I wrote it down. I just never READ it.', 'Verbatim, in my notes. Ugh.'];
+const FAN_WHY = ["Why didn't he just SAY that?", 'He could have just told us!', 'Next time, bullet points, please.'];
+const FAN_LOOT = {
+  LG: ['We donate it to the village.', 'This goes to the orphanage.'], NG: ['Everyone gets a fair share.', 'Split it evenly, friends.'],
+  CG: ['Drinks at the Tavern, on me!', 'Free loot for everyone!'], LN: ['Itemizing the loot. Alphabetically.', 'Per guild rules, it goes in the ledger.'],
+  TN: ['Gold, no gold. It all returns to nature.', 'I will take the shiny one. Or not.'], CN: ['*pockets something first*', 'What loot? I see no loot.'],
+  LE: ['Invoices are in your inboxes.', 'Per clause 4, first pick is mine.'], NE: ['I will take the bones. All of them.', 'Dibs on the skeletons.'],
+  CE: ['*fakes a mimic* RAWR! ...Gotcha.', 'This chest is a mimic! ...Kidding. Or am I?'],
+};
+const FAN_ARGUE_LC = [                        // a Lawful member, then a Chaotic one
+  ['We go in formation.', "I'm already in."], ['We should make a plan first.', 'Plan B: run in screaming.'],
+  ['Wait for my signal!', 'Was that the signal? I went anyway.'], ['Guild rules: no fireballs indoors.', 'Caves are outdoors-indoors.'],
+  ['Stay on the marked path.', 'The marked path is boring.'], ['I drew us a map.', 'I ate the map.'],
+];
+const FAN_ARGUE_GE = [                        // a Good member, then an Evil one
+  ['We should free the prisoners.', 'We should recruit the prisoners.'], ['Spare it. It has a family.', 'Then its family can pay the ransom.'],
+  ['We share the loot equally.', 'Equally. By weight. My weight.'], ['Heal the goblin too, it surrendered.', 'Heal it, then bill it.'],
+  ['Let us leave the village a gift.', 'Let us leave the village an invoice.'],
+];
+const FAN_AGREE = {                           // two of a kind
+  L: [['Formation holding.', 'As per the plan.'], ['I logged that in the quest report.', 'In triplicate, I hope.']],
+  C: [['Want to poke it with a stick?', 'Already poking.'], ["Let's skip the boring part.", 'All the parts are boring. Charge!']],
+  G: [['Everyone okay?', 'All good! Thanks for asking.'], ['Nobody gets left behind.', 'Not even the hireling.']],
+  E: [['Their gold looks unattended.', 'Unattended gold is basically ours.'], ['We could sell the map.', 'Twice.']],
+};
+const FAN_SOLO = [
+  ['The code of honor says we knock first.', 'Honor demands I hold this line. Even the wrong one.'],     // Marcus
+  ["It's 'Fire-BALL', not 'Fy-ur ball'.", 'Rules are rules. Even for monsters.'],                     // Priya
+  ['Hold still, I am healing you. Ugh.', 'My knees. My back. My healing slots.', 'Does anyone say thank you? No.'],   // Wei
+  ['This battle needs a key change!', 'Writing verse three. Nobody die yet.', 'Ode to my tiny lute!'],   // Haruto
+  ['WHO WANTS SOME?!', 'I AM CALM!', "I'm three feet of pure rage."],                                // Maria
+  ['Filing incident report #42: monster was rude.', 'Biscuit, HEEL!', 'Form 7B: monster aggression.'], // Jake
+  ['Scouting ahead!', 'Found a better trail. Not coming back.', 'Be right back. Maybe.'],             // Tasha
+  ['Breathe in. Breathe out. Punch.', 'Sorry about the doorframe.', 'Peace be with you. Mind the horns.'],   // Raj
+  ["Oops. That wasn't supposed to be on fire.", 'I MEANT to do that!', 'Who wants toasted marshmallows?'],  // Emily
+  ['Healing potion? Sure. *hot sauce*', 'Heh heh. Nobody drink the red one.', 'I swapped the labels again.'],  // Kenji
+  ['Per clause 4, I get first pick of the loot.', 'Read the fine print, monster.', 'Paragraph 9 says you owe me.'],   // Mei
+  ['What contract?', 'Did anyone see my... your... this coin purse?', 'Mine now.'],                    // Jamal
+  ['Wake me when someone wins.', 'Ooh, a sunbeam.', 'Nature will sort it out.'],                       // Rosa
+  ['Hit it.', 'Plan: hit it. Backup plan: hit it harder.', 'SAM SMASH.'],                              // Sam
+  ["They weren't using those bones.", 'Waste not, want not. Especially skeletons.', 'Rise, my minions. Gently.'],   // Fatima
+  ['Does the gadget work? That is all I ask.', 'Version 2 will have fewer explosions.', 'Hold this. Do not press the button.'],   // Arjun
+];
+// Each quest's riddles: the riddle hints at how it is won, the reveal explains it after the victory.
+const RIDDLES = {
+  workbench: [
+    { r: 'The beast who breathes the burning breath, fears the tears the mountain weeps.', a: 'The mountain weeps... the waterfall. The cave was behind the waterfall the whole time.' },
+    { r: 'Its scales are steel from tail to tooth, save one, below, that tells the truth.', a: 'One missing scale on its belly. That was the weak spot. Obviously.' },
+    { r: 'It sleeps on what it loves the most; wake it with a rival’s boast.', a: 'Brag about a bigger hoard and it storms off to check. Left the cave wide open.' }],
+  forge: [
+    { r: 'His power climbs with every stair; take not one step, and meet him there.', a: "Don't climb the tower. There was a lift around the back. A LIFT." },
+    { r: 'Show the face he fears the most, and watch the wizard turn to ghost.', a: 'He was afraid of his own reflection. One hand mirror and he froze.' },
+    { r: 'His staff is long, his beard is longer; tread on one and you are stronger.', a: "Step on the beard. He trips. It's always the beard." }],
+  dairy: [
+    { r: 'The cage is locked, the key is near; it hangs where the jailer scratches his ear.', a: "The key was tucked behind the troll's ear. Like a pencil." },
+    { r: 'Ask not the captive to be freed; ask the captive what they need.', a: 'She did not need rescuing. She needed a ladder. And a snack.' },
+    { r: 'The troll is big, the troll is slow; feed him a riddle and watch him go.', a: 'Ask the troll a riddle and he sits down to think. For hours.' }],
+  valet: [
+    { r: 'What was lost was never gone; it waits where last it was put on.', a: 'The artifact was a hat. The golem was wearing it the whole time.' },
+    { r: 'Stone that walks will not walk far, if you ask it who you are.', a: "Golems can't answer questions about you. It crashed trying." },
+    { r: 'The pedestal weighs what it holds; swap it with sand, as the old tale told.', a: 'Swap it for a bag of sand. Same weight. Ancient trap, ancient trick.' }],
+  bakery: [
+    { r: 'They fear the light but love the shine; toss one coin and form a line.', a: 'Goblins queue for shiny coins. Toss one and they line up right out of the cave.' },
+    { r: 'The cave has two mouths, and one is shy.', a: 'There was a back door. A BACK DOOR. We crawled through the front.' },
+    { r: 'Count the goblins, then count again; the last is never number ten.', a: 'Only nine goblins. The tenth was a goblin-shaped rock. We fought a rock.' }],
+  garden: [
+    { r: 'What a kiss has cursed, a kiss will cure... from lips that croak, of that be sure.', a: 'The frog had to kiss the tree. Not the other way around. Gross, but correct.' },
+    { r: 'The curse is old, the curse is sad; water the root and it is glad.', a: 'The tree was just thirsty. One bucket. The curse was dehydration.' },
+    { r: 'Speak its name the other way, and the curse will fade away.', a: "Its name was Bob. Backwards, it's still Bob. We said Bob. It worked." }],
+  pizza: [
+    { r: 'The wolves are hungry, the road is long; the wagon carries what they want.', a: 'The wagon was full of sausages. Toss one back and the wolves leave us alone.' },
+    { r: 'Turn left at the tree that is not a tree.', a: 'The tree was a bandit in a costume. We turned left at a bandit.' },
+    { r: 'Slow wheels finish, fast wheels fall.', a: 'The fast road had a broken bridge. The slow road had... a bridge.' }],
+  easel: [
+    { r: 'His soul is kept where none would look; not in a vault, but in a cook.', a: 'His soul was in the jar labeled COOKIES. Nobody checks the cookie jar.' },
+    { r: 'The dead who walk despise the day; let in the light and he will not stay.', a: 'Open the curtains. He just needed us to open the curtains.' },
+    { r: 'Bones that stand will fall when called; one gentle word will end it all.', a: '"Goodnight." He was very tired. We just said goodnight.' }],
+  lumber: [
+    { r: 'Cut one head and two will grow; give it a hug and the heads will slow.', a: 'It just wanted a hug. Three hugs. One per head.' },
+    { r: 'Many heads, but only one tummy.', a: 'Feed the middle head. The other two are just for show.' },
+    { r: 'Sing the song its mother sang.', a: 'A lullaby! It fell asleep mid-roar. Verse two did it.' }],
+  lab: [
+    { r: 'Answer my riddle with one of your own.', a: "She loves riddles. Ask her one back and she's stuck for days." },
+    { r: 'What walks on four, then two, then three?', a: 'A person. The answer is always a person. With a cane.' },
+    { r: 'The answer lies within the question, if you read it twice.', a: 'The answer was literally "the question". We read it twice. Ugh.' }],
+  servers: [
+    { r: 'Walls of wood fear what wood fears.', a: 'Termites. One jar of termites and the whole wall fell over.' },
+    { r: 'The gate is strong, the latch is weak; knock politely, and they will speak.', a: 'We knocked. They opened. They thought we were the pizza.' },
+    { r: 'Bandits love gold, but love their mothers more.', a: 'We said their mothers were visiting. They all came out to tidy up.' }],
+  packing: [
+    { r: 'Keep your hand upon the wall, and you will never fall at all.', a: 'Left hand on the wall the whole way. That is literally how mazes work.' },
+    { r: 'The way out is the way you came in.', a: 'The exit was the entrance. We walked in a circle for an hour.' },
+    { r: 'Follow the cheese, not the cheeses.', a: 'The cube eats cheese. Leave a trail and it clears the way.' }],
+};
+const FAN_CHAT = {                            // Tavern small talk (replaces the break-room lines in this theme)
+  fridge: ['Who drank my potion?!', 'Is this cheese... moving?', 'Smells like goblin.'],
+  coffee: ['Another ale, barkeep!', 'Make it a double.', 'Who left the keg empty?!'],
+  micro: ['Mutton again?', 'Ding! Roast boar.', 'Is this mimic meat?'],
+  eat: ['Pass the mead.', 'Best stew in the realm.', 'Ugh, gruel again.'],
+  vend: ['It ate my gold coin.', 'Come on, healing potion...', 'Exact change only?!'],
+  arcade: ['New high score in Dungeon Dash!', 'One more quest.', 'Combo!!'],
+  pool: ['Corner pocket.', 'Nice shot!'], cooler: ['Did you hear about the dragon?', 'Weekend quest plans?'],
+  nap: ['*snores in Elvish*'], phone: ['Reading my scroll feed.', 'Who sends ravens anymore?'],
+};
+const FAN_BANTER = [
+  ['Did you hear the Dungeon Master showed up again?', 'Did he say anything useful?', 'He said "the cheese is not the cheeses."', 'So, no.'],
+  ['Who rolled a 1 on the stairs?', 'The stairs rolled a 20, {a}.', 'Fair.'],
+  ['Kenji swapped the potions again.', 'I can still taste the hot sauce.', 'He says it builds character, {b}.'],
+  ['Did Raj break the doorframe?', 'Third one this week.', 'The carpenter loves him, {a}.'],
+];
 const BOSS = { x: 800, y: 186, bubble: null, bubbleUntil: 0, visitor: null, nextQuip: 25 };
 let troubleNo = 41;
 const DUCK = { bubble: null, bubbleUntil: 0, next: 0 };
@@ -5592,6 +6576,9 @@ function drawBoss() {
   } else if (THEME === 'hero') {     // a domino mask at Hero HQ
     RR(x - 10, hy - 4.5, 20, 6, 3, '#1e3a8a'); C(x - 3, hy - 1.5, 1.6, '#fff'); C(x + 3, hy - 1.5, 1.6, '#fff');
     C(x - 3, hy - 1.5, 0.8, '#2b1a12'); C(x + 3, hy - 1.5, 0.8, '#2b1a12'); L(x + 10, hy - 2, x + 15, hy + 3, '#1e3a8a', 1.4);
+  } else if (THEME === 'fantasy') {  // the Guildmaster's crown in Might & Mayhem
+    poly([x - 11, hy - 9, x - 12, hy - 21, x - 6, hy - 15, x, hy - 24, x + 6, hy - 15, x + 12, hy - 21, x + 11, hy - 9], '#facc15');
+    R(x - 11, hy - 11, 22, 3, '#ca8a04'); C(x, hy - 13, 1.8, '#dc2626'); C(x - 6, hy - 13, 1.3, '#2563eb'); C(x + 6, hy - 13, 1.3, '#16a34a');
   } else if (THEME === 'stone') {    // a chief's bone crown in the Stone Age
     R(x - 12, hy - 13, 24, 4, '#7c4a2d');
     for (let i = -2; i <= 2; i++) { const bx = x + i * 5, top = hy - 22 + Math.abs(i) * 3;
@@ -5639,6 +6626,7 @@ function drawDiningTable() {
   RR(70, 236, 132, 26, 6, '#a87b4f'); R(74, 262, 124, 6, '#8a6340'); R(80, 266, 5, 18, '#6b4b30'); R(187, 266, 5, 18, '#6b4b30');
   RR(98, 240, 34, 18, 2, '#f5f0e6'); C(115, 249, 7, '#f3c26b'); C(112, 247, 1.2, '#c0392b'); C(118, 251, 1.2, '#c0392b'); C(116, 246, 1, '#2e7d32');
   RR(150, 242, 7, 11, 2, '#e74c3c'); RR(162, 244, 7, 11, 2, '#3498db'); RR(176, 246, 14, 6, 1, '#fff');
+  if (fanOn()) fanDiceTable();
 }
 // the vending machine and the arcade, free-standing above the pool table (base at y 420)
 function drawMachines() {
@@ -5711,7 +6699,7 @@ function drawWhiteboard() {
   }
   const lead = workers.find(w => w.mode === 'job' && w.job && w.locKind === 'meet');
   if (!lead) {
-    TXT('NEXT MEETING: TBD', 470, 650, 'bold 9px system-ui', '#3b82f6');
+    TXT((roomSkin('meeting') || {}).tbd || 'NEXT MEETING: TBD', 470, 650, 'bold 9px system-ui', '#3b82f6');
     L(400, 674, 430, 664, '#22c55e', 2); L(430, 664, 460, 670, '#22c55e', 2); L(460, 670, 500, 656, '#22c55e', 2);
     TXT('\u2191 morale', 530, 668, '8px system-ui', '#888');
     return;
@@ -6302,6 +7290,78 @@ THEMES.hero.rooms = {
     },
   },
 };
+// ---- Might & Mayhem: Temple of Resurrection, War Table, the Crossroads ------------------
+THEMES.fantasy.rooms = {
+  trouble: {
+    serving: 'NOW RESURRECTING',
+    back() {
+      roomShell('trouble', '#78716c', '#a8a29e', fCheck('rgba(0,0,0,.09)', 24));
+      for (let y = 30, k = 0; y < 92; y += 13, k++) { L(980, y, 1286, y, 'rgba(0,0,0,.14)', 1); for (let x = 984 + (k % 2) * 13; x < 1286; x += 26) L(x, y, x, y + 13, 'rgba(0,0,0,.12)', 1); }
+      roomSign(1086, 38, 170, 20, ['TEMPLE OF RESURRECTION'], '#1c1917', '#fde68a', '#d4af37', 9.5);
+      RR(988, 54, 66, 34, 3, '#fef3c7', '#a16207', 1); TXT('RAISE DEAD', 1021, 63, 'bold 7px Georgia, serif', '#7c2d12'); TXT('2 for 1', 1021, 72, '7px Georgia, serif', '#7c2d12'); TXT('(Tuesdays)', 1021, 81, 'italic 6px Georgia, serif', '#78350f');
+      g.beginPath(); g.moveTo(1176, 90); g.lineTo(1176, 66); g.arc(1225, 66, 49, Math.PI, 0); g.lineTo(1274, 90); g.closePath(); g.fillStyle = '#1c1917'; g.fill();   // stained glass window
+      g.save(); g.clip(); ['#dc2626', '#2563eb', '#facc15', '#16a34a', '#a855f7', '#0ea5e9'].forEach((c, i) => { g.globalAlpha = 0.85; R(1178 + i * 16, 30, 14, 60, c); }); g.globalAlpha = 1;
+      for (let i = 0; i < 7; i++) L(1176 + i * 16, 30, 1176 + i * 16, 90, '#1c1917', 2); L(1176, 62, 1274, 62, '#1c1917', 2); g.restore();
+      R(1252, 214, 22, 30, '#a8a29e'); E(1263, 214, 13, 4, '#d6d3d1'); E(1263, 214, 10, 2.6, '#7dd3fc');   // holy water font (on the extinguisher's spot)
+    },
+    fx() {                                                              // light through the window and a soft halo over the altar
+      g.globalAlpha = 0.07 + Math.sin(T * 0.8) * 0.02; poly([1180, 90, 1270, 90, 1300, 290, 1130, 290], '#fde68a'); g.globalAlpha = 1;
+    },
+    counter() {
+      counterBase('#e7e5e4', '#a8a29e', '#d4af37', '#7c2d12', 'REVIVE', '#fde68a', '☥', '#a16207');
+      for (const x of [1012, 1026, 1234, 1248]) { R(x - 1.5, 170, 3, 12, '#fef3c7'); flame(x, 170, 0.5, T + x); }
+      RR(1180, 166, 22, 16, 2, '#7c2d12', '#facc15', 1); TXT('✚', 1191, 174, 'bold 9px system-ui', '#facc15');   // a tome of healing
+    },
+    duck(x, y) {                                                        // the duck in a wizard hat
+      E(x, y - 31, 17, 3.6, '#1d4ed8'); poly([x - 11, y - 32, x + 11, y - 32, x + 4, y - 54, x + 12, y - 62, x - 1, y - 52], '#1d4ed8');
+      TXT('★', x - 1, y - 42, 'bold 8px system-ui', '#facc15'); C(x + 6, y - 36, 1.2, '#facc15');
+    },
+  },
+  meeting: {
+    tbd: 'NEXT CAMPAIGN SESSION: TBD.',
+    back() {
+      roomShell('meeting', '#78716c', '#6b4423', fPlanks('rgba(0,0,0,.28)'));
+      for (let y = 640, k = 0; y < 690; y += 12, k++) for (let x = 322 + (k % 2) * 14; x < 611; x += 28) L(x, y, x, y + 12, 'rgba(0,0,0,.12)', 1);
+      roomSign(347, 659, 34, 34, ['WAR', 'TABLE'], '#3b2410', '#fde68a', '#d4af37', 8);
+      fanShield(592, 664, '#991b1b', 'sun'); L(580, 650, 604, 678, '#cbd5e1', 2); L(604, 650, 580, 678, '#cbd5e1', 2);   // crossed swords behind a shield
+      seatsOf(chairOf('#78350f', '#3b2410'));
+      cornersOf((x, y, i) => { if (i) { pirBarrel(x - 8, y - 18, 16, 18); } else { RR(x - 8, y - 12, 16, 12, 2, '#6b3e1f'); R(x - 8, y - 8, 16, 2, '#d4af37'); } });
+    },
+    table() {
+      RR(375, 764, 190, 62, 12, '#5b3a1e'); RR(385, 770, 170, 50, 3, '#f3e2b8', '#a16207', 1);       // the campaign map
+      g.beginPath(); g.moveTo(392, 812); g.quadraticCurveTo(430, 790, 470, 800); g.quadraticCurveTo(510, 812, 548, 780); g.strokeStyle = '#60a5fa'; g.lineWidth = 2; g.stroke();
+      for (const [x, y] of [[405, 782], [418, 778], [430, 784]]) poly([x - 6, y + 5, x, y - 5, x + 6, y + 5], '#a8a29e');
+      for (const [x, y] of [[500, 784], [510, 790], [492, 792]]) C(x, y, 4, '#4d7c0f');
+      R(530, 796, 12, 9, '#78716c'); for (let i = 0; i < 3; i++) R(530 + i * 4.5, 793, 3, 3, '#78716c');   // a castle
+      for (const [x, y, c] of [[444, 802, '#2563eb'], [452, 806, '#dc2626'], [460, 800, '#16a34a'], [520, 812, '#7c3aed']]) { E(x, y + 3, 3, 1.2, 'rgba(0,0,0,.3)'); R(x - 1.5, y - 4, 3, 7, c); C(x, y - 5, 2, c); }   // minis
+      poly([404, 812, 410, 808, 414, 814, 408, 818], '#dc2626');                                              // a d20 on the map
+      R(380, 826, 6, 12, '#3b2410'); R(554, 826, 6, 12, '#3b2410');
+    },
+  },
+  mail: {
+    back() {
+      roomShell('mail', '#7dd3fc', '#4d7c0f', (x, y, w, h) => { for (let i = 0; i < 40; i++) L(x + hh(i * 3) % w, y + hh(i * 5) % h, x + hh(i * 3) % w + 1, y + hh(i * 5) % h - 3, 'rgba(255,255,255,.12)', 1); });
+      poly([1294, 95, 1330, 70, 1380, 88, 1440, 62, 1500, 86, 1550, 66, 1591, 84, 1591, 95], '#65a30d');      // hills on the horizon
+      R(1294, 232, 297, 26, '#b08968'); R(1438, 95, 26, 203, '#b08968');                                     // two roads crossing
+      roomSign(1450, 36, 228, 18, ['THE CROSSROADS · WAITING ON YOU'], '#3b2410', '#fde68a', '#d4af37', 10);
+      RR(1330, 52, 240, 98, 3, '#78350f');                                                                    // the quest board
+      mailCells('#5b3a1e', (x, y, h) => { RR(x + 2, y + 2, 16, 15, 1, '#fef3c7'); L(x + 5, y + 7, x + 15, y + 7, '#a16207', 1); L(x + 5, y + 11, x + 13, y + 11, '#a16207', 1); C(x + 15, y + 14, 1.6, '#dc2626'); });
+      R(1320, 150, 260, 10, '#92400e'); R(1322, 160, 256, 22, '#78350f'); L(1322, 171, 1578, 171, '#5b3a1e', 1.2); C(1450, 147, 5, '#d4af37');
+      R(1564, 244, 5, 40, '#78350f');                                                                         // the signpost, on the mail bin's spot (below the waiting spots)
+      poly([1518, 256, 1524, 250, 1566, 250, 1566, 262, 1524, 262], '#a16207'); TXT('WHICH WAY?', 1544, 256.5, 'bold 6px system-ui', '#3b2410');
+      poly([1567, 266, 1580, 266, 1586, 272, 1580, 278, 1567, 278], '#a16207'); TXT('?', 1576, 272.5, 'bold 8px system-ui', '#3b2410');
+      E(1562, 284, 14, 3, 'rgba(0,0,0,.2)');
+    },
+    fx() {                                                              // while someone waits on you: the party's banner over the road
+      if (!(STATE && STATE.jobs.some(j => j.status === 'waiting'))) return;
+      g.beginPath(); g.moveTo(1334, 26);                                 // between the two blinking beacons
+      for (let x = 1334; x <= 1566; x += 8) g.lineTo(x, 26 + Math.sin(x * 0.04 + T * 3) * 1.5);
+      for (let x = 1566; x >= 1334; x -= 8) g.lineTo(x, 48 + Math.sin(x * 0.04 + T * 3) * 1.5);
+      g.closePath(); g.fillStyle = '#991b1b'; g.fill(); g.strokeStyle = '#facc15'; g.lineWidth = 1.2; g.stroke();
+      TXT('THE PARTY AWAITS YOUR COMMAND', 1450, 37.5 + Math.sin(T * 3) * 0.8, 'bold 9.5px Georgia, serif', '#fde68a');
+    },
+  },
+};
 // window: a night skyline with a searchlight and a caped flier crossing; star bunting; a break-room rule
 function decorHero() {
   windowScene('#0f172a', '#334155', () => {
@@ -6326,6 +7386,43 @@ function decorHero() {
   C(606, 293, 10, '#1e3a8a'); heroStar(606, 293, 8, '#facc15', Math.sin(T) * 0.2);     // HQ badge on the break room door frame
 }
 
+// Might & Mayhem: a castle and a passing dragon in the boss's window, heraldic pennants, and the Tavern: the bar on
+// the kitchen counter, ale barrels on the wall right of the TV, candles, a hanging sign and a darker corner (the nap
+// room). Nothing new on the floor, so the walkways, TV, couch, rug and signs stay as they are.
+function decorFantasy() {
+  windowScene('#7dd3fc', '#6b4423', () => {
+    const sky = g.createLinearGradient(0, 30, 0, 84); sky.addColorStop(0, '#60a5fa'); sky.addColorStop(1, '#fde68a');
+    g.fillStyle = sky; g.fillRect(670, 30, 116, 54);
+    poly([670, 84, 690, 66, 716, 74, 742, 60, 770, 72, 786, 66, 786, 84], '#4d7c0f');
+    R(732, 50, 22, 16, '#a8a29e'); R(728, 44, 6, 22, '#a8a29e'); R(752, 44, 6, 22, '#a8a29e'); poly([727, 44, 731, 36, 735, 44], '#b91c1c'); poly([751, 44, 755, 36, 759, 44], '#b91c1c'); R(740, 58, 6, 8, '#44403c');
+    const dx = 650 + (T * 11) % 170, dy = 42 + Math.sin(T * 1.2) * 3, fl = Math.sin(T * 7) * 3;
+    E(dx, dy, 6, 2, '#7f1d1d'); poly([dx - 2, dy, dx + 2, dy - 6 - fl, dx + 4, dy], '#991b1b'); L(dx - 6, dy, dx - 11, dy + 2, '#7f1d1d', 1.2); C(dx + 6, dy - 1, 1.8, '#7f1d1d');
+  });
+  for (const [a, b] of [[26, 610], [646, 970], [986, 1286], [1306, 1590]]) {     // heraldic pennants along the top walls
+    g.beginPath(); g.moveTo(a, 24); for (let x = a; x < b; x += 24) g.quadraticCurveTo(x + 12, 32, Math.min(x + 24, b), 24);
+    g.strokeStyle = '#a16207'; g.lineWidth = 1; g.stroke();
+    for (let x = a + 12, i = 0; x < b; x += 24, i++) { const sw = Math.sin(T * 1.7 + x * 0.05) * 1.2; poly([x - 5, 27, x + 5, 27, x + sw, 40], ['#b91c1c', '#1d4ed8', '#ca8a04', '#15803d'][i % 4]); }
+  }
+  // the bar: taps and tankards on the kitchen counter (Kenji's usual spot is right here)
+  RR(126, 88, 26, 17, 3, '#8a5a36', '#4b2e17', 1); for (const x of [131, 139, 147]) { R(x - 1, 82, 2, 7, '#d4af37'); RR(x - 2, 78, 4, 5, 1, '#1c1917'); }
+  for (const x of [212, 224]) { RR(x - 4, 94, 8, 11, 1.5, '#a16207', '#78350f', 0.8); E(x, 94, 4, 1.8, '#fef3c7'); L(x + 4, 97, x + 6.5, 100, '#78350f', 1.2); }
+  // ale barrels on the wall right of the TV, candles in sconces
+  pirBarrel(528, 120, 24, 36, 'ALE'); pirBarrel(554, 120, 24, 36, 'ALE'); pirBarrel(541, 86, 24, 34, 'MEAD'); pirBarrel(580, 128, 20, 28);
+  for (const [x, y] of [[283, 72], [598, 76]]) { R(x - 4, y + 6, 8, 2, '#78350f'); R(x - 1.5, y - 2, 3, 8, '#fef3c7'); flame(x, y - 2, 0.6, T + x); }
+  // the tavern sign over the door to the hall
+  L(600, 279, 612, 279, '#3b2410', 1.5); L(602, 279, 602, 283, '#3b2410', 1); L(610, 279, 610, 283, '#3b2410', 1);
+  g.save(); g.translate(606, 283); g.rotate(Math.sin(T * 0.9) * 0.06); RR(-16, 0, 32, 14, 2, '#78350f', '#d4af37', 1);
+  TXT('TAVERN', 0, 7.5, 'bold 6px Georgia, serif', '#fde68a'); g.restore();
+  g.globalAlpha = 0.22; R(455, 362, 160, 83, '#0c0a09'); g.globalAlpha = 1;      // the dark corner
+}
+function fanDiceTable() {                     // the dining table as the dice table: a felt mat, dice, character sheets, candles
+  RR(136, 240, 44, 18, 2, '#14532d', '#a16207', 1);
+  poly([146, 244, 152, 241, 157, 246, 151, 253, 145, 250], '#dc2626'); TXT('20', 151, 247.5, 'bold 4px system-ui', '#fff');
+  RR(162, 244, 8, 8, 1.5, '#f8fafc'); C(164.5, 246.5, 0.8, '#111'); C(167.5, 249.5, 0.8, '#111');
+  RR(76, 240, 14, 17, 1, '#fef3c7', '#d6c3a1', 0.6); for (let i = 0; i < 4; i++) L(78, 244 + i * 3, 88, 244 + i * 3, '#a8a29e', 0.6);
+  for (const x of [96, 192]) { R(x - 1.5, 240, 3, 9, '#fef3c7'); flame(x, 240, 0.5, T + x); }
+}
+
 // ============================================================================================
 // Static background (cached to an offscreen canvas)
 // ============================================================================================
@@ -6338,7 +7435,8 @@ function plant(x, y, s = 1) {
 function drawStatic() {
   R(0, 0, W, H, '#262933');
   // room names in the top margin
-  for (const [t, x] of [['BREAK ROOM', 318], ["BOSS'S OFFICE", 806], ['HELP DESK', 1130], ['MAILROOM', 1450]]) TXT(t, x, 10, 'bold 11px system-ui', '#8b93a7');
+  const lb = THEMES[THEME].labels || {};
+  for (const [t, x, k] of [['BREAK ROOM', 318, 'break'], ["BOSS'S OFFICE", 806, 'boss'], ['HELP DESK', 1130, 'trouble'], ['MAILROOM', 1450, 'mail']]) TXT(lb[k] || t, x, 10, 'bold 11px system-ui', '#8b93a7');
 
   // ---- break room
   R(20, 20, 595, 75, '#efe3cf'); R(20, 78, 595, 17, '#c9a77a'); R(20, 76, 595, 3, '#a8865a');
@@ -6404,7 +7502,8 @@ function drawStatic() {
     for (let k = 0; k < 10; k++) L(x + 6, y + 10 + k * 19, x + 6, y + 18 + k * 19, '#f1c40f', 2);
     RR(x + 34, y + 26, 200, 164, 10, s.tint);
     RR(x + 34, y + 26, 200, 164, 10, null, 'rgba(0,0,0,.12)', 2);
-    RR(x + 86, y + 4, 120, 18, 4, '#2b2f3a'); TXT(s.label, x + 146, y + 13.5, 'bold 10px system-ui', '#ffd479');
+    if (THEMES[THEME].plaque) THEMES[THEME].plaque(s, x, y);
+    else { RR(x + 86, y + 4, 120, 18, 4, '#2b2f3a'); TXT(s.label, x + 146, y + 13.5, 'bold 10px system-ui', '#ffd479'); }
   }
 
   // ---- boss office
@@ -6692,7 +7791,7 @@ function drawDynamicBg() {
     C(lx, 35, 6, on ? '#ff3b3b' : (waiting ? '#7a1f1f' : '#5a5a5a'));
   }
   // help-desk "now serving" display
-  RR(1062, 56, 96, 30, 3, '#111'); TXT('NOW SERVING', 1110, 64, 'bold 7px system-ui', '#888'); TXT(String(troubleNo), 1110, 77, 'bold 13px monospace', '#ff4d4d');
+  RR(1062, 56, 96, 30, 3, '#111'); TXT((roomSkin('trouble') || {}).serving || 'NOW SERVING', 1110, 64, 'bold 7px system-ui', '#888'); TXT(String(troubleNo), 1110, 77, 'bold 13px monospace', '#ff4d4d');
   // patio cat on the bench
   const br = Math.sin(T * 1.6) * 0.8;
   E(150, 774, 12 + br * 0.4, 6 + br * 0.3, '#f39c4a'); C(160, 771, 5, '#f39c4a'); poly([157, 768, 159, 763, 161, 768], '#f39c4a'); poly([161, 768, 163, 763, 165, 768], '#f39c4a');
@@ -6767,7 +7866,11 @@ function drawBubble(b) {
   const tx = clamp(x, bx + 8, bx + bw - 8), below = by > b.bottom;   // the tail stays on the box when it moved aside
   // a moved bubble keeps a thin leader line to its speaker
   if (!below && (b.bottom - (by + bh + 6) > 3 || tx !== x)) { g.strokeStyle = border; g.lineWidth = 1; g.beginPath(); g.moveTo(tx, by + bh + 6); g.lineTo(x, b.bottom - 2); g.stroke(); }
-  if (opts.thought) {                     // a thought: a puffy box and a trail of little circles instead of a tail
+  if (opts.scroll) {                      // a scroll: parchment with rolled ends (the Dungeon Master)
+    RR(bx, by, bw, bh, 2, bg, border, 1);
+    for (const ex of [bx - 4, bx + bw - 4]) RR(ex, by - 3, 8, bh + 6, 4, shade(bg, -0.12), border, 1);
+    if (below) poly([tx - 5, by + 0.5, tx + 5, by + 0.5, tx, by - 6], bg); else poly([tx - 5, by + bh - 0.5, tx + 5, by + bh - 0.5, tx, by + bh + 6], bg);
+  } else if (opts.thought) {                     // a thought: a puffy box and a trail of little circles instead of a tail
     RR(bx, by, bw, bh, 12, bg, border, 1);
     const d = below ? -1 : 1, y0 = below ? by : by + bh;
     [[0, 4, 2.8], [-3, 9, 2], [-5, 13, 1.3]].forEach(([ox, oy, r]) => { g.beginPath(); g.arc(tx + ox, y0 + d * oy, r, 0, TAU); g.fillStyle = bg; g.fill(); g.strokeStyle = border; g.lineWidth = 1; g.stroke(); });
@@ -6806,18 +7909,19 @@ function drawSlip(w) {
 function drawTooltip(w) {
   const lines = [w.L.name + (w.job && w.job.agent ? ' as ' + w.job.agent : '')];
   if (THEME === 'hero') { const p = powerOf(w); lines.push(p.alias + ' · ' + (isVillain(w) ? 'villain' : 'hero') + ' · ' + p.label); }
+  if (fanOn()) { const f = fanOf(w); lines.push(f.race + ' ' + f.cls + ' · ' + AL_NAME[f.al]); if (w.party && w.party.slot && w.party.leader !== w) lines.push('In ' + w.party.leader.L.name + "'s party: " + stationName(FANTASY[w.party.slot])); }
   if (w.job) {
     lines.push(STATUS_LABEL[w.job.status] || w.job.status);
     if (w.job.activity && w.job.status === 'working') lines.push(w.job.activity);
     if (w.job.message && w.job.status !== 'working') lines.push(w.job.message);
     if (w.locKind === 'meet') lines.push('Leading a team of ' + helpersOf(w.job.id).length);
     const lead = leaderOf(w.job); if (lead) lines.push('Reports to ' + lead.L.name);
-  } else lines.push(w.mode === 'returning' ? 'Heading back to the break room' : 'On break — ' + (w.duel ? 'dueling ' + (w.duel.a === w ? w.duel.b : w.duel.a).L.name : w.talk ? 'chatting with ' + (w.talk.a === w ? w.talk.b : w.talk.a).L.name
+  } else lines.push(w.mode === 'party' ? 'On a quest' : w.mode === 'returning' ? 'Heading back to the ' + (fanOn() ? 'Tavern' : 'break room') : 'On break — ' + (w.duel ? 'dueling ' + (w.duel.a === w ? w.duel.b : w.duel.a).L.name : w.talk ? 'chatting with ' + (w.talk.a === w ? w.talk.b : w.talk.a).L.name
     : w.spot && w.spot.act === 'tv' ? 'watching ' + TV_NAMES[tvShow()] : ACT_NAMES[w.spot && w.spot.act] || 'wandering'));
   g.font = '12px system-ui';
   const ls = lines.map((l, i) => i === 0 ? l : fitText(l, 240));
   const tw = Math.max(...ls.map(l => g.measureText(l).width)) + 16, th = ls.length * 15 + 8;
-  const bx = clamp(w.x + 16, 4, W - tw - 4), by = clamp(w.y - 40, 4, H - th - 4);
+  const at = wpos(w), bx = clamp(at.x + 16, 4, W - tw - 4), by = clamp(at.y - 40, 4, H - th - 4);
   RR(bx, by, tw, th, 6, 'rgba(20,22,28,.92)', '#ffd23f', 1);
   ls.forEach((l, i) => TXT(l, bx + 8, by + 11 + i * 15, i === 0 ? 'bold 12px system-ui' : '12px system-ui', i === 0 ? '#ffd23f' : '#e8e9ee', 'left'));
 }
@@ -6829,6 +7933,7 @@ let hovered = null, selected = null, selectUntil = 0, online = false;
 function update(dt) {
   T += dt;
   for (const w of workers) updateWorker(w, dt);
+  updParties(dt);
   updParticles(dt); updPool(dt); updTalks(); updHero(dt);
   if (T > BOSS.nextQuip) { if (!BOSS.visitor) bossSay(pick(activeCount() ? BOSS_BUSY : BOSS_IDLE), 3); BOSS.nextQuip = T + rand(35, 70); }
   const atDesk = workers.some(w => w.mode === 'job' && w.locKind === 'trouble' && w.arrived);
@@ -6850,8 +7955,9 @@ function render() {
   g.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * OX, DPR * OY);
   drawDynamicBg();
   if (THEME === 'hero') drawRipples();
-  const items = PROPS.map(p => ({ y: p.y, f: p.heave ? () => drawProp(p) : p.draw })).concat(workers.map(w => ({ y: w.y, f: () => drawWorker(w) })),
-    CAST.on ? castCrew().map(n => ({ y: n.y, f: () => drawCast(n) })) : []);
+  const items = PROPS.map(p => ({ y: p.y, f: p.heave ? () => drawProp(p) : p.draw })).concat(workers.map(w => ({ y: fanOn() && fanPerch(w) ? 264 : w.y, f: () => drawWorker(w) })),
+    CAST.on ? castCrew().map(n => ({ y: n.y, f: () => drawCast(n) })) : [], HIRELINGS.map(n => ({ y: n.y, f: () => drawPerson(n.L, n.x, n.y, poseFor(n)) })),
+    PARTIES.filter(p => p.dmo && p.dmo.vis).map(p => ({ y: p.dmo.y, f: () => drawDM(p.dmo) })));
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.f();
   for (const id of STATION_ORDER) { const s = themeStations()[id]; if (s.fx && stationActive(s)) { const w = stationWorker(s); s.fx(s.x0, s.y0, w, T + w.seed); } }
@@ -6859,12 +7965,14 @@ function render() {
   drawPager();
   drawParticles();
   if (THEME === 'hero') { drawBeams(); drawHeave(); }
+  drawDice();
   // slips and bubbles on top; the selected/hovered worker last so it is readable
   const order = [...workers].sort((a, b) => (a === hovered || a === selected) - (b === hovered || b === selected) || a.y - b.y);
   const bubs = [];
   for (const w of order) {
     const top = drawSlip(w);
-    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, w.x, top, w.bubble, { maxW: 150, maxLines: THEME === 'hero' ? 5 : 2 }));   // Hero HQ punchlines run long
+    const at = wpos(w);
+    if (w.bubble && T < w.bubbleUntil) bubs.push(measureBubble(w, at.x, at === w ? top : at.y + headTop(w), w.bubble, { maxW: 150, maxLines: THEME === 'hero' || THEME === 'fantasy' ? 5 : 2 }));   // Hero HQ punchlines and riddle reveals run long
     else w._lift = null;
   }
   if (BOSS.bubble && T < BOSS.bubbleUntil) bubs.push(measureBubble(BOSS, BOSS.x, BOSS.y - 70, BOSS.bubble, { bg: '#fff4ee', border: '#d97757' }));
@@ -6873,6 +7981,9 @@ function render() {
   else DUCK._lift = null;
   if (CAT.bubble && T < CAT.bubbleUntil) bubs.push(measureBubble(CAT, CAT.x, CAT.y - 26, CAT.bubble, { thought: true, maxW: 150, maxLines: 4, font: 'italic 12px system-ui', bg: '#fff7ed', border: '#f39c4a' }));
   else CAT._lift = null;
+  for (const n of HIRELINGS) if (n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + headTop(n), n.bubble, { maxW: 150, maxLines: 3 }));
+  for (const p of PARTIES) { const d = p.dmo; if (d && d.vis && d.bubble && T < d.bubbleUntil)   // the Dungeon Master's riddle, on a scroll
+    bubs.push(measureBubble(d, d.x, d.y - 46, d.bubble, { scroll: true, bg: '#f3e2b8', border: '#8b5a2b', color: '#3b2410', font: 'italic 12px Georgia, serif', maxW: 190, maxLines: 5 })); }
   for (const n of castCrew()) {
     if (CAST.on && n.bubble && T < n.bubbleUntil) bubs.push(measureBubble(n, n.x, n.y + (castPose(n) === 'sit' ? -52 : -58) * (n.L.tall || 1), n.bubble, { maxW: 150, maxLines: 3, under: true }));
     else n._lift = null;
@@ -6911,8 +8022,8 @@ function workerAt(e) {
   const x = (e.clientX - r.left - OX) / SC, y = (e.clientY - r.top - OY) / SC;
   let best = null, bd = 1e9;
   for (const w of workers) {
-    const top = w.y + headTop(w) - 2;
-    if (Math.abs(x - w.x) < 14 && y > top && y < w.y + 4) { const d = Math.abs(x - w.x) + Math.abs(y - (w.y - 25)); if (d < bd) { bd = d; best = w; } }
+    const at = wpos(w), top = at.y + headTop(w) - 2;
+    if (Math.abs(x - at.x) < 14 && y > top && y < at.y + 4) { const d = Math.abs(x - at.x) + Math.abs(y - (at.y - 25)); if (d < bd) { bd = d; best = w; } }
   }
   return best;
 }
@@ -6951,8 +8062,10 @@ function apply(s) {
   }
   for (const id of Object.keys(JOBS)) if (!seenIds.has(id)) {
     const j = JOBS[id]; delete JOBS[id]; delete prevStatus[id];
-    if (j.worker != null && workers[j.worker]) { const w = workers[j.worker]; if (w.job && w.job.id === id) finishJob(w, !firstLoad, j); }
+    if (j.worker != null && workers[j.worker]) { const w = workers[j.worker]; if (w.party && w.party.leader === w) FAN_PARTY_DONE[id] = 1; if (w.job && w.job.id === id) finishJob(w, !firstLoad, j); }
   }
+  if (firstLoad) for (const w of workers) if (w.mode === 'job' && w.job) formParty(w, 'instant');
+  for (const w of FAN_PENDING.splice(0)) if (w.mode === 'job' && w.job) formParty(w, 'dice');
   firstLoad = false;
   renderPanel(); updateTitle();
 }
@@ -6996,13 +8109,19 @@ function teamLine(j, w) {
     team ? 'team lead of ' + team : '', j.station && w ? stationName(stationOf(j)) : ''].filter(Boolean);
   return bits.length ? '<div class="proj">' + esc(bits.join(' \u00b7 ')) + '</div>' : '';
 }
+function partyLine(j, w) {                   // Might & Mayhem: "Slay the Dragon: Marcus, Wei, Priya", leader first (Hirelings never listed)
+  const p = w && w.party && w.party.leader === w ? w.party : null;
+  if (!p || !fanOn()) return '';
+  const names = partyAll(p).filter(o => !o.hire).map(o => esc(o.L.name) + alBadge(o)).join(', ');
+  return `<div class="party">\u2694 ${esc(stationName(p.slot ? FANTASY[p.slot] : stationOf(j)))}: ${names}</div>`;
+}
 function jobCard(j) {
   const w = j.worker != null ? workers[j.worker] : null;
   return `<div class="job ${esc(j.status)}" data-id="${esc(j.id)}">
-    <div class="jt"><span class="dot" style="background:${w ? w.L.shirt : '#777'}"></span><b>${w ? esc(w.L.name + (j.agent ? ' as ' + j.agent : '')) : 'Waiting for a free worker'}</b>
+    <div class="jt"><span class="dot" style="background:${w ? w.L.shirt : '#777'}"></span><b>${w ? esc(w.L.name + (j.agent ? ' as ' + j.agent : '')) : 'Waiting for a free worker'}</b>${alBadge(w)}
       <span class="pill">${esc(STATUS_LABEL[j.status] || j.status)}</span><span class="age" data-since="${j.created + (j.waited || 0)}"${j.wait_since ? ` data-until="${j.wait_since}"` : ''}></span></div>
     <div class="title">${esc(j.title)}</div>
-    ${teamLine(j, w)}
+    ${teamLine(j, w)}${partyLine(j, w)}
     ${j.status === 'working' && j.activity ? `<div class="act">${esc(j.activity)}</div>` : ''}
     ${j.message && j.status !== 'working' ? `<div class="msg">${esc(j.message)}</div>` : ''}
     <div class="btns">${w ? '<button data-act="find">Find</button>' : ''}<button data-act="done">Done ✓</button></div>
@@ -7014,14 +8133,19 @@ function renderPanel() {
   const waiting = jobs.filter(j => j.status === 'waiting'), others = jobs.filter(j => j.status !== 'waiting');
   $('#nWait').innerHTML = waiting.length ? `<span class="n">${waiting.length}</span>` : '';
   $('#listWaiting').innerHTML = waiting.length ? waiting.map(jobCard).join('') : '<div class="empty">Nobody is waiting on you.</div>';
-  $('#listWorking').innerHTML = others.length ? others.map(jobCard).join('') : '<div class="empty">Everyone is on break.</div>';
-  const idle = workers.filter(w => !w.job);
-  $('#listIdle').innerHTML = idle.map(w => `<span class="chip"><i style="background:${w.L.shirt}"></i>${esc(w.L.name)}</span>`).join('') || '<div class="empty">The break room is empty — all hands on deck!</div>';
-  const now = serverNow();
+  const fan = fanOn();
+  $('#hWorking').textContent = fan ? 'On quest' : 'On the job'; $('#hIdle').textContent = fan ? 'Tavern' : 'Break room';
+  $('#listWorking').innerHTML = others.length ? others.map(jobCard).join('') : `<div class="empty">${fan ? 'Everyone is at the Tavern.' : 'Everyone is on break.'}</div>`;
+  const idle = workers.filter(w => !w.job && !w.party);
+  $('#listIdle').innerHTML = idle.map(w => `<span class="chip"><i style="background:${w.L.shirt}"></i>${esc(w.L.name)}${alBadge(w)}</span>`).join('')
+    || `<div class="empty">${fan ? 'The Tavern is empty — everyone is on a quest!' : 'The break room is empty — all hands on deck!'}</div>`;
+  const now = serverNow(), keep = new Set((STATE.recent || []).map(r => r.id));
+  for (const id of Object.keys(FAN_PARTY_DONE)) if (!keep.has(id)) delete FAN_PARTY_DONE[id];
   // the server keeps the last few; show only the past hour so the list doesn't pile up
   $('#listRecent').innerHTML = (STATE.recent || []).filter(r => now - r.finished < 3600).map(r => {
     const w = r.worker != null ? workers[r.worker] : null;
-    return `<div class="recent"><b>${w ? esc(w.L.name) : '?'}</b> finished “${esc(r.title)}” <span>· ${ago(now - r.finished)} ago${r.reason ? ' · ' + esc(r.reason) : ''}</span></div>`;
+    const what = !fan ? ` finished “${esc(r.title)}”` : !FAN_PARTY_DONE[r.id] ? `${alBadge(w)} completed the quest “${esc(r.title)}”` : `'s party${alBadge(w)} completed the quest “${esc(r.title)}”`;
+    return `<div class="recent"><b>${w ? esc(w.L.name) : '?'}</b>${what} <span>· ${ago(now - r.finished)} ago${r.reason ? ' · ' + esc(r.reason) : ''}</span></div>`;
   }).join('') || '<div class="empty">Nothing yet.</div>';
   tickAges();
 }

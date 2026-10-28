@@ -42,9 +42,15 @@ hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). See `README.
   and `index.html` `STATION_ORDER` (stations), which must match `STATIONS` in `server.py`.
   Work areas: `AREA_RULES` in `server.py` and `AREA_SLOT` in `index.html` must use the same keys.
   A theme (`THEMES` in `index.html`) is a set of 12 station definitions keyed by those slots
-  (`STA` Classic, `DEV` Dev Shop, `SCIFI`, `HORROR`, `CYBER` Neon City, `XMAS` North Pole, `PIRATE` Pirate Cove, `STONE` Stone Age, `HERO` Hero HQ), plus optional
+  (`STA` Classic, `DEV` Dev Shop, `SCIFI`, `HORROR`, `CYBER` Neon City, `XMAS` North Pole, `PIRATE` Pirate Cove, `STONE` Stone Age, `HERO` Hero HQ,
+  `FANTASY` Might & Mayhem). Classic is hidden from the Theme menu and the clock-in screen (a saved Classic opens Might & Mayhem)
+  but stays as the base: its slots are what every theme maps onto. Might & Mayhem alone has `party: true` (parties, dice, the
+  Dungeon Master, Hirelings; see "Might & Mayhem parties" in `index.html`); every other theme must keep one worker per task.
+  Other optional theme fields: `plaque(s, x, y)` (draws the station titles) and `labels` (`{break, boss, trouble, mail}`, the
+  room names in the top margin). Plus optional
   `routed`, `costumes` (see `dress()`), `wash`, `decor`, `blocks` and `rooms` (skins for the troubleshooting room, meeting room
-  and mailroom: `{trouble, meeting, mail}`, each with optional `back`/`fx`/`counter`|`table`/`duck`; assigned in the "Themed rooms" section, a missing entry means Classic, and furniture footprints must not change). Station draws use coordinates
+  and mailroom: `{trouble, meeting, mail}`, each with optional `back`/`fx`/`counter`|`table`/`duck`, plus `serving` (trouble: the
+  "NOW SERVING" display text) and `tbd` (meeting: the whiteboard's idle text); assigned in the "Themed rooms" section, a missing entry means Classic, and furniture footprints must not change). Station draws use coordinates
   relative to the cell (x, y) and keep their equipment right of x + 92 (that area is blocked for walking).
 - People walk on a grid (`FLOORS` minus `WALLS`, `FURNITURE`, station equipment and a theme's `blocks`), A* plus
   straightening in `findPath()`. When you draw new furniture or decor people could walk through, add
