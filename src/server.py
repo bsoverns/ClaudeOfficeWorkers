@@ -297,7 +297,7 @@ class Office:
 
     def _pick_station(self, job: dict | None = None, leave: str | None = None) -> str:
         """A station nobody else holds (a random one), else the one with the fewest workers.
-        leave: the station the worker is at; they move off it unless it's the only one with room."""
+        leave: the station a returning session's worker had last time; they get another one unless it's the only one with room."""
         counts = {s: 0 for s in STATIONS}
         for j in self.jobs.values():
             if j is not job and j["worker"] is not None and j["station"] in counts:
@@ -305,15 +305,6 @@ class Office:
         low = min(counts.values())
         options = [s for s, c in counts.items() if c == low and s != leave] or [leave]
         return random.choice(options)
-
-    def _rotate(self, job: dict) -> None:
-        """A new task for a staffed job: its worker moves to another station (rule: keep rotating)."""
-        if job["worker"] is None:
-            return
-        job["station"] = self._pick_station(job, job["station"])
-        key = job.get("key") or job["id"]
-        if key in self.affinity:
-            self.affinity[key] = [job["worker"], job["station"]]
 
     def _staff(self, job: dict) -> None:
         """Give the job a worker: the one who did this session's last task if they're free,
@@ -547,10 +538,8 @@ class Office:
                     self.closed.discard(sid)
                     if not job:
                         job = self._new_job(sid, prompt, project, ts=ts)
-                    else:
-                        self._rotate(job)
-                        if job["title"].startswith("(picking up"):
-                            job["title"] = clip(prompt, 120)
+                    elif job["title"].startswith("(picking up"):
+                        job["title"] = clip(prompt, 120)
                     job["prompt"] = clip(prompt, 200)
                     job["pending_agents"] = []         # Agent calls from an earlier turn that never started
                     job["activity"] = "Reading your message"
