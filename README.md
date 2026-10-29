@@ -53,7 +53,8 @@ to a station shows that station's mission instead, as its sign reads ("Slay the 
 session's name stays in the side panel and the tooltip. Slips sit where they don't cover the worker,
 the station they work at or the room's signs, boards, TV and doorways (with a thin line back to
 the worker when they aren't right overhead), never overlap each other or a speech bubble, and
-shrink to a one-line name tag in a crowded room. Speech bubbles stay within three lines (five in
+shrink to a one-line name tag in a crowded room. Once a worker reaches their station (every theme),
+the slip shrinks to that name tag too; hover or click them for the full slip. Speech bubbles stay within three lines (five in
 Hero HQ and Might & Mayhem) and show Claude's Markdown (tables, code, bold) as plain text.
 
 On break, people chat with whoever is nearby: short back-and-forth exchanges about fish in the
