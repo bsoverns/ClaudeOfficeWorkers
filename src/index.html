@@ -7938,11 +7938,14 @@ const FOCAL = [
 ];
 const slipAlert = w => w.job.status === 'waiting' || w.job.status === 'trouble';
 // A slip's text and size: the full card (who · project, then the title) or the compact one-liner (name and a status dot)
+// What a station's sign says, as a title: 'SLAY THE DRAGON' -> 'Slay the Dragon'
+const missionName = s => s.label.toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/(?!^)\b(The|Of|A|An|And|To|In|On|For|At)\b/g, m => m.toLowerCase());
 function slipSize(w, compact) {
   const j = w.job, zz = dozing(w) && w.locKind === 'st';
+  const title = desiredKind(j) === 'st' && THEME !== 'dev' ? missionName(stationOf(j)) : j.title;   // off to a station: the mission on its sign (Dev Shop keeps the task)
   if (compact) { g.font = 'bold 10px system-ui'; const t = w.L.name + (zz ? ' zzz' : ''); return { c: 1, t, cw: Math.ceil(g.measureText(t).width) + 24, ch: 17, zh: 0 }; }
   g.font = 'bold 11px system-ui';
-  const lines = wrap(j.title, 128, 2);
+  const lines = wrap(title, 128, 2);
   const sub = w.L.name + (j.agent ? ' as ' + j.agent : '') + (j.project ? ' · ' + j.project : '') + (j.kind === 'helper' ? ' · helper' : '');
   g.font = '600 9px system-ui'; const subW = Math.min(g.measureText(sub).width, 128);
   g.font = 'bold 11px system-ui'; const tw = Math.max(subW, ...lines.map(l => g.measureText(l).width));
