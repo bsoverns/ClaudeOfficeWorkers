@@ -111,6 +111,7 @@
         <option value="hero">Hero HQ (superheroes)</option><option value="fantasy">Might &amp; Mayhem (fantasy)</option></select></label>
       <label><input type="checkbox" id="optSound" name="office-sound" autocomplete="off"> Chime when someone is waiting on you</label>
       <label><input type="checkbox" id="optStartSound" name="office-start-sound" autocomplete="off"> Soft blip when a task starts or ends</label>
+      <label><input type="checkbox" id="optHorn" name="office-horn" autocomplete="off"> Viking horn when an adventurer is summoned (Might &amp; Mayhem)</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
       <label><input type="checkbox" id="optNotify" name="office-notify" autocomplete="off"> Desktop notification when someone waits</label>
       <div class="row">
@@ -276,7 +277,7 @@ function confetti(x, y) {
 // ============================================================================================
 // Sound + alerts
 // ============================================================================================
-const settings = { sound: true, startSound: true, remind: false, notify: false };
+const settings = { sound: true, startSound: true, horn: true, remind: false, notify: false };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('office-settings') || '{}')); } catch (e) {}
 function saveSettings() { try { localStorage.setItem('office-settings', JSON.stringify(settings)); } catch (e) {} }
 let AC = null;
@@ -296,10 +297,26 @@ const SOUNDS = {
   done() { tone(659, 0, 0.12, 'triangle', 0.09); tone(880, 0.09, 0.12, 'triangle', 0.09); tone(1319, 0.18, 0.3, 'triangle', 0.09); },
   page() { tone(988, 0, 0.25, 'sine', 0.06); tone(784, 0.22, 0.4, 'sine', 0.06); },
   trouble() { tone(330, 0, 0.16, 'square', 0.035); tone(247, 0.14, 0.28, 'square', 0.035); },
+  horn() { hornBlast(0, 0.42); hornBlast(0.55, 1.5); },   // Might & Mayhem: a short blast, then a long one
 };
+// One blast of a Viking horn: a low, slightly bent-up buzz that swells brighter through a low-pass, with a slow wobble
+function hornBlast(start, dur) {
+  const t0 = AC.currentTime + start, f = AC.createBiquadFilter(), gn = AC.createGain(), lfo = AC.createOscillator(), dep = AC.createGain();
+  f.type = 'lowpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(260, t0); f.frequency.linearRampToValueAtTime(1050, t0 + 0.18);
+  f.frequency.linearRampToValueAtTime(820, t0 + dur);
+  gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(0.075, t0 + 0.12);
+  gn.gain.setValueAtTime(0.075, t0 + dur - 0.22); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  lfo.frequency.value = 5; dep.gain.value = 1.4; lfo.connect(dep);
+  for (const k of [1, 1.006]) {
+    const o = AC.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(84 * k, t0); o.frequency.linearRampToValueAtTime(98 * k, t0 + 0.14);
+    dep.connect(o.frequency); o.connect(f); o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  f.connect(gn).connect(AC.destination); lfo.start(t0); lfo.stop(t0 + dur + 0.05);
+}
 function play(name) {
   if (!AC || AC.state !== 'running') return;
-  if (name === 'waiting' ? !settings.sound : !settings.startSound) return;
+  if (name === 'waiting' ? !settings.sound : name === 'horn' ? !settings.horn : !settings.startSound) return;
   try { SOUNDS[name](); } catch (e) {}
 }
 
@@ -5070,10 +5087,12 @@ function assignJob(w, j, instant) {
     const lead = j.kind === 'helper' ? leaderOf(j) : null;
     w.slip = false; w.jobPhase = 'paged'; w.pagedAt = T; w.pagedBy = lead; w.path = [];
     const where = lead ? 'the meeting room' : 'my office';
+    const horn = !lead && THEME === 'fantasy', blowing = T < HORN.until;   // Might & Mayhem: the Guildmaster blows a Viking horn instead of paging
     if (lead) say(lead, 'Paging ' + w.L.name + ' to ' + where + '!', 3);
+    else if (horn) { bossSay('\ud83d\udcef ' + w.L.name + ', to the Keep!', 3); HORN.until = T + 2.4; }
     else bossSay('\ud83d\udce2 Paging ' + w.L.name + ' to ' + where + '!', 3);
-    PAGE.until = T + 2.2; PAGE.text = w.L.name.toUpperCase() + ', ' + where.toUpperCase();
-    play('page');
+    PAGE.until = T + 2.2; PAGE.text = w.L.name.toUpperCase() + ', ' + (horn ? 'TO THE KEEP' : where.toUpperCase());
+    if (!(horn && blowing)) play(horn && settings.horn ? 'horn' : 'page');   // two summons in one poll: one blast
     puff(w.x, w.y + headTop(w) - 8, { kind: 'text', text: '!', vy: -12, life: 1.3, color: '#ffd23f', font: 'bold 18px system-ui' });
   }
   if (!instant) FAN_PENDING.push(w);           // Might & Mayhem only: apply() rolls the dice for a party once every task in this poll has its worker
@@ -5086,7 +5105,7 @@ function answerPage(w) {
   if (lead) { w.jobPhase = 'toMeet'; goTo(w, firstFree(SEATS, w)); }
   else { w.jobPhase = 'toBoss'; goTo(w, firstFree(VISIT_SPOTS, w)); }
 }
-const PAGE = { until: 0, text: '' };
+const PAGE = { until: 0, text: '' }, HORN = { until: 0 };
 function drawPager() {
   // PA speakers in the break room and over the work floor; they pulse while someone is paged
   for (const [x, y] of [[598, 32], [1586, 360]]) {
@@ -5100,7 +5119,7 @@ function drawPager() {
   if (T < PAGE.until) {
     g.font = 'bold 11px system-ui'; const tw = g.measureText(PAGE.text).width + 30;
     RR(1100 - tw / 2, 302, tw, 20, 10, 'rgba(20,22,28,.85)', '#ffd23f', 1.5);
-    TXT('\ud83d\udce2 ' + PAGE.text, 1100, 312.5, 'bold 11px system-ui', '#ffd23f');
+    TXT((THEME === 'fantasy' ? '\ud83d\udcef ' : '\ud83d\udce2 ') + PAGE.text, 1100, 312.5, 'bold 11px system-ui', '#ffd23f');
   }
 }
 function finishJob(w, celebrate, old) {
@@ -6588,11 +6607,26 @@ function drawBoss() {
   } else if (THEME === 'fantasy') {  // the Guildmaster's crown in Might & Mayhem
     poly([x - 11, hy - 9, x - 12, hy - 21, x - 6, hy - 15, x, hy - 24, x + 6, hy - 15, x + 12, hy - 21, x + 11, hy - 9], '#facc15');
     R(x - 11, hy - 11, 22, 3, '#ca8a04'); C(x, hy - 13, 1.8, '#dc2626'); C(x - 6, hy - 13, 1.3, '#2563eb'); C(x + 6, hy - 13, 1.3, '#16a34a');
+    if (T < HORN.until) drawHorn(x, hy);
   } else if (THEME === 'stone') {    // a chief's bone crown in the Stone Age
     R(x - 12, hy - 13, 24, 4, '#7c4a2d');
     for (let i = -2; i <= 2; i++) { const bx = x + i * 5, top = hy - 22 + Math.abs(i) * 3;
       L(bx, hy - 12, bx, top, '#f5f0e1', 2.2); C(bx - 1, top, 1.5, '#f5f0e1'); C(bx + 1, top, 1.5, '#f5f0e1'); }
     C(x, hy - 11, 1.8, '#f97316');
+  }
+}
+// The Guildmaster's Viking horn, raised while summoning (HORN.until): a curved ivory horn from the mouth, banded in
+// bronze, held in both hands, with sound rings rolling out of the bell
+function drawHorn(x, hy) {
+  const k = Math.max(0, Math.min(1, (HORN.until - T) / 0.3, (T - HORN.until + 2.4) / 0.25)), lift = (1 - k) * 10;   // raised and lowered quickly
+  const p = s => { const u = 1 - s; return [u * u * (x + 2) + 2 * u * s * (x + 26) + s * s * (x + 34), u * u * (hy + 4 + lift) + 2 * u * s * (hy + 8 + lift) + s * s * (hy - 16 + lift)]; };
+  for (let i = 0; i <= 16; i++) { const [px, py] = p(i / 16); C(px, py, 1.6 + i * 0.32, i % 5 === 4 ? '#a16207' : '#efe3c2'); }
+  const [bx, by] = p(1); E(bx, by, 6.5, 3, '#ca8a04'); E(bx, by, 4.6, 1.8, '#3b2a10');
+  for (const s of [0.25, 0.55]) { const [hx, hy2] = p(s); C(hx, hy2 + 2, 2.6, '#e08a68'); }   // his hands
+  if (k === 1) for (let r = 0; r < 3; r++) {                                        // the blast
+    const rr = 6 + ((T * 26 + r * 7) % 21);
+    g.globalAlpha = Math.max(0, 1 - rr / 27); g.beginPath(); g.arc(bx, by, rr, -Math.PI * 0.75, Math.PI * 0.05);
+    g.strokeStyle = '#facc15'; g.lineWidth = 2; g.stroke(); g.globalAlpha = 1;
   }
 }
 function drawBossDesk() {
@@ -8279,7 +8313,7 @@ const TEST_TITLES = ['Refactor the login page', 'Fix the flaky date test', 'Writ
 $('#btnTest').onclick = () => cmd({ cmd: 'start', title: pick(TEST_TITLES), project: 'test' });
 $('#btnChime').onclick = () => { audioOn(); setTimeout(() => { try { SOUNDS.waiting(); } catch (e) {} }, 50); };
 $('#btnClear').onclick = () => { if (confirm('Send every worker back to the break room?')) cmd({ cmd: 'clear' }); };
-for (const [id, key] of [['optSound', 'sound'], ['optStartSound', 'startSound'], ['optRemind', 'remind'], ['optNotify', 'notify']]) {
+for (const [id, key] of [['optSound', 'sound'], ['optStartSound', 'startSound'], ['optHorn', 'horn'], ['optRemind', 'remind'], ['optNotify', 'notify']]) {
   const el = $('#' + id); el.checked = !!settings[key];
   el.onchange = async () => {
     settings[key] = el.checked;
