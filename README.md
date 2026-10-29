@@ -167,7 +167,24 @@ pick yet the office opens in Might & Mayhem.
   (psychokinesis) sends a ripple across the floor that makes everyone nearby hop; and Facade
   (shapeshifting) borrows a coworker's face for a few seconds (hover him: the tooltip still says
   who he really is). To see one right away, run `heroTry(w, true)` in the browser console with a
-  worker from `workers`. Stations are the Gadget Lab, Suit
+  worker from `workers`.
+  The break-room furniture takes a beating too, but only a piece nobody is using: heat and eye rays
+  set the couch, dining table, pool table, ping pong table, vending machine, arcade or patio bench
+  on fire, cold freezes it solid (icicles and all), electricity leaves it crackling for a few
+  seconds, Bulwark lifts any of them but the bench, Levity floats one in a glowing aura from where
+  she stands, Rupture's quake rattles one nearby and Paradox stops one in a golden time-stop glow.
+  Nobody sits at a piece while something is happening to it. Fire and ice stay until someone fixes
+  them (45 seconds at most): whoever on break has the cold power puts out a fire ("Chill out."),
+  heat or eye rays melt the ice ("Ice to meet you."), and otherwise the nearest hero takes the
+  fire extinguisher or the de-icer flamethrower off the wall below the break-room clock, sprays it
+  and hangs it back up. Paged on the way, they drop it (it's back on its hook) and the next hero
+  takes over. The patio cat hisses and bolts when its bench is hit, waits beside it until it's
+  safe, then strolls back. Facade sometimes plays a prank instead of borrowing a face: he poofs
+  into a copy of the patio cat ("MEOW!"); the real one hisses and runs laps around the patio
+  until he changes back, then returns to its bench thinking "Just you wait!". If Mindwave is out
+  there she hears what it thinks of him. For testing: `heroObj(w, 'couch', 'fire', true)` (pieces
+  are the keys of `OBJS`; effects fire, ice, zap, lift, float, rattle, time), `heroFix(w, 'couch')`
+  and `heroCatPrank(w, true)`. Stations are the Gadget Lab, Suit
   Forge, Portal Gate, Hero Hotline, Data Vault, Bio Lab, Danger Room, Comic Press, Cape
   Cleaners, Containment, Hero Supercomputer and Evidence Locker. A night skyline with a
   searchlight out the window and star bunting on the walls; the boss wears a domino mask.
