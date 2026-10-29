@@ -8112,11 +8112,14 @@ function render() {
 }
 let last = performance.now();
 function frame(now) {
+  requestAnimationFrame(frame);                // first, so one bad frame can't stop the office for good
+  // a window that had no size yet when the page started (first launch) leaves a 1x1 canvas at scale 0: catch up here
+  const r = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.max(1, Math.round(r.width * dpr)) || cv.height !== Math.max(1, Math.round(r.height * dpr))) resize();
   let dt = (now - last) / 1000; last = now;
   if (dt > 0.25) { let rem = Math.min(dt, 30); while (rem > 0) { const h = Math.min(0.1, rem); update(h); rem -= h; } }
   else update(dt);
-  render();
-  requestAnimationFrame(frame);
+  if (SC) render();
 }
 function resize() {
   const r = stage.getBoundingClientRect();
