@@ -48,7 +48,9 @@ one is back). A failed tool sends the worker to the Troubleshooting desk (staffe
 rubber duck); when Claude stops or needs permission, the worker waits in the mailroom,
 a chime plays and the tab shows a red icon. Say "done" and they go back on break. The work slip
 shows the session's name as the Claude app shows it (your rename, else the app's own title),
-or your first prompt until the session has a name. Slips sit where they don't cover the worker,
+or your first prompt until the session has a name. In every theme but Dev Shop, a worker heading
+to a station shows that station's mission instead, as its sign reads ("Slay the Dragon"); the
+session's name stays in the side panel and the tooltip. Slips sit where they don't cover the worker,
 the station they work at or the room's signs, boards, TV and doorways (with a thin line back to
 the worker when they aren't right overhead), never overlap each other or a speech bubble, and
 shrink to a one-line name tag in a crowded room. Speech bubbles stay within three lines (five in
