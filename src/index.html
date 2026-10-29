@@ -3508,7 +3508,7 @@ const THEMES = {
     swaps: { 2: 'snowman', 4: 'rudolph', 9: 'santa', 12: 'mrsclaus', 15: 'snowman' },
     costumes: ['elf', 'sweater', 'reindeer', 'gingerbread', 'elf', 'sweater', 'elf', 'sweater'],
     wash: ['#1e3a8a', 0.08], decor: () => decorXmas(),
-    blocks: [[658, 230, 62, 36], [114, 706, 28, 22]] },     // the tree in the boss's office, the patio snowman
+    blocks: [[658, 230, 62, 36], [544, 140, 52, 20], [114, 706, 28, 22]] },     // the trees in the boss's office and break room, the patio snowman
   pirate: { name: 'Pirate Cove', stations: PIRATE,      // the beach props sit on the patio tree and bushes
     swaps: { 9: 'captain', 4: 'skelly', 13: 'skelly' },
     costumes: ['pirate', 'deckhand', 'parrot', 'buccaneer', 'pirate', 'deckhand', 'parrot'],
@@ -4713,6 +4713,9 @@ function decorXmas() {
   // the office tree, with presents under it
   xmasTree(690, 258, 1.15, T);
   present(668, 250, 14, 12, '#ef4444', '#facc15'); present(700, 252, 16, 11, '#3b82f6', '#fff'); present(684, 256, 11, 9, '#a855f7', '#facc15');
+  // and one in the break room corner, right of the TV under the clock
+  xmasTree(570, 152, 1, T + 1.7);
+  present(548, 144, 13, 11, '#22c55e', '#ef4444'); present(578, 146, 15, 10, '#ef4444', '#fff'); present(563, 150, 10, 8, '#facc15', '#3b82f6');
   // a wreath on the break room door frame and stockings by the TV
   g.beginPath(); g.arc(606, 293, 9, 0, TAU); g.strokeStyle = '#166534'; g.lineWidth = 5; g.stroke();
   for (let i = 0; i < 6; i++) C(606 + Math.cos(i) * 9, 293 + Math.sin(i) * 9, 1.4, '#ef4444'); poly([602, 302, 610, 302, 606, 297], '#b91c1c');

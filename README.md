@@ -122,8 +122,8 @@ pick yet the office opens in Might & Mayhem.
   a glowing red nose), gingerbread people, snowmen and ugly-sweater wearers (nobody's turban or
   hijab gets a hat or antlers). Stations are the Nice List, Sleigh Hangar, Tree Farm, Toy Repair,
   Cookie Kitchen, Chimney Drop, Snow Machine, Letters to Santa, the Yeti Cave, Toy Testing,
-  Lights & Wiring and Gift Wrapping. Falling snow, string lights, stockings, a wreath, a tree in
-  the boss's office, a snowman on the patio and Santa's sleigh across the moon; the boss wears
+  Lights & Wiring and Gift Wrapping. Falling snow, string lights, stockings, a wreath, trees with
+  presents in the boss's office and the break room corner, a snowman on the patio and Santa's sleigh across the moon; the boss wears
   a Santa hat, and the break room talk turns to Secret Santa and eggnog.
 - **Pirate Cove**: pirates with bandanas, eyepatches and gold earrings, deckhands in striped
   shirts, buccaneers in tricorns, pirates with a parrot on the shoulder, a bearded captain and a
