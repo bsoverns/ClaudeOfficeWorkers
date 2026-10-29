@@ -7967,7 +7967,8 @@ const rectOv = (b, r) => Math.max(0, Math.min(b[0] + b[2], r[0] + r[2]) - Math.m
 // view and clear of the slips placed before. Each spot costs its distance from the head (0.15/px up to 60px, then 3/px, so
 // slips stay by their worker), a little more when it leans right (toward the station art, away from the walkway), plus what it covers (area x weight):
 // its own worker 6, the station they work at 4, signs/boards/TV/doorways/plaques 3, other people and stations 1.5. The full
-// card wins unless the compact one-liner saves more than 12 (40 at a station, where there is room), so crowds shrink; a slip
+// card wins unless the compact one-liner saves more than 12, so crowds shrink; a worker at their station always gets the one-liner
+// (the full card shows on the way there, and when hovered or selected); a slip
 // keeps its last spot while that is still allowed and within 10 of the best, or while its worker walks (walkers don't count). Moves ease (offsets from the feet), snapping when the
 // eased box would overlap. w.slipBox (the box incl. the alert badge) is what bubbles avoid; w._sd is what drawSlip draws.
 function layoutSlips(order) {
@@ -7984,7 +7985,7 @@ function layoutSlips(order) {
     const hit = (x, y, s) => ({ x, y: y - al, w: s.cw + al, h: s.ch + s.zh + al });   // the alert badge pokes out top right
     const ok = (x, y, s) => { const b = hit(x, y, s); return b.y >= V.y0 + 2 && b.y + b.h <= V.y1 - 2 && !placed.some(p => boxesHit(b, p, 3)); };
     let best = null, keep = null;
-    for (const c of [0, 1]) {
+    for (const c of own && !first(w) ? [1] : [0, 1]) {   // at their station: just the name tag (hover or click for the full slip)
       const s = slipSize(w, c), bh = s.ch + s.zh;
       for (let [k, x, y] of slipSpots(hx, top, feet, s.cw, bh)) {
         x = clamp(x, V.x0 + 2, V.x1 - s.cw - al - 2);
