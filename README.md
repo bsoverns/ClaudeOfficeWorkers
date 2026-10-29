@@ -204,7 +204,10 @@ footprints so nobody walks differently. Troubleshooting room / meeting room / ma
 
 The boss's office isn't re-skinned (a theme's `rooms` only cover these three). In Might & Mayhem it is
 labelled GUILDMASTER'S KEEP (the theme's `labels`) and decorated: the boss wears a Guildmaster's crown
-and a castle sits out the window.
+and a castle sits out the window. Instead of paging, the Guildmaster summons each adventurer by raising
+a curved Viking horn and blowing it ("📯 Haruto, to the Keep!"): a short blast, then a long one. The
+horn's sound has its own checkbox in Settings; with it off, the usual soft page blip plays. Other themes
+page as before.
 
 The rubber duck stays in every theme, usually in a matching hat (a wizard hat in Might & Mayhem).
 
@@ -423,8 +426,9 @@ character. It prints `all passed` or the failures.
 
 ## Settings (right-hand panel)
 
-Chime when someone waits, soft blips on start/finish, re-chime every 5 minutes while
-anyone waits, and desktop notifications. Stored in the browser. **Done ✓** on a card ends
+Chime when someone waits, soft blips on start/finish, the Viking horn when an adventurer is
+summoned (Might & Mayhem only), re-chime every 5 minutes while anyone waits, and desktop
+notifications. Stored in the browser. **Done ✓** on a card ends
 that task; **Find** highlights the worker. The timer on a card counts working time only: it
 stops while the job waits on you and picks up where it left off when work resumes. Hover or click a worker to see what they're up to.
 A worker whose Claude has gone quiet for 5 minutes dozes at their station; jobs with no
