@@ -148,7 +148,7 @@ pick yet the office opens in Might & Mayhem.
   stripes, villains an all-seeing eye in a black triangle (`capeSign()`; on a wheelchair it sits
   on the cape hem below the seat, since the backrest hides the rest). Powers, one each: super strength, heat, flight,
   cold, telepathy, electricity, teleportation, psychokinesis, super speed, time, regeneration,
-  shapeshifting, telekinesis, portals, invisibility and eye rays (`POWERS` in `index.html`; hover
+  shapeshifting, telekinesis, portals, invisibility with force fields and eye rays (`POWERS` in `index.html`; hover
   a worker to see their alias and power). Most of the break is the usual break-room stuff, but a
   hero and a villain who end up chatting usually trade corny superhero insults, and about a third
   of their chats end in a short duel on the spot: fire, ice, lightning, eye beams, portals, a time
@@ -157,6 +157,11 @@ pick yet the office opens in Might & Mayhem.
   and they head to work. Powers also get them around: the teleporter and the portal maker
   blink to the end of long trips, the speedster runs 2.5x with afterimages, fliers glide along
   their path at 2x without a walking animation and the invisible one fades out while walking.
+  Veil (invisibility) can also throw up a force-field bubble: in a duel it stops about half the
+  attacks aimed at her (never while she's frozen, so she can still be hit). Fire, ice, lightning, eye
+  rays, mind blasts, shock waves, lifts and time stops bounce off it back onto the attacker, and punches
+  and rushes leave the attacker seeing stars; teleports, portals and shapeshifting slip through. Her
+  own turn is either a sneaky invisible bonk or a force push.
   The quieter powers show off on break too, every minute or so per person and only while they're
   idle (it stops the moment they're paged or walk off): Bulwark (strength) walks over and lifts the
   couch or the dining table overhead when nobody is using it, then sets it back down exactly where it
@@ -166,7 +171,8 @@ pick yet the office opens in Might & Mayhem.
   nearby and reads their mind or plants a thought (the patio cat moment is still there); Rupture
   (psychokinesis) sends a ripple across the floor that makes everyone nearby hop; and Facade
   (shapeshifting) borrows a coworker's face for a few seconds (hover him: the tooltip still says
-  who he really is). To see one right away, run `heroTry(w, true)` in the browser console with a
+  who he really is); and Veil puts a force-field bubble over herself or someone idle nearby for a
+  few seconds (whoever is inside doesn't hop when Rupture shakes the floor). To see one right away, run `heroTry(w, true)` in the browser console with a
   worker from `workers`.
   The break-room furniture takes a beating too, but only a piece nobody is using: heat and eye rays
   set the couch, dining table, pool table, ping pong table, vending machine, arcade or patio bench
