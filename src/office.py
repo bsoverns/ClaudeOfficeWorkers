@@ -7,6 +7,7 @@
   py src/office.py done    [ID | all]
   py src/office.py list
   py src/office.py clear
+  py src/office.py usage [reset]   today's tokens and cost (Eastern time); "reset" starts over
   py src/office.py demo
 
 ID defaults to the newest job. Port comes from CLAUDE_OFFICE_PORT (default 8777).
@@ -37,7 +38,18 @@ def send(body: dict) -> dict:
 def show(res: dict) -> None:
     if not res.get("ok"):
         sys.exit("Error: " + str(res.get("error") or res))
-    if "jobs" in res:
+    if "usage" in res:
+        u = res["usage"]
+        print(f"Tokens for {u['day']} (Eastern)" + (" since your reset" if u.get("since") else "") + ":")
+        if not u["models"]:
+            print("  nothing yet")
+        for m in u["models"]:
+            total_in = m["input"] + m["cache_write"] + m["cache_read"]
+            cost = f"${m['cost']:.2f}" if m["priced"] else "no price"
+            print(f"  {m['model']:<24} {m['messages']:>5} replies  in {total_in:>12,}  out {m['output']:>10,}  {cost:>9}")
+        if len(u["models"]) > 1:
+            print(f"  {'total':<38} ${sum(m['cost'] for m in u['models']):.2f}")
+    elif "jobs" in res:
         if not res["jobs"]:
             print("No jobs. Everyone is on break.")
         for j in res["jobs"]:
@@ -75,7 +87,8 @@ def demo() -> None:
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="office", description="Send commands to the Claude Office.")
-    ap.add_argument("cmd", choices=["start", "working", "trouble", "wait", "done", "activity", "list", "clear", "demo"])
+    ap.add_argument("cmd", choices=["start", "working", "trouble", "wait", "done", "activity", "list", "clear", "usage",
+                                    "demo"])
     ap.add_argument("arg", nargs="?", help="title for start, otherwise the job id (default: newest)")
     ap.add_argument("--id", help="job id for start (default: cli-N)")
     ap.add_argument("--project", default="cmd")
@@ -86,6 +99,9 @@ def main(argv: list[str] | None = None) -> None:
     a = ap.parse_args(argv)
     if a.cmd == "demo":
         demo()
+        return
+    if a.cmd == "usage":
+        show(send({"cmd": "usage-reset" if a.arg == "reset" else "usage"}))
         return
     if a.cmd == "start":
         show(send({"cmd": "start", "title": a.arg or "Test task", "id": a.id, "project": a.project, "area": a.area}))

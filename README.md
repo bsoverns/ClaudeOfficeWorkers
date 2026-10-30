@@ -85,7 +85,7 @@ tool activity go only to the local server on `127.0.0.1`, never anywhere else.
 | 🤫 **Hook output** | The script prints nothing and always exits 0, even on errors. | For some events (like `UserPromptSubmit`) Claude Code adds a hook's output to Claude's context. No output means nothing is added. |
 | ⚡ **Speed** | Every hook is `async` with a 5-second limit, and the post gives up after half a second. | Claude never waits on the office. If it isn't running, the post fails instantly and nothing happens. |
 | 🏠 **Network** | The script posts the event to `http://127.0.0.1:<port>/api/hook`, your own PC. | No internet, no API keys, no telemetry, no update checks. The page loads no CDNs, fonts or images. |
-| 📄 **Your files** | The script reads the end of the session's transcript (on disk) to find its name, and a subagent's small `.meta.json` for its task description. | Plain local file reads. Prompts and messages are trimmed to 2,000 characters and tool results are dropped before the post. |
+| 📄 **Your files** | The script reads the end of the session's transcript (on disk) to find its name, and a subagent's small `.meta.json` for its task description. The server reads the new lines of the session's transcripts for the [token meter](#token-meter). | Plain local file reads. Prompts and messages are trimmed to 2,000 characters and tool results are dropped before the post. The token meter keeps only token counts per model. |
 
 What it does cost is a moment of CPU: each hook starts a short-lived Python process (or
 `ClaudeOffice.exe --hook`). The office remembers its jobs in a local state file (see
@@ -436,6 +436,7 @@ py src\office.py working -a "Editing app.js"
 py src\office.py wait -m "Your turn!"
 py src\office.py done            (newest job; or give an id, or "all")
 py src\office.py list
+py src\office.py usage           (today's tokens and cost; "usage reset" starts over)
 py src\office.py demo            (a 90-second show with three workers)
 ```
 
@@ -458,6 +459,29 @@ the last hour.
 
 The office remembers its jobs in `%LOCALAPPDATA%\ClaudeOffice\state.json`, so restarting it
 (or the exe quitting after its window closes) puts everyone back where they were.
+
+## Token meter
+
+The front of the help desk counter (in every theme) has two small screens: today's cost on the
+left, today's input and output tokens on the right. A "+$0.04" floats up when the cost grows.
+Click either screen for the details card: each model's replies, input tokens (split into new
+input, cache writes and cache reads), output tokens and cost, plus a total. **Reset** starts the
+count over from now; **Esc** or ✕ closes the card.
+
+- **Where the numbers come from:** Claude Code writes each reply's model and token counts to the
+  session's transcript. Whenever a session's hook reports in, the server reads the lines added
+  to that transcript (and its subagents' transcripts) since it last looked, and counts each
+  reply once. The test buttons and `office.py` have no transcript, so they never count.
+- **Today:** the day is US Eastern time (daylight saving included) and starts over at midnight.
+- **Cost** is at Anthropic's API list prices, from the `PRICES` table in `src/server.py`: cache
+  writes at 1.25× input (5-minute cache) or 2× (1-hour cache), cache reads at the model's cache
+  price, fast mode at 2×, US-only inference at 1.1×. On a Pro or Max plan it's what the same use would cost on the API, not
+  what you pay. A model missing from the table counts its tokens but shows "no price" (and the
+  total gets a "+"): add it to `PRICES` when a new model comes out or prices change.
+- **Memory only:** nothing is saved. After a restart the office counts today again from the
+  transcripts as each session reports in (a reset is forgotten too).
+
+`py src\office.py usage` prints the same numbers; `py src\office.py usage reset` resets them.
 
 ## Contributing
 
