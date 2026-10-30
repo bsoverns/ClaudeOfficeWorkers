@@ -661,7 +661,7 @@ const POWERS = [
   { power: 'changeling', label: 'Shapeshifting', alias: 'Facade', suit: '#365314', cape: '#84cc16', mask: '#1a2e05', fx: '#a3e635' },         // Jamal
   { power: 'telekinesis', label: 'Telekinesis', alias: 'Levity', suit: '#0f766e', cape: '#5eead4', mask: '#134e4a', fx: '#5eead4' },          // Rosa
   { power: 'portal', label: 'Portal Creation', alias: 'Rift', suit: '#312e81', cape: '#f97316', mask: '#1e1b4b', fx: '#38bdf8' },             // Sam
-  { power: 'invisible', label: 'Invisibility', alias: 'Veil', suit: '#e2e8f0', cape: '#94a3b8', mask: '#475569', fx: '#e2e8f0' },             // Fatima
+  { power: 'invisible', label: 'Invisibility & Force Fields', alias: 'Veil', suit: '#e2e8f0', cape: '#94a3b8', mask: '#475569', fx: '#e2e8f0' },             // Fatima
   { power: 'eyerays', label: 'Eye Rays', alias: 'Glare', suit: '#18181b', cape: '#b91c1c', mask: '#450a0a', fx: '#ef4444' },                  // Arjun
 ];
 const isVillain = w => w.id % 2 === 1;
@@ -5365,7 +5365,29 @@ function updTalks() {
 // duel ends the moment either one is paged (they drop it and go to work) or leaves.
 // Travel: teleporters and portal makers blink to the end of long trips, the speedster runs 2.5x,
 // fliers float along the path and the invisible one fades out while walking.
+// Force fields: Veil also throws up a bubble. In a duel it stops 45% of the attacks aimed at her (not while
+// she's frozen): blasts, beams and holds bounce back off it onto the attacker a beat later, and punches and
+// rushes knock the attacker silly. Sneaky powers (teleport, portals, shapeshifting, healing) get through.
 const DUELS = [], BEAMS = [];
+const VEIL_FIELD = '#a5b4fc', VEIL_BLOCK = 0.45;
+const BOUNCE = { heat: 'beam', cold: 'beam', electro: 'beam', eyerays: 'beam', telepathy: 'beam', psychokinesis: 'beam',
+  telekinesis: 'hold', time: 'hold', strength: 'body', speed: 'body', flight: 'body' };
+const shielded = w => BEAMS.some(b => b.kind === 'shield' && b.who === w);
+function shieldUp(w, o, p) {
+  const kind = BOUNCE[p.power];
+  if (!kind || powerOf(o).power !== 'invisible' || T < (o.frozenUntil || 0) || Math.random() >= VEIL_BLOCK) return false;
+  const dir = o.x >= w.x ? 1 : -1, edge = { x: o.x - dir * 24, y: o.y, lift: o.lift };   // the near side of the bubble
+  BEAMS.push({ kind: 'shield', who: o, c: VEIL_FIELD, life: 1, max: 1 });
+  o.zapUntil = T + 0.8; faceTo(o, w);
+  if (kind === 'hold') for (let i = 0; i < 10; i++) puff(edge.x, o.y - 30, { kind: 'spark', vx: -dir * rand(20, 70), vy: rand(-50, 50), life: 0.5, color: p.fx });
+  else usePower(w, edge, p, true);                                     // the attack lands on the bubble, not on her
+  if (kind === 'body') {                                               // ran into a wall: seeing stars
+    w.shakeUntil = T + 0.7;
+    for (let i = 0; i < 3; i++) puff(w.x, w.y + headTop(w) - 6, { kind: 'text', text: '★', vx: rand(-25, 25), vy: -rand(10, 25), life: 0.9, color: '#fde047', font: 'bold 11px system-ui' });
+    heroPow(edge.x, o.y - 70, 'BOING!', VEIL_FIELD);
+  } else { heroPow(edge.x, o.y - 70, 'DEFLECTED!', VEIL_FIELD); if (w.duel) w.duel.bounce = { at: T + 0.35, w: o, o: w, p }; }
+  return true;
+}
 function faceTo(w, o) { const dx = o.x - w.x, dy = o.y - w.y; w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); }
 function startDuel(hero, villain) {
   if (!canTalk(hero) || !canTalk(villain)) return;
@@ -5386,8 +5408,10 @@ function endDuel(d, cut) {
   const stay = [d.a, d.b].filter(w => w.mode === 'idle');                // who's still on break gets the last word
   if (THEME === 'hero' && stay.length) say(pick(stay), pick(cut ? DUEL_CUT : DUEL_END), 2.5);
 }
-function usePower(w, o) {
-  const p = powerOf(w), c = p.fx, dir = o.x >= w.x ? 1 : -1;
+// p: the power used (w's own, or the one Veil's bubble sends back); back: a bounce or a hit on the bubble, no new block
+function usePower(w, o, p = powerOf(w), back) {
+  if (!back && shieldUp(w, o, p)) return;
+  const c = p.fx, dir = o.x >= w.x ? 1 : -1;
   const x0 = w.x + (w.jx || 0) + dir * 11, y0 = w.y - 40 - (w.lift || 0), x1 = o.x + (o.jx || 0), y1 = o.y - 32 - (o.lift || 0);
   const d = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / d, uy = (y1 - y0) / d;
   const stream = (n, sp, look) => { for (let i = 0; i < n; i++) { const v = rand(sp * 0.8, sp * 1.2); puff(x0, y0, Object.assign({ vx: ux * v + rand(-18, 18), vy: uy * v + rand(-18, 18), life: d / sp }, look(i))); } };
@@ -5397,7 +5421,7 @@ function usePower(w, o) {
     case 'cold': stream(12, 190, i => i % 2 ? { kind: 'spark', color: '#e0f2fe' } : { size: 1.6, color: '#bfdbfe' });
       o.frozenUntil = T + 1; o.frozenKind = 'ice'; heroPow(x1, y1 - 16, 'CHILL!', c); break;
     case 'electro': BEAMS.push({ kind: 'bolt', x0, y0, x1, y1, c, life: 0.4, max: 0.4 }); heroPow(x1, y1 - 16, 'ZZZAP!', c); break;
-    case 'eyerays': { const ey = w.y - 47 - (w.lift || 0), ex = w.x + (w.jx || 0) + dir * 4;
+    case 'eyerays': { const mine = powerOf(w) === p, ey = mine ? w.y - 47 - (w.lift || 0) : y0, ex = mine ? w.x + (w.jx || 0) + dir * 4 : x0;
       BEAMS.push({ kind: 'laser', x0: ex, y0: ey, x1, y1, c, life: 0.45, max: 0.45 }); heroPow(x1, y1 - 16, 'ZWEEE!', c); break; }
     case 'telepathy': for (let i = 0; i < 4; i++) puff(x0, y0 - 10, { kind: 'ring', vx: ux * (70 + i * 12), vy: uy * (70 + i * 12), life: d / 75, size: 2 + i, grow: 4, color: c });
       heroPow(x1, y1 - 16, 'MIND BLAST!', c); break;
@@ -5420,7 +5444,13 @@ function usePower(w, o) {
       BEAMS.push({ kind: 'portal', x0: px, y0: w.y - 26, c: '#38bdf8', life: 1, max: 1 }, { kind: 'portal', x0: qx, y0: o.y - 26, c: '#f97316', life: 1, max: 1 });
       for (let i = 0; i < 6; i++) puff(qx, o.y - 30, { vx: dir * rand(40, 80), vy: rand(-20, 20), life: 0.5, size: 2, color: '#fdba74' });
       heroPow(x1, y1 - 16, 'VWOOM!', c); break; }
-    case 'invisible': w.fadeUntil = T + 1.3; puff(x1, y1 - 4, { kind: 'text', text: '?!', vy: -10, life: 1, color: '#fff', font: 'bold 12px system-ui' });
+    case 'invisible':
+      if (Math.random() < 0.5) {                                        // a force-field shove
+        BEAMS.push({ kind: 'shield', who: w, c: VEIL_FIELD, life: 0.6, max: 0.6 });
+        for (let i = 0; i < 3; i++) puff(x0, y0 + 10, { kind: 'ring', vx: ux * (110 + i * 15), vy: uy * (110 + i * 15), life: d / 120, size: 4 + i * 2, grow: 6, color: VEIL_FIELD });
+        o.shakeUntil = T + 0.5; heroPow(x1, y1 - 18, 'FORCE PUSH!', VEIL_FIELD); break;
+      }
+      w.fadeUntil = T + 1.3; puff(x1, y1 - 4, { kind: 'text', text: '?!', vy: -10, life: 1, color: '#fff', font: 'bold 12px system-ui' });
       heroPow(x1, y1 - 18, 'BONK!', '#cbd5e1'); break;
     case 'time': o.frozenUntil = T + 1.3; o.frozenKind = 'time'; BEAMS.push({ kind: 'clock', who: o, c, life: 1.3, max: 1.3 }); heroPow(x1, y1 - 20, 'TIME OUT!', c); break;
     case 'flight': for (let i = 0; i < 6; i++) puff(w.x + rand(-14, 14), w.y - 20 - (w.lift || 0), { kind: 'spark', vx: -dir * rand(60, 100), vy: rand(-6, 6), life: 0.35, color: '#e0f2fe' });
@@ -5458,6 +5488,7 @@ function updHero(dt) {
   for (const d of [...DUELS]) {
     if (THEME !== 'hero' || [d.a, d.b].some(w => w.mode !== 'idle' || w.path.length)) { endDuel(d, true); continue; }
     if (T > d.until) { endDuel(d, false); continue; }
+    if (d.bounce && T >= d.bounce.at) { const b = d.bounce; d.bounce = null; usePower(b.w, b.o, b.p, true); d.next = Math.max(d.next, T + 0.7); }   // Veil's bubble sends it back
     if (T >= d.next) { const w = d.turn ? d.b : d.a; d.turn = !d.turn; usePower(w, w === d.a ? d.b : d.a); d.next = T + rand(0.7, 1.1); }
   }
   if (THEME === 'hero') { updObjs(dt); updCatRun(dt); }                  // the furniture's fire / ice / zaps, the cat on the run
@@ -5534,6 +5565,11 @@ function drawBeams() {
     else if (b.kind === 'aura') { const w = b.who, cx = w.x + (w.jx || 0), cy = w.y - 30 - (w.lift || 0);
       g.beginPath(); g.arc(cx, cy, 22 + Math.sin(T * 10) * 2, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 2; g.stroke();
       g.globalAlpha = a * 0.15; C(cx, cy, 22, b.c); }
+    else if (b.kind === 'shield') { const w = b.who, cx = w.x + (w.jx || 0), cy = w.y - 28 - (w.lift || 0);   // Veil's bubble pops up, wobbles, fades
+      const r = 26 * Math.min(1, (b.max - b.life) * 8) + Math.sin(T * 7) * 1, ry = r * 1.18;
+      g.globalAlpha = a * 0.16; E(cx, cy, r, ry, b.c);
+      g.globalAlpha = a * 0.85; g.beginPath(); g.ellipse(cx, cy, r, ry, 0, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 2; g.stroke();
+      g.globalAlpha = a * 0.6; g.beginPath(); g.ellipse(cx, cy, r * 0.72, ry * 0.72, 0, Math.PI * 1.1, Math.PI * 1.45); g.strokeStyle = '#fff'; g.lineWidth = 1.6; g.stroke(); }
     else if (b.kind === 'portal') { const r = Math.min(1, (1 - k) * 6, k * 4) + 0.01;
       g.globalAlpha = 0.35; E(b.x0, b.y0, 10 * r, 22 * r, b.c); g.globalAlpha = 1;
       g.beginPath(); g.ellipse(b.x0, b.y0, 10 * r, 22 * r, 0, 0, TAU); g.strokeStyle = b.c; g.lineWidth = 3; g.stroke(); }
@@ -5569,10 +5605,14 @@ function drawRipples() {
 // Now and then someone on break shows off a power that never shows outside a duel (first try 15-60 s after
 // load, then every 40-90 s each; a try that finds them busy retries in 4-10 s):
 // Bulwark lifts a free piece of furniture (more in "powers vs. the break-room furniture" below), Mend's arm pops off and grows back, Paradox rewinds
-// people walking by, Mindwave links minds, Rupture shakes the floor and Facade borrows a face.
+// people walking by, Mindwave links minds, Rupture shakes the floor (anyone in Veil's bubble doesn't hop), Facade borrows
+// a face and Veil puts a force-field bubble over herself or someone idle nearby for 4 s.
 // w.hx is the effect in progress; it ends the moment that person is paged, walks off or duels, or
 // the theme changes. heroTry(w, true) starts one right away (for testing), keeping the safety checks.
-const HX_DUR = { regen: 2.9, time: 1.6, mind: 2.5, quake: 1.2, mimic: 7, float: 4 };
+const HX_DUR = { regen: 2.9, time: 1.6, mind: 2.5, quake: 1.2, mimic: 7, float: 4, shield: 4 };
+const HX_SHIELD = ['Personal space, please.', 'Bubble time.', 'Do not disturb.', 'Quiet zone. Sound-proof, too.'];
+const HX_SHIELD_FOR = ['Got you covered, {name}.', '{name}, you looked unprotected.', 'Stay safe in there, {name}.'];
+const HX_SHIELDED = ['Uh... thanks?', 'Is this a bubble?', 'I can hear the ocean in here.', 'Can I keep it?'];
 const HX_STRENGTH = ['Light work.', 'Leg day? Every day.', 'Anyone lose a coin under here?', 'Just checking for crumbs.'];
 const HX_REGEN = ['Not again...', 'Give it a second.', "It's fine. It grows back.", 'Ugh, my good arm.'];
 const HX_TIME = ['Let me rewind that.', 'Again, from the top.', 'Oops. Too far.', 'Déjà vu, anyone?'];
@@ -5684,7 +5724,7 @@ const HX_START = {
     for (let i = 0; i < 12; i++) { const an = rand(0, TAU), r = rand(10, 60); puff(w.x + Math.cos(an) * r, w.y + Math.sin(an) * r * 0.5, { vx: rand(-40, 40), vy: rand(-70, -25), ay: 160, life: 0.7, size: rand(1.5, 2.6), color: pick(['#a8a29e', '#78716c', 'rgba(214,211,209,.8)']) }); }
     heroPow(w.x, w.y - 72, 'KRAK!', c);
     for (const o of workers) {
-      if (o === w || o.path.length || o.duel || T < (o.frozenUntil || 0) || o.L.mobility === 'wheelchair' || (o.mode === 'idle' && o.spot && o.spot.act === 'nap')) continue;
+      if (o === w || o.path.length || o.duel || T < (o.frozenUntil || 0) || shielded(o) || o.L.mobility === 'wheelchair' || (o.mode === 'idle' && o.spot && o.spot.act === 'nap')) continue;
       const r = Math.hypot((o.x - w.x) / 120, (o.y - w.y) / 60);
       if (r > 1) continue;
       o.hopAt = T + r / 1.25 * 1.1;                                    // hop when the first ring reaches them
@@ -5692,6 +5732,15 @@ const HX_START = {
     }
     const k = only || (Math.random() < 0.7 ? objNear(w, 150) : null);   // a free piece close by rattles
     if (k) objSet(k, 'rattle', 1.3);
+    return true;
+  },
+  invisible(w) {                                 // a force-field bubble over herself or someone idle close by
+    const near = workers.filter(o => o !== w && canTalk(o) && Math.hypot(o.x - w.x, o.y - w.y) < 200);
+    const o = near.length && Math.random() < 0.6 ? pick(near) : w;
+    w.hx = { kind: 'shield', t0: T, o, react: o !== w ? T + 1.2 : 0 };
+    BEAMS.push({ kind: 'shield', who: o, c: VEIL_FIELD, life: HX_DUR.shield, max: HX_DUR.shield, owner: w, hx: true });
+    heroPow(o.x, o.y - 76, 'FIELD UP!', VEIL_FIELD);
+    say(w, o === w ? pick(HX_SHIELD) : pick(HX_SHIELD_FOR).replace('{name}', o.L.name), 2.8);
     return true;
   },
   changeling(w) {
@@ -5776,6 +5825,9 @@ function hxTick(w, dt) {
       if (o.talk || o.duel || Math.random() < 0.5) say(w, pick(HX_READ).replace('{name}', o.L.name), 3);   // never talk over a banter
       else { say(o, pick(HX_NUDGE), 3); puff(o.x, o.y + headTop(o) - 4, { kind: 'text', text: '?', vy: -12, life: 1, color: powerOf(w).fx, font: 'bold 13px system-ui' }); }
     }
+  } else if (x.kind === 'shield') {
+    if (x.o !== w && (x.o.mode !== 'idle' || x.o.path.length || x.o.duel)) return hxEnd(w, true);   // they got paged: the bubble pops
+    if (x.react && T > x.react) { x.react = 0; if (canTalk(x.o)) say(x.o, pick(HX_SHIELDED), 2.5); }
   } else if (x.kind === 'mimic') {
     if (x.react && T > x.react) { x.react = 0; if (canTalk(x.o)) say(x.o, pick(HX_COPIED).replace('{name}', w.L.name), 3); }
     if (Math.random() < dt * 2) puff(w.x + rand(-10, 10), w.y - rand(10, 50), { vy: -12, life: 0.6, size: 1.4, color: '#a3e635', alpha: 0.6 });
