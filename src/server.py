@@ -231,8 +231,10 @@ def describe_tool(name: str, inp: object) -> str:
 
 
 # ---- Token usage and cost for today (Eastern time) -----------------------------------
-# API list prices in $ per million tokens: (model id prefix, input, output, cache read). Cache writes
-# cost 1.25x input (5-minute cache) or 2x input (1-hour cache); fast mode costs 2x everything.
+# API list prices in $ per million tokens: (model id prefix, input, output, cache read), from
+# https://platform.claude.com/docs/en/about-claude/pricing (checked 2026-10-30). Cache writes cost
+# 1.25x input (5-minute cache) or 2x input (1-hour cache); fast mode costs 2x everything, and
+# US-only inference (inference_geo "us") 1.1x.
 # The longest matching prefix wins. Update this when prices change or a new model comes out:
 # a model missing here still counts its tokens, but shows no cost.
 PRICES = [
@@ -242,7 +244,7 @@ PRICES = [
     ("claude-opus-4-8", 5, 25, 0.50), ("claude-opus-4-7", 5, 25, 0.50),
     ("claude-opus-4-6", 5, 25, 0.50), ("claude-opus-4-5", 5, 25, 0.50),
     ("claude-opus-4", 15, 75, 1.50), ("claude-3-opus", 15, 75, 1.50),
-    ("claude-sonnet-5-5", 2, 10, 0.20), ("claude-sonnet-5", 2, 10, 0.20),
+    ("claude-sonnet-5-5", 2, 10, 0.10), ("claude-sonnet-5", 2, 10, 0.20),
     ("claude-sonnet-4", 3, 15, 0.30), ("claude-3-7-sonnet", 3, 15, 0.30),
     ("claude-haiku-5-5", 0.10, 0.50, 0.01), ("claude-haiku-4-5", 1, 5, 0.10),
     ("claude-3-5-haiku", 0.80, 4, 0.08),
@@ -276,7 +278,11 @@ def message_cost(model: str, u: dict) -> float | None:
     w5m = n("cache_creation_input_tokens") - w1h
     cost = (n("input_tokens") * cin + n("output_tokens") * cout + n("cache_read_input_tokens") * cread
             + w5m * cin * 1.25 + w1h * cin * 2) / 1e6
-    return cost * 2 if u.get("speed") == "fast" else cost
+    if u.get("speed") == "fast":
+        cost *= 2
+    if u.get("inference_geo") == "us":
+        cost *= 1.1
+    return cost
 
 
 def eastern_offset(ts: float) -> int:

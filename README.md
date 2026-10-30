@@ -475,7 +475,7 @@ count over from now; **Esc** or ✕ closes the card.
 - **Today:** the day is US Eastern time (daylight saving included) and starts over at midnight.
 - **Cost** is at Anthropic's API list prices, from the `PRICES` table in `src/server.py`: cache
   writes at 1.25× input (5-minute cache) or 2× (1-hour cache), cache reads at the model's cache
-  price, fast mode at 2×. On a Pro or Max plan it's what the same use would cost on the API, not
+  price, fast mode at 2×, US-only inference at 1.1×. On a Pro or Max plan it's what the same use would cost on the API, not
   what you pay. A model missing from the table counts its tokens but shows "no price" (and the
   total gets a "+"): add it to `PRICES` when a new model comes out or prices change.
 - **Memory only:** nothing is saved. After a restart the office counts today again from the
