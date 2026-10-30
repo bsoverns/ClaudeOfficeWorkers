@@ -72,6 +72,24 @@
   .theme b { font-size:15px; } .theme span { font-size:12px; color:var(--dim); line-height:1.35; }
   .theme.sel { border-color:var(--accent); box-shadow:0 0 0 2px rgba(217,119,87,.45); }
   #overlay p.hint { font-size:12px; margin:0; }
+  #usageCard { position:absolute; z-index:3; width:340px; max-width:calc(100% - 16px); background:var(--panel);
+               border:1px solid var(--line); border-top:3px solid #fbbf24; border-radius:10px; padding:12px 14px;
+               box-shadow:0 8px 28px rgba(0,0,0,.5); font-size:13px; }
+  #usageCard[hidden] { display:none; }
+  #usageCard h3 { margin:0; font-size:15px; }
+  #usageCard .when { font-size:11.5px; color:var(--dim); margin:2px 0 8px; }
+  #usageCard table { width:100%; border-collapse:collapse; }
+  #usageCard th { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); font-weight:600; text-align:right; padding:0 0 4px; }
+  #usageCard td { text-align:right; padding:5px 0; border-top:1px solid var(--line); vertical-align:top; font-variant-numeric:tabular-nums; }
+  #usageCard th:first-child, #usageCard td:first-child { text-align:left; }
+  #usageCard td + td, #usageCard th + th { padding-left:10px; }
+  #usageCard tfoot td { font-weight:700; }
+  #usageCard .sub { font-size:10.5px; color:var(--dim); font-weight:400; }
+  #usageCard td:first-child { white-space:nowrap; }
+  #usageCard tr.split td { border-top:0; padding:0 0 6px; font-size:10.5px; color:var(--dim); text-align:left; white-space:normal; }
+  #usageCard .cost { color:#fbbf24; font-weight:700; }
+  #usageCard .note { font-size:11px; color:var(--dim); margin:8px 0 0; }
+  #usageCard .x { position:absolute; right:8px; top:8px; padding:0 6px; }
   select { font:inherit; font-size:13px; color:var(--text); background:#323747; border:1px solid #434a5e; border-radius:6px; padding:2px 6px; }
   @media (max-width: 900px) {
     #app { flex-direction:column; } #stage { flex:none; height:62vh; }
@@ -82,7 +100,7 @@
 </head>
 <body>
 <div id="app">
-  <div id="stage"><canvas id="c"></canvas></div>
+  <div id="stage"><canvas id="c"></canvas><div id="usageCard" hidden></div></div>
   <aside id="panel">
     <header>
       <svg class="logo" viewBox="-32 -32 64 64"><g fill="#d97757" id="logoRays"></g><circle r="13" fill="#d97757"/></svg>
@@ -7066,6 +7084,78 @@ function drawDuck() {
   E(x - 16, y - 16, 3, 5, '#333'); L(x - 16, y - 12, x - 8, y - 9, '#333', 1.4);
   const sk = roomSkin('trouble'); if (sk && sk.duck) sk.duck(x, y);
 }
+// ---- Token meter: today's tokens and cost (Eastern time) on the front of the help desk counter ----------------------
+// Two small screens either side of the counter's plate, in every theme (the counter keeps Classic's footprint). The server
+// reads them from the sessions' transcripts (STATE.usage); click either screen for the card with each model and Reset.
+const METER = [[1043, 196, 52, 26], [1165, 196, 52, 26]];   // [x, y, w, h]: cost (left), tokens (right)
+let meterCost = null, meterFx = [];                          // last cost shown, and the "+$0.04" that floats up when it grows
+const fmtTok = n => n < 1000 ? String(n) : n < 1e6 ? (n / 1e3).toFixed(n < 1e4 ? 1 : 0) + 'K' : (n / 1e6).toFixed(n < 1e7 ? 2 : 1) + 'M';
+const fmtCost = c => c > 0 && c < 0.005 ? '<$0.01' : c < 1000 ? '$' + c.toFixed(2) : '$' + (c / 1000).toFixed(1) + 'K';
+function usageTotals() {
+  const t = { input: 0, cache_write: 0, cache_read: 0, output: 0, cost: 0, priced: true, messages: 0 };
+  for (const m of (STATE && STATE.usage && STATE.usage.models) || []) {
+    for (const k of ['input', 'cache_write', 'cache_read', 'output', 'cost', 'messages']) t[k] += m[k];
+    if (!m.priced) t.priced = false;
+  }
+  t.allIn = t.input + t.cache_write + t.cache_read;
+  return t;
+}
+function drawTokenMeter() {
+  const t = usageTotals(), [[cx, cy, cw, ch], [kx, ky, kw, kh]] = METER;
+  if (meterCost !== null && t.cost > meterCost + 0.005) meterFx.push({ t: T, text: '+' + fmtCost(t.cost - meterCost) });
+  meterCost = t.cost;
+  for (const [x, y, w, h] of METER) {
+    RR(x - 1.5, y - 1.5, w + 3, h + 3, 4, '#2b2f3a'); RR(x, y, w, h, 3, '#0b1016');
+    g.globalAlpha = 0.07; R(x + 2, y + 2, w - 4, (h - 4) / 2, '#fff'); g.globalAlpha = 1;   // glass glint
+  }
+  TXT('TODAY', cx + cw / 2, cy + 6.5, 'bold 5.5px system-ui', '#7c8799');
+  TXT(fmtCost(t.cost) + (t.priced ? '' : '+'), cx + cw / 2, cy + 17, 'bold 11px monospace', '#fbbf24');
+  TXT('IN  ' + fmtTok(t.allIn), kx + 4, ky + 8.5, 'bold 7px monospace', '#4ade80', 'left');
+  TXT('OUT ' + fmtTok(t.output), kx + 4, ky + 19, 'bold 7px monospace', '#60a5fa', 'left');
+  if (t.messages && Math.floor(T * 2) % 2) C(kx + kw - 4, ky + 4, 1.2, '#4ade80');   // blinks once there is something to count
+  meterFx = meterFx.filter(f => T - f.t < 2.2);
+  for (const f of meterFx) {
+    const k = (T - f.t) / 2.2;
+    g.globalAlpha = 1 - k; TXT(f.text, cx + cw / 2, cy - 6 - k * 22, 'bold 9px system-ui', '#fbbf24'); g.globalAlpha = 1;
+  }
+}
+function meterAt(e) {
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - OX) / SC, y = (e.clientY - r.top - OY) / SC;
+  return METER.some(([mx, my, mw, mh]) => x >= mx - 2 && x <= mx + mw + 2 && y >= my - 2 && y <= my + mh + 2);
+}
+// 'claude-opus-5-5' -> 'Opus 5.5', 'claude-3-5-haiku-20241022' -> 'Haiku 3.5'
+function modelName(id) {
+  const parts = id.replace(/^claude-/, '').split('-').filter(p => !/^\d{8}$/.test(p));
+  const fam = parts.find(p => /^[a-z]/i.test(p)) || id, ver = parts.filter(p => /^\d+$/.test(p)).join('.');
+  return fam.charAt(0).toUpperCase() + fam.slice(1) + (ver ? ' ' + ver : '');
+}
+function usageCardHtml() {
+  const u = (STATE && STATE.usage) || { models: [] }, t = usageTotals();
+  const day = u.day ? new Date(u.day + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Today';
+  const since = u.since ? ' · since your reset at ' + new Date(u.since * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const row = m => `<tr><td><b>${esc(modelName(m.model))}</b> <span class="sub">${m.messages} repl${m.messages === 1 ? 'y' : 'ies'}</span></td>
+    <td>${fmtTok(m.input + m.cache_write + m.cache_read)}</td><td>${fmtTok(m.output)}</td><td class="cost">${m.priced ? fmtCost(m.cost) : 'no price'}</td></tr>
+    <tr class="split"><td colspan="4">input: ${fmtTok(m.input)} new · ${fmtTok(m.cache_write)} cache write · ${fmtTok(m.cache_read)} cache read</td></tr>`;
+  return `<button class="x" data-usage="close" title="Close">✕</button>
+    <h3>Token meter</h3>
+    <div class="when">${esc(day)} (Eastern)${esc(since)} · starts over at midnight</div>
+    ${u.models.length ? `<table><thead><tr><th>Model</th><th>Input</th><th>Output</th><th>Cost</th></tr></thead>
+      <tbody>${u.models.map(row).join('')}</tbody>
+      ${u.models.length > 1 ? `<tfoot><tr><td>Total</td><td>${fmtTok(t.allIn)}</td><td>${fmtTok(t.output)}</td><td class="cost">${fmtCost(t.cost)}${t.priced ? '' : '+'}</td></tr></tfoot>` : ''}</table>`
+      : '<div class="empty">No Claude replies counted yet today.</div>'}
+    <p class="note">Read from the sessions' transcripts as they report in; test tasks don't count. Cost is at API list prices
+    (on a Pro or Max plan, what the same use would cost on the API).</p>
+    <div class="btns"><button data-usage="reset">Reset</button></div>`;
+}
+function showUsageCard(open) {
+  const el = $('#usageCard');
+  if (open !== undefined) el.hidden = !open;
+  if (el.hidden) return;
+  el.innerHTML = usageCardHtml();
+  const r = stage.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;   // under the counter, kept on the stage
+  el.style.left = clamp(OX + 1130 * SC - w / 2, 8, r.width - w - 8) + 'px';
+  el.style.top = clamp(OY + 232 * SC, 8, Math.max(8, r.height - h - 8)) + 'px';
+}
 function drawTellerCounter() {
   const sk = roomSkin('trouble'); if (sk && sk.counter) return sk.counter();
   g.fillStyle = 'rgba(190,225,240,.30)'; g.fillRect(1000, 96, 260, 86);
@@ -8518,7 +8608,7 @@ const PROPS = [
   { y: 258, draw: drawCouch, obj: 'couch' }, { y: 259, draw: drawDiningTable, obj: 'table' }, { y: PY + 88, draw: drawPoolTable, obj: 'pool' },
   { y: 420, draw: drawVend, obj: 'vend' }, { y: 420, draw: drawArcade, obj: 'arcade' },
   { y: 540, draw: drawPingPong, obj: 'pingpong' }, { y: 186, draw: drawBoss }, { y: 238, draw: drawBossDesk },
-  { y: 158, draw: drawDuck }, { y: 226, draw: drawTellerCounter }, { y: 830, draw: drawMeetingTable },
+  { y: 158, draw: drawDuck }, { y: 226, draw: () => { drawTellerCounter(); drawTokenMeter(); } }, { y: 830, draw: drawMeetingTable },
 ];
 function render() {
   g = mainCtx;
@@ -8606,9 +8696,19 @@ function workerAt(e) {
   }
   return best;
 }
-cv.addEventListener('mousemove', e => { hovered = workerAt(e); cv.style.cursor = hovered ? 'pointer' : 'default'; });
+cv.addEventListener('mousemove', e => { hovered = workerAt(e); cv.style.cursor = hovered || meterAt(e) ? 'pointer' : 'default'; });
 cv.addEventListener('mouseleave', () => { hovered = null; });
-cv.addEventListener('click', e => { const w = workerAt(e); selected = w === selected ? null : w; selectUntil = 0; });
+cv.addEventListener('click', e => {
+  const w = workerAt(e);
+  if (!w && meterAt(e)) { showUsageCard($('#usageCard').hidden); return; }
+  selected = w === selected ? null : w; selectUntil = 0;
+});
+$('#usageCard').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-usage]'); if (!b) return;
+  if (b.dataset.usage === 'close') showUsageCard(false);
+  if (b.dataset.usage === 'reset' && confirm("Start today's token count over from now?")) await cmd({ cmd: 'usage-reset' });
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') showUsageCard(false); });
 
 // ============================================================================================
 // Server sync
@@ -8646,7 +8746,7 @@ function apply(s) {
   if (firstLoad) for (const w of workers) if (w.mode === 'job' && w.job) formParty(w, 'instant');
   for (const w of FAN_PENDING.splice(0)) if (w.mode === 'job' && w.job) formParty(w, 'dice');
   firstLoad = false;
-  renderPanel(); updateTitle();
+  renderPanel(); updateTitle(); showUsageCard();
 }
 function setOnline(on) {
   online = on; const c = $('#conn');

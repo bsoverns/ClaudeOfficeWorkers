@@ -7,6 +7,8 @@ Open:  http://127.0.0.1:8777/
 Claude Code reports in through claude_hook.py (wired up by install_hooks.py), which
 POSTs each hook payload to /api/hook. office.py sends manual commands to /api/cmd.
 The page long-polls /api/state and does all the animation itself; on closing it posts /api/bye.
+Each hook also lets the office read what's new in that session's transcript, for today's token
+usage and cost (see Usage).
 
 Standard library only. Binds to 127.0.0.1, so nothing outside this PC can reach it.
 """
@@ -19,6 +21,7 @@ import re
 import sys
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -227,6 +230,195 @@ def describe_tool(name: str, inp: object) -> str:
     return "Using " + (name or "a tool")
 
 
+# ---- Token usage and cost for today (Eastern time) -----------------------------------
+# API list prices in $ per million tokens: (model id prefix, input, output, cache read). Cache writes
+# cost 1.25x input (5-minute cache) or 2x input (1-hour cache); fast mode costs 2x everything.
+# The longest matching prefix wins. Update this when prices change or a new model comes out:
+# a model missing here still counts its tokens, but shows no cost.
+PRICES = [
+    ("claude-fable-5-1", 10, 50, 0.25), ("claude-mythos-5-1", 10, 50, 0.25),
+    ("claude-fable-5", 10, 50, 1.00), ("claude-mythos-5", 10, 50, 1.00),
+    ("claude-opus-5-5", 4, 20, 0.20), ("claude-opus-5", 5, 25, 0.50),
+    ("claude-opus-4-8", 5, 25, 0.50), ("claude-opus-4-7", 5, 25, 0.50),
+    ("claude-opus-4-6", 5, 25, 0.50), ("claude-opus-4-5", 5, 25, 0.50),
+    ("claude-opus-4", 15, 75, 1.50), ("claude-3-opus", 15, 75, 1.50),
+    ("claude-sonnet-5-5", 2, 10, 0.20), ("claude-sonnet-5", 2, 10, 0.20),
+    ("claude-sonnet-4", 3, 15, 0.30), ("claude-3-7-sonnet", 3, 15, 0.30),
+    ("claude-haiku-5-5", 0.10, 0.50, 0.01), ("claude-haiku-4-5", 1, 5, 0.10),
+    ("claude-3-5-haiku", 0.80, 4, 0.08),
+]
+# Models whose price goes up for long prompts: prefix -> (prompt tokens over which, input, output, cache read)
+LONG_PRICES = {"claude-haiku-5-5": (100_000, 0.50, 2.50, 0.05)}
+USAGE_FILES_MAX = 400      # transcripts whose read position we remember
+
+
+def price_of(model: str) -> tuple | None:
+    best = None
+    for row in PRICES:
+        if model.startswith(row[0]) and (best is None or len(row[0]) > len(best[0])):
+            best = row
+    return best
+
+
+def message_cost(model: str, u: dict) -> float | None:
+    """API-price cost in $ of one message's usage block, or None for a model with no price."""
+    row = price_of(model)
+    if not row:
+        return None
+    n = lambda k, d=u: int(d.get(k) or 0) if isinstance(d.get(k), (int, float)) else 0
+    cin, cout, cread = row[1], row[2], row[3]
+    prompt = n("input_tokens") + n("cache_creation_input_tokens") + n("cache_read_input_tokens")
+    long = LONG_PRICES.get(row[0])
+    if long and prompt > long[0]:
+        cin, cout, cread = long[1], long[2], long[3]
+    split = u.get("cache_creation") if isinstance(u.get("cache_creation"), dict) else None
+    w1h = n("ephemeral_1h_input_tokens", split) if split else 0
+    w5m = n("cache_creation_input_tokens") - w1h
+    cost = (n("input_tokens") * cin + n("output_tokens") * cout + n("cache_read_input_tokens") * cread
+            + w5m * cin * 1.25 + w1h * cin * 2) / 1e6
+    return cost * 2 if u.get("speed") == "fast" else cost
+
+
+def eastern_offset(ts: float) -> int:
+    """Hours from UTC to US Eastern time at ts: daylight time (-4) from 2 a.m. on the second Sunday of
+    March to 2 a.m. on the first Sunday of November, else -5. Worked out here because Windows Python has
+    no time zone data without an extra package."""
+    utc = datetime.fromtimestamp(ts, timezone.utc)
+    mar1 = datetime(utc.year, 3, 1, 7, tzinfo=timezone.utc)      # 2 a.m. EST
+    nov1 = datetime(utc.year, 11, 1, 6, tzinfo=timezone.utc)     # 2 a.m. EDT
+    start = mar1 + timedelta(days=(6 - mar1.weekday()) % 7 + 7)
+    end = nov1 + timedelta(days=(6 - nov1.weekday()) % 7)
+    return -4 if start <= utc < end else -5
+
+
+def eastern_day(ts: float) -> str:
+    """The Eastern-time date at ts, as YYYY-MM-DD."""
+    return (datetime.fromtimestamp(ts, timezone.utc) + timedelta(hours=eastern_offset(ts))).strftime("%Y-%m-%d")
+
+
+class Usage:
+    """Tokens and cost per model for today (Eastern time), read from the transcripts of the sessions
+    that report in. Claude Code writes each reply's model and token counts to the session's transcript;
+    the office reads only the lines added since it last looked, counts each message once, and starts
+    over at midnight Eastern or when you reset it. Kept in memory only: a restart counts today again
+    from the transcripts as their sessions report in (minus anything before a reset)."""
+
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.files: dict[str, int] = {}        # transcript path -> bytes read so far
+        self.seen: set[str] = set()            # message ids counted today
+        self.day = eastern_day(time.time())
+        self.since = 0.0                       # when you last reset; messages before it don't count
+        self.models: dict[str, dict] = {}
+
+    def _roll(self) -> None:
+        today = eastern_day(time.time())
+        if today != self.day:
+            self.day, self.models, self.seen = today, {}, set()
+
+    def _add(self, rec: dict) -> bool:
+        msg = rec.get("message")
+        if rec.get("type") != "assistant" or not isinstance(msg, dict) or not isinstance(msg.get("usage"), dict):
+            return False
+        model, mid = str(msg.get("model") or ""), str(msg.get("id") or rec.get("requestId") or rec.get("uuid") or "")
+        if not model.startswith("claude") or not mid or mid in self.seen:   # "<synthetic>": Claude Code's own notes
+            return False
+        try:
+            ts = datetime.fromisoformat(str(rec.get("timestamp")).replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return False
+        if ts < self.since or eastern_day(ts) != self.day:
+            return False
+        self.seen.add(mid)
+        u = msg["usage"]
+        n = lambda k: int(u.get(k) or 0) if isinstance(u.get(k), (int, float)) else 0
+        m = self.models.setdefault(model, {"model": model, "input": 0, "cache_write": 0, "cache_read": 0,
+                                           "output": 0, "cost": 0.0, "messages": 0, "priced": True})
+        m["input"] += n("input_tokens")
+        m["cache_write"] += n("cache_creation_input_tokens")
+        m["cache_read"] += n("cache_read_input_tokens")
+        m["output"] += n("output_tokens")
+        m["messages"] += 1
+        cost = message_cost(model, u)
+        if cost is None:
+            m["priced"] = False
+        else:
+            m["cost"] += cost
+        return True
+
+    def _read(self, path: str) -> bool:
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            return False
+        pos = self.files.get(path, 0)
+        if size < pos:                         # rewritten: start over (counted messages are skipped by id)
+            pos = 0
+        if size == pos:
+            return False
+        with open(path, "rb") as f:
+            f.seek(pos)
+            data = f.read(size - pos)
+        end = data.rfind(b"\n") + 1            # a half-written last line waits for the next look
+        self.files.pop(path, None)
+        self.files[path] = pos + end
+        while len(self.files) > USAGE_FILES_MAX:
+            self.files.pop(next(iter(self.files)))
+        changed = False
+        for line in data[:end].splitlines():
+            if b'"usage"' not in line:
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(rec, dict) and self._add(rec):
+                changed = True
+        return changed
+
+    def scan(self, p: dict) -> bool:
+        """Read what's new in the transcripts of the session a hook came from: the session's own and
+        its subagents' (<session>/subagents/*.jsonl beside it). True if a count changed. A hook with
+        no transcript on disk (the test buttons, office.py) counts nothing."""
+        path, sid = p.get("transcript_path"), str(p.get("session_id") or "")
+        if not (isinstance(path, str) and path.endswith(".jsonl") and os.path.isfile(path)):
+            return False
+        paths = [path]
+        folder = os.path.dirname(path)
+        if os.path.basename(folder) != "subagents" and sid and all(c.isalnum() or c in "-_" for c in sid):
+            folder = os.path.join(folder, sid, "subagents")
+        if os.path.basename(folder) == "subagents":
+            try:
+                paths += [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".jsonl")]
+            except OSError:
+                pass
+        with self.lock:
+            self._roll()
+            changed = False
+            for f in dict.fromkeys(paths):
+                try:
+                    changed = self._read(f) or changed
+                except OSError:
+                    pass
+            return changed
+
+    def reset(self) -> None:
+        """Start today's count over from now."""
+        with self.lock:
+            self.since, self.models = time.time(), {}
+
+    def public(self) -> dict:
+        with self.lock:
+            self._roll()
+            models = sorted((dict(m, cost=round(m["cost"], 6)) for m in self.models.values()),
+                            key=lambda m: -m["cost"])
+            return {"day": self.day, "since": self.since if eastern_day(self.since or 0) == self.day else 0,
+                    "models": models}
+
+
+USAGE = Usage()
+
+
 class Office:
     """All jobs and the worker rotation. Every method takes self.lock."""
 
@@ -253,6 +445,12 @@ class Office:
         self.rev += 1
         self.lock.notify_all()
         self._save()
+
+    def poke(self) -> None:
+        """Wake the pages for news outside the jobs (today's token usage)."""
+        with self.lock:
+            self.rev += 1
+            self.lock.notify_all()
 
     # ---- saved state, so restarting the office keeps everyone where they were ----------
     def _save(self) -> None:
@@ -673,6 +871,11 @@ class Office:
     def handle_cmd(self, p: dict) -> dict:
         cmd = str(p.get("cmd") or "").strip().lower()
         jid = str(p.get("id") or "").strip()
+        if cmd in ("usage", "usage-reset"):
+            if cmd == "usage-reset":
+                USAGE.reset()
+                self.poke()
+            return {"ok": True, "usage": USAGE.public()}
         with self.lock:
             if cmd == "start":
                 if not jid:
@@ -730,7 +933,7 @@ class Office:
             while self.rev == since and time.time() < deadline:
                 self.lock.wait(max(0.0, deadline - time.time()))
             return {"rev": self.rev, "now": time.time(), "roster": ROSTER, "stations": STATIONS,
-                    "jobs": self._public_jobs(), "recent": self.recent}
+                    "jobs": self._public_jobs(), "recent": self.recent, "usage": USAGE.public()}
 
     def reap(self) -> None:
         """Send home jobs that have gone silent (e.g. a session that crashed)."""
@@ -858,6 +1061,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/hook":
             OFFICE.handle_hook(p)
             self._send(200, {"ok": True})
+            if USAGE.scan(p):                  # after answering: a long transcript's first read can take a moment
+                OFFICE.poke()
         elif path == "/api/cmd":
             self._send(200, OFFICE.handle_cmd(p))
         else:
