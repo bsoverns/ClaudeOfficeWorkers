@@ -1,0 +1,15 @@
+#!/bin/bash
+# Cursor Office launcher for macOS. Runs the office with the Mac's own Python 3.
+# No args: open the office window. Also: --install [--uninstall], --server [port], --hook, --cost-check, cmd <args>.
+HERE="$(cd "$(dirname "$0")/../Resources/CursorOffice" && pwd)"
+PY=""
+for c in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+  if [ -x "$c" ] && "$c" -c 'import sys; sys.exit(sys.version_info < (3, 9))' >/dev/null 2>&1; then PY="$c"; break; fi
+done
+if [ -z "$PY" ]; then
+  [ "$1" = "--hook" ] || [ "$1" = "--cursor-hook" ] && exit 0      # never get in Cursor's way
+  osascript -e 'display dialog "Cursor Office needs Python 3.9 or newer.\n\nOpen Terminal and run:  xcode-select --install\n(or install Python from python.org), then open Cursor Office again." with title "Cursor Office" buttons {"OK"} default button 1 with icon caution' >/dev/null 2>&1
+  exit 1
+fi
+export CLAUDE_OFFICE_PYTHON="$PY"
+exec "$PY" "$HERE/cursor_app.py" "$@"

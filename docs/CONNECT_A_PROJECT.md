@@ -8,6 +8,26 @@ The office has two halves:
 
 Both halves live on the same machine. Each machine gets its own copy.
 
+Using Cursor? It has a separate office and separate hooks: see [Cursor](#cursor) below. The rest of this page is about Claude Code.
+
+---
+
+## Cursor
+
+The Cursor office is a second program, in `CursorOffice.zip` / `CursorOffice-mac.zip` (port 8778, change it with `CURSOR_OFFICE_PORT`), independent of the Claude Code one.
+
+| | Standalone app | From source |
+|---|---|---|
+| Connect all projects | `Connect Cursor.bat` / `.command` | `py src\install_cursor_hooks.py` |
+| Disconnect | `Disconnect Cursor.bat` / `.command` | `py src\install_cursor_hooks.py --uninstall` |
+| One project only | `CursorOffice.exe --install --project C:\repo` | `py src\install_cursor_hooks.py --project C:\repo` |
+| Open the office | `CursorOffice.exe` / `CursorOffice.app` | `scripts\start_cursor.bat` or `py src\server.py --cursor` |
+
+Connecting writes `~/.cursor/hooks.json` (with `--project`, `<repo>/.cursor/hooks.json`), backs up any existing file
+and keeps your other hooks. Don't commit a project's copy: it holds paths from your PC, so add it to `.gitignore`.
+Cursor reloads the file when it's saved; restart Cursor if nothing shows up, and look in its Hooks output channel if it still doesn't.
+If you move the folder, connect again. See [Cursor office](../README.md#cursor-office) for what it shows, its speed and how to turn on the optional cost screen (click it on the help desk to use your Cursor login, or set `CURSOR_ADMIN_KEY`).
+
 ---
 
 ## 0. Easiest: the standalone app (no Python needed)

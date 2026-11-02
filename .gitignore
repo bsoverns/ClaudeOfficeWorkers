@@ -8,6 +8,8 @@ dist/
 *.spec
 office.ico
 office.icns
+cursor_office.ico
+cursor_office.icns
 
 # Backups install_hooks.py writes next to a settings file
 *.bak-office-*

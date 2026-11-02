@@ -21,6 +21,8 @@ import re
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -28,6 +30,14 @@ from urllib.parse import parse_qs, urlparse
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESOURCES = getattr(sys, "_MEIPASS", HERE)   # where index.html lives (bundled in the exe)
 DEFAULT_PORT = 8777
+CURSOR_PORT = 8778     # the Cursor office: a second process of this same program (--cursor)
+PRODUCT = "Claude"     # which tool this process's office watches; the page shows it in its labels
+CURSOR_USAGE_URL = "https://api.cursor.com/teams/filtered-usage-events"
+CURSOR_SUMMARY_URL = "https://cursor.com/api/usage-summary"     # these two take your Cursor login; undocumented
+CURSOR_PERIOD_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage"
+CURSOR_COST_SECONDS = 3600   # Cursor aggregates this data hourly and asks for at most one poll an hour
+CURSOR_COST_LOGIN_SECONDS = 900
+CURSOR_COST_MAX_PAGES = 50
 EXPIRE_HOURS = 12      # a job with no news for this long is sent home
 RECENT_MAX = 12        # finished jobs kept for the "Recently finished" list
 AFFINITY_MAX = 300     # sessions whose worker we remember
@@ -877,6 +887,12 @@ class Office:
     def handle_cmd(self, p: dict) -> dict:
         cmd = str(p.get("cmd") or "").strip().lower()
         jid = str(p.get("id") or "").strip()
+        if cmd == "cursor-cost":
+            if PRODUCT != "Cursor":
+                return {"ok": False, "error": "only the Cursor office has this"}
+            CURSOR_COST.set_login(p.get("on") is True)
+            self.poke()
+            return {"ok": True}
         if cmd in ("usage", "usage-reset"):
             if cmd == "usage-reset":
                 USAGE.reset()
@@ -938,8 +954,9 @@ class Office:
             deadline = time.time() + wait
             while self.rev == since and time.time() < deadline:
                 self.lock.wait(max(0.0, deadline - time.time()))
-            return {"rev": self.rev, "now": time.time(), "roster": ROSTER, "stations": STATIONS,
-                    "jobs": self._public_jobs(), "recent": self.recent, "usage": USAGE.public()}
+            return {"rev": self.rev, "now": time.time(), "product": PRODUCT, "roster": ROSTER, "stations": STATIONS,
+                    "jobs": self._public_jobs(), "recent": self.recent, "usage": USAGE.public(),
+                    "cost": CURSOR_COST.public()}
 
     def reap(self) -> None:
         """Send home jobs that have gone silent (e.g. a session that crashed)."""
@@ -955,6 +972,249 @@ class Office:
 
 
 OFFICE = Office()
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect with your login: urllib would send its headers on to the new host."""
+
+    def redirect_request(self, *a, **k):
+        return None
+
+
+def cursor_state_db() -> str:
+    """Where the Cursor app keeps its settings, including your login."""
+    if sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+    return os.path.join(base, "Cursor", "User", "globalStorage", "state.vscdb")
+
+
+def read_cursor_login() -> tuple[str, str]:
+    """(token, user id) from the Cursor app's own store, opened read-only so it can't change anything
+    or get in Cursor's way. Raises LookupError if you aren't logged in. Not part of any documented API."""
+    import base64
+    import sqlite3
+    from urllib.parse import quote
+    path = cursor_state_db()
+    if not os.path.isfile(path):
+        raise LookupError("Cursor's login wasn't found on this PC")
+    db = sqlite3.connect(f"file:{quote(path.replace(chr(92), '/'))}?mode=ro", uri=True, timeout=2)
+    try:
+        row = db.execute("SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken' LIMIT 1").fetchone()
+    finally:
+        db.close()
+    token = str(row[0] if row and row[0] else "").strip().strip('"')
+    if not token:
+        raise LookupError("Cursor isn't logged in")
+    try:
+        part = token.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+        return token, str(claims["sub"]).split("|")[-1]
+    except (IndexError, KeyError, ValueError, TypeError):
+        raise LookupError("Cursor's login isn't in the expected format") from None
+
+
+def _login_request(url: str, headers: dict, body: bytes | None = None) -> dict:
+    req = urllib.request.Request(url, data=body, headers={"User-Agent": "Mozilla/5.0", **headers})
+    with urllib.request.build_opener(_NoRedirect).open(req, timeout=20) as r:
+        return json.loads(r.read())
+
+
+def fetch_login_usage(token: str, user_id: str) -> tuple[dict, dict]:
+    """The two private calls the Cursor app and dashboard use: (usage summary, current period).
+    Either can come back {} with its failure in the "_error" field; the token is never in an error."""
+    def attempt(url: str, headers: dict, body: bytes | None) -> dict:
+        try:
+            out = _login_request(url, headers, body)
+            return out if isinstance(out, dict) else {"_error": "unexpected answer"}
+        except urllib.error.HTTPError as e:
+            return {"_error": f"HTTP {e.code}", "_status": e.code}
+        except (OSError, ValueError) as e:
+            return {"_error": type(e).__name__}
+    return (attempt(CURSOR_SUMMARY_URL, {"Cookie": f"WorkosCursorSessionToken={user_id}%3A%3A{token}"}, None),
+            attempt(CURSOR_PERIOD_URL, {"Authorization": f"Bearer {token}", "Content-Type": "application/json",
+                                        "Connect-Protocol-Version": "1"}, b"{}"))
+
+
+def _number(v: object) -> float | None:
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def cycle_spend(summary: dict, period: dict) -> dict | None:
+    """Your own spend this billing cycle, in cents, as the Cursor settings page shows it: enterprise
+    accounts report it under individualUsage.overall, others under plan plus on-demand. The team's
+    pooled numbers are never used. None if neither answer has it."""
+    usage = summary.get("individualUsage") if isinstance(summary.get("individualUsage"), dict) else {}
+    overall, plan, extra = (usage.get(k) if isinstance(usage.get(k), dict) else {} for k in ("overall", "plan", "onDemand"))
+    used, limit = _number(overall.get("used")), _number(overall.get("limit"))
+    if used is None and _number(plan.get("used")) is not None:
+        used, limit = _number(plan["used"]) + (_number(extra.get("used")) or 0), _number(plan.get("limit"))
+    if used is None:
+        pu = period.get("planUsage") if isinstance(period.get("planUsage"), dict) else {}
+        used, limit = _number(pu.get("totalSpend")), _number(pu.get("limit"))
+    if used is None:
+        return None
+    return {"cents": used, "limit": limit or 0, "resets": str(summary.get("billingCycleEnd") or "")}
+
+
+def cursor_cost_report() -> str:
+    """What the login route finds on this PC, safe to share: your own amounts and field names, never
+    the token, your email, any id or the team's spend. For --cursor-cost-check, since Cursor's private
+    answers can change."""
+    lines = []
+    try:
+        token, user_id = read_cursor_login()
+        lines.append("Login: found in Cursor's store")
+    except (LookupError, OSError, ImportError) as e:
+        return f"Login: {e}"
+    except Exception as e:
+        return f"Login: couldn't read Cursor's store ({type(e).__name__})"
+    summary, period = fetch_login_usage(token, user_id)
+
+    def private(key: str) -> bool:
+        k = key.lower()     # "id" only as a whole end of the name: "individualUsage" is the part worth seeing
+        return any(w in k for w in ("email", "name", "token", "team", "pool")) or k.endswith(("id", "ids"))
+
+    def shape(v: object, depth: int = 0) -> object:
+        if isinstance(v, dict) and depth < 4:
+            return {k: shape(x, depth + 1) for k, x in v.items() if not private(k)}
+        return v if isinstance(v, (int, float, bool)) or v is None else "(text)"
+    lines.append("Usage summary: " + (summary.get("_error") or json.dumps(shape(summary))))
+    lines.append("Current period: " + (period.get("_error") or json.dumps(shape(period))))
+    spend = cycle_spend(summary, period)
+    lines.append(f"The office would show: ${spend['cents'] / 100:.2f} of ${spend['limit'] / 100:.2f}" if spend else "The office would show: nothing, no spend found")
+    return "\n".join(lines)
+
+
+class CursorCost:
+    """Your Cursor cost, for the Cursor office only; Cursor's hooks report none. Off by default,
+    with no internet at all. Two ways on:
+    - Settings checkbox (saved in cursor-cost.json): this billing cycle's spend through your Cursor
+      login, read fresh from the Cursor app for each check and never saved or logged. These are
+      Cursor's private calls, so they can change without notice.
+    - CURSOR_ADMIN_KEY: today's cost from the documented Team Admin API, which wins if both are set.
+      It returns the whole team's events without an email filter, so it never asks until it knows
+      yours: CURSOR_COST_EMAIL, else the user_email a hook reports."""
+
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.wake = threading.Event()
+        self.key = ""
+        self.login = False
+        self.email = ""
+        self.day = ""
+        self.cents = 0.0
+        self.limit = 0.0
+        self.resets = ""
+        self.checked = 0.0
+        self.error = ""
+
+    def _settings(self) -> str:
+        return os.path.join(data_dir(), "cursor-cost.json")
+
+    def start(self) -> None:
+        self.key = os.environ.get("CURSOR_ADMIN_KEY", "").strip()
+        self.email = os.environ.get("CURSOR_COST_EMAIL", "").strip()
+        try:
+            with open(self._settings(), encoding="utf-8") as f:
+                self.login = json.load(f).get("login") is True
+        except (OSError, ValueError, AttributeError):
+            pass
+        threading.Thread(target=self._loop, daemon=True).start()
+
+    def set_login(self, on: bool) -> None:
+        """The Settings checkbox. Remembered, so it's on again whenever the office starts."""
+        with self.lock:
+            self.login = on
+            self.cents, self.limit, self.resets, self.checked, self.error = 0.0, 0.0, "", 0.0, ""
+        os.makedirs(data_dir(), exist_ok=True)
+        with open(self._settings(), "w", encoding="utf-8") as f:
+            json.dump({"login": on}, f)
+        self.wake.set()
+
+    def saw_hook(self, p: dict) -> None:
+        """The first hook that names you starts the first Team API check."""
+        email = p.get("user_email")
+        if self.key and not self.email and isinstance(email, str) and email.strip():
+            self.email = email.strip()
+            self.wake.set()
+
+    def _loop(self) -> None:
+        while True:
+            if self.key:
+                if self.email:
+                    self.check()
+                    OFFICE.poke()
+            elif self.login:
+                self.check_login()
+                OFFICE.poke()
+            self.wake.wait(CURSOR_COST_SECONDS if self.key else CURSOR_COST_LOGIN_SECONDS)
+            self.wake.clear()
+
+    def check_login(self) -> None:
+        """This cycle's spend through your Cursor login. On a failure the last good number stays."""
+        spend, error = None, ""
+        try:
+            token, user_id = read_cursor_login()
+            summary, period = fetch_login_usage(token, user_id)
+            spend = cycle_spend(summary, period)
+            if not spend:
+                refused = {summary.get("_status"), period.get("_status")} & {401, 403}
+                error = "Cursor refused your login (open Cursor and check you're signed in)" if refused else "Cursor's answer had no spend in it"
+        except LookupError as e:
+            error = str(e)
+        except Exception as e:     # a locked or changed database, say: never the office's problem
+            error = f"Couldn't read Cursor's login ({type(e).__name__})"
+        with self.lock:
+            self.error = error
+            if spend:
+                self.cents, self.limit, self.resets, self.checked = spend["cents"], spend["limit"], spend["resets"], time.time()
+
+    def _page(self, start_ms: int, end_ms: int, page: int) -> dict:
+        import base64
+        body ={"startDate": start_ms, "endDate": end_ms, "email": self.email, "page": page, "pageSize": 1000}
+        auth = base64.b64encode(f"{self.key}:".encode("utf-8")).decode("ascii")
+        req = urllib.request.Request(CURSOR_USAGE_URL, data=json.dumps(body).encode("utf-8"), method="POST",
+                                     headers={"Content-Type": "application/json", "Authorization": f"Basic {auth}"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())
+
+    def check(self) -> None:
+        """Add up chargedCents (Cursor's documented way to get cost) over today's events. On a
+        failure the last good number stays, with the reason beside it."""
+        now = time.time()
+        start = now - (now + eastern_offset(now) * 3600) % 86400
+        cents, page, error = 0.0, 1, ""
+        try:
+            while True:
+                data = self._page(int(start * 1000), int(now * 1000), page)
+                cents += sum(float(e.get("chargedCents") or 0) for e in data.get("usageEvents") or [])
+                if not (data.get("pagination") or {}).get("hasNextPage") or page >= CURSOR_COST_MAX_PAGES:
+                    break
+                page += 1
+        except urllib.error.HTTPError as e:
+            error = "Cursor refused the key (it needs a Team API key)" if e.code in (401, 403) else f"Cursor answered {e.code}"
+        except (OSError, ValueError, TypeError, AttributeError) as e:
+            error = f"Couldn't reach Cursor ({type(e).__name__})"
+        with self.lock:
+            self.error = error
+            if not error:
+                self.day, self.cents, self.checked = eastern_day(now), cents, now
+
+    def public(self) -> dict | None:
+        if not self.key and not self.login:
+            return None
+        with self.lock:
+            if not self.key:
+                return {"mode": "login", "cents": round(self.cents, 2), "limit": self.limit, "resets": self.resets,
+                        "checked": self.checked, "error": self.error, "email": True}
+            today = self.day == eastern_day(time.time())
+            return {"mode": "key", "cents": round(self.cents, 2) if today else 0, "checked": self.checked if today else 0,
+                    "error": self.error, "email": bool(self.email)}
+
+
+CURSOR_COST = CursorCost()
 
 
 class Viewers:
@@ -1066,6 +1326,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/hook":
             OFFICE.handle_hook(p)
+            CURSOR_COST.saw_hook(p)
             self._send(200, {"ok": True})
             if USAGE.scan(p):                  # after answering: a long transcript's first read can take a moment
                 OFFICE.poke()
@@ -1081,7 +1342,15 @@ def _reaper() -> None:
         OFFICE.reap()
 
 
+def use_cursor() -> None:
+    """Make this process the Cursor office: its own port (so its own state file) and name."""
+    global PRODUCT
+    PRODUCT = "Cursor"
+
+
 def default_port() -> int:
+    if PRODUCT == "Cursor":
+        return int(os.environ.get("CURSOR_OFFICE_PORT") or CURSOR_PORT)
     return int(os.environ.get("CLAUDE_OFFICE_PORT") or DEFAULT_PORT)
 
 
@@ -1109,14 +1378,19 @@ def make_server(port: int) -> ThreadingHTTPServer:
     OFFICE.reap()
     httpd.daemon_threads = True
     threading.Thread(target=_reaper, daemon=True).start()
+    if PRODUCT == "Cursor":
+        CURSOR_COST.start()
     return httpd
 
 
 def main(argv: list[str] | None = None) -> None:
-    argv = sys.argv[1:] if argv is None else argv
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if "--cursor" in argv:
+        argv.remove("--cursor")
+        use_cursor()
     port = int(argv[0]) if argv else default_port()
     httpd = make_server(port)
-    print(f"Claude Office is open at http://127.0.0.1:{port}/  (Ctrl+C to close)")
+    print(f"{PRODUCT} Office is open at http://127.0.0.1:{port}/  (Ctrl+C to close)")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -9,7 +9,6 @@ import json
 import os
 import sys
 import time
-import urllib.request
 
 KEEP_INPUT = ("command", "file_path", "pattern", "query", "url", "description", "subagent_type", "name")
 TITLE_TAIL = 2 * 1024 * 1024  # how much of the transcript's end to search for the session name
@@ -88,11 +87,12 @@ def read_stdin() -> bytes:
 
 
 def main() -> None:
+    import urllib.request  # here, not at the top: cursor_hook.py imports this file and must start fast
     ts = time.time()  # when the event happened; lets the server ignore late async posts
     raw = read_stdin()
     p = json.loads(raw.decode("utf-8", "replace") or "{}")
-    if not isinstance(p, dict):
-        return
+    if not isinstance(p, dict) or p.get("cursor_version"):
+        return  # Cursor can also load Claude Code's hooks; it has its own office (cursor_hook.py)
     ti = p.get("tool_input")
     if isinstance(ti, dict):
         p["tool_input"] = {k: str(v)[:200] for k, v in ti.items() if k in KEEP_INPUT}

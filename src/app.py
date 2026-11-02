@@ -8,6 +8,9 @@ r"""ClaudeOffice.exe: the whole Claude Office in one program (built by scripts/b
   ClaudeOffice.exe --hook              what Claude Code runs for each event (reads stdin)
   ClaudeOffice.exe cmd <args>          same as src/office.py, e.g. cmd start "Test" / cmd demo
 
+The Cursor office is its own program, CursorOffice.exe: see cursor_app.py, which runs this file's
+main() with cursor=True. That turns its arguments into the --cursor ones below (cursor_args).
+
 Also runs unbuilt: `py src/app.py ...`.
 
 On a Mac, ClaudeOffice.app (built by scripts/build_mac.sh) runs this file with the Mac's own
@@ -16,11 +19,8 @@ python3 and takes the same arguments: ClaudeOffice.app/Contents/MacOS/ClaudeOffi
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
-import threading
 import time
-import webbrowser
 
 FROZEN = getattr(sys, "frozen", False)
 BYE_EXIT_SECONDS = 15      # app mode: quit this long after a window said goodbye, if no page polled since
@@ -53,17 +53,29 @@ def attach_console() -> bool:
     return False
 
 
-def tell(text: str, title: str = "Claude Office", error: bool = False) -> None:
+def tell(text: str, title: str = "", error: bool = False) -> None:
     """Print if there's a console, otherwise show a message box (double-clicked .bat/.exe)."""
     if not FROZEN or _has_console:
         print(text)
         return
     if os.name == "nt":
         import ctypes
-        ctypes.windll.user32.MessageBoxW(None, text, title, 0x10 if error else 0x40)
+        ctypes.windll.user32.MessageBoxW(None, text, title or _app_name, 0x10 if error else 0x40)
 
 
 _has_console = False
+_app_name = "Claude Office"
+
+
+def cursor_args(args: list[str]) -> list[str]:
+    """CursorOffice.exe's arguments as the ones main() knows, so it's always the Cursor office."""
+    if not args:
+        return ["--cursor"]
+    if args[0] == "--server":
+        return ["--server", "--cursor", *args[1:]]
+    if args[0] in ("--hook", "--install", "--cost-check"):
+        return ["--cursor-" + args[0][2:], *args[1:]]
+    return args
 
 
 def find_browser() -> str | None:
@@ -87,6 +99,8 @@ def find_browser() -> str | None:
 
 
 def open_window(url: str) -> None:
+    import subprocess   # these imports are here, not at the top, so the hook modes start fast
+    import webbrowser
     from server import data_dir
     browser = find_browser()
     if not browser:
@@ -104,6 +118,7 @@ def open_window(url: str) -> None:
 
 
 def run_app() -> None:
+    import threading
     import server
     port = server.default_port()
     url = f"http://127.0.0.1:{port}/"
@@ -123,9 +138,14 @@ def run_app() -> None:
             return
 
 
-def main() -> None:
-    global _has_console
+def main(cursor: bool = False) -> None:
+    global _has_console, _app_name
     args = sys.argv[1:]
+    if cursor:
+        _app_name = "Cursor Office"
+        args = cursor_args(args)
+        if args[:1] == ["cmd"]:     # office.py talks to this office, not the Claude one
+            os.environ["CLAUDE_OFFICE_PORT"] = os.environ.get("CURSOR_OFFICE_PORT") or "8778"
     if args[:1] == ["--hook"]:
         import claude_hook
         try:
@@ -133,19 +153,41 @@ def main() -> None:
         except Exception:
             pass
         sys.exit(0)
-    if args[:1] == ["--install"]:
+    if args[:1] == ["--cursor-hook"]:
+        attach_console()    # for the reply, where stdout is a pipe (PowerShell doesn't read a windowed exe's)
+        import cursor_hook
+        try:
+            cursor_hook.main()
+        except Exception:
+            pass
+        sys.exit(0)
+    if args[:1] == ["--cursor-cost-check"]:
         _has_console = attach_console()
-        import install_hooks
+        import server
+        tell(server.cursor_cost_report(), "Cursor cost check")
+        return
+    if args[:1] in (["--install"], ["--cursor-install"]):
+        _has_console = attach_console()
+        is_cursor = args[0] == "--cursor-install"
+        if is_cursor:
+            import install_cursor_hooks as installer
+        else:
+            import install_hooks as installer
         rest = args[1:]
         project = None
         if "--project" in rest:
             i = rest.index("--project")
             project = rest[i + 1] if i + 1 < len(rest) else "."
         try:
-            tell(install_hooks.install(project, "--uninstall" in rest))
+            tell(installer.install(project, "--uninstall" in rest))
         except Exception as e:
-            tell(f"Couldn't update the Claude Code settings:\n{e}", error=True)
+            tell(f"Couldn't update the {'Cursor hooks' if is_cursor else 'Claude Code settings'}:\n{e}", error=True)
             sys.exit(1)
+        return
+    if args[:1] == ["--cursor"]:
+        import server
+        server.use_cursor()
+        run_app()
         return
     if args[:1] == ["--server"]:
         _has_console = attach_console()
@@ -159,7 +201,11 @@ def main() -> None:
         return
     if args and args[0] in ("-h", "--help", "/?"):
         _has_console = attach_console()
-        tell(__doc__ or "")
+        if cursor:
+            import cursor_app
+            tell(cursor_app.__doc__ or "")
+        else:
+            tell(__doc__ or "")
         return
     run_app()
 
