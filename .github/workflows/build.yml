@@ -1,10 +1,10 @@
 name: Build
 
 # A version job stamps the version once. Then the Mac and Windows builds run in parallel: each
-# compiles the Python, builds ClaudeOffice.app (scripts/build_mac.sh) or ClaudeOffice.exe (the same
-# steps as scripts/build.bat), smoke-tests it and uploads the zip. Pushes to main (merged PRs) then
-# run a release job after both builds, which publishes a GitHub Release with ClaudeOffice.zip and
-# ClaudeOffice-mac.zip attached and release notes generated from the merged PRs.
+# compiles the Python, builds ClaudeOffice and CursorOffice (scripts/build_mac.sh, or the same
+# steps as scripts/build.bat), smoke-tests them and uploads the zips. Pushes to main (merged PRs) then
+# run a release job after both builds, which publishes a GitHub Release with the four zips
+# attached and release notes generated from the merged PRs.
 
 on:
   push:
@@ -71,11 +71,30 @@ jobs:
           kill $server
           python3 -c "import json, sys; jobs = json.load(open('state.json'))['jobs']; print(jobs); sys.exit(0 if any(j['id'] == 'ci' and j['area'] == 'sql' for j in jobs) else 'Smoke test failed: no SQL job from the hook.')"
 
+      - name: Smoke test CursorOffice.app
+        run: |
+          # The second program: its own server, fed by the app's --cursor-hook mode, which must reply with JSON.
+          app="dist/CursorOffice-mac/CursorOffice.app/Contents/MacOS/CursorOffice"
+          export CURSOR_OFFICE_PORT=8798
+          "$app" --server 8798 &
+          server=$!
+          for i in $(seq 30); do curl -sf http://127.0.0.1:8798/api/ping >/dev/null && break; sleep 0.5; done
+          echo '{"hook_event_name":"beforeSubmitPrompt","conversation_id":"ci","workspace_roots":["/tmp/ci"],"prompt":"Write a stored procedure"}' | "$app" --cursor-hook > reply.json
+          curl -sf http://127.0.0.1:8798/api/state > state.json
+          kill $server
+          python3 -c "import json, sys; s = json.load(open('state.json')); r = json.load(open('reply.json')); print(s['jobs'], r); sys.exit(0 if s['product'] == 'Cursor' and r == {'continue': True} and any(j['id'] == 'ci' for j in s['jobs']) else 'Smoke test failed: no Cursor job or reply from the hook.')"
+
       - name: Upload ClaudeOffice-mac.zip
         uses: actions/upload-artifact@v4
         with:
           name: ClaudeOffice-mac
           path: dist/ClaudeOffice-mac.zip
+
+      - name: Upload CursorOffice-mac.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: CursorOffice-mac
+          path: dist/CursorOffice-mac.zip
 
   build:
     runs-on: windows-latest
@@ -97,9 +116,9 @@ jobs:
           Write-Host "Version: $version"
 
       - name: Check the Python compiles
-        run: python -m py_compile src/app.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py tools/make_icon.py
+        run: python -m py_compile src/app.py src/cursor_app.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py src/install_cursor_hooks.py src/cursor_hook.py tools/make_icon.py
 
-      - name: Build ClaudeOffice.exe (same steps as scripts/build.bat)
+      - name: Build ClaudeOffice.exe and CursorOffice.exe (same steps as scripts/build.bat)
         shell: pwsh
         run: |
           python -m pip install --upgrade pyinstaller
@@ -108,6 +127,11 @@ jobs:
           Copy-Item README.md, LICENSE, docs/CONNECT_A_PROJECT.md, "package/Connect Claude Code.bat", "package/Disconnect Claude Code.bat" dist/ClaudeOffice/
           Set-Content dist/ClaudeOffice/VERSION.txt "$env:VERSION" -Encoding utf8
           Compress-Archive -Force -Path dist/ClaudeOffice -DestinationPath dist/ClaudeOffice.zip
+          python tools/make_icon.py --cursor
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name CursorOffice --icon cursor_office.ico --add-data "src/index.html;." src/cursor_app.py
+          Copy-Item README.md, LICENSE, docs/CONNECT_A_PROJECT.md, "package/Connect Cursor.bat", "package/Disconnect Cursor.bat", "package/Check Cursor Cost.bat" dist/CursorOffice/
+          Set-Content dist/CursorOffice/VERSION.txt "$env:VERSION" -Encoding utf8
+          Compress-Archive -Force -Path dist/CursorOffice -DestinationPath dist/CursorOffice.zip
 
       - name: Smoke test the exe
         shell: pwsh
@@ -132,11 +156,44 @@ jobs:
           if ($hook.ExitCode -ne 0) { throw "Hook exited with $($hook.ExitCode)" }
           if (-not ($state.jobs | Where-Object { $_.id -eq 'ci' -and $_.area -eq 'sql' })) { throw 'Smoke test failed: no SQL job from the hook.' }
 
+      - name: Smoke test CursorOffice.exe
+        shell: powershell
+        run: |
+          # The second program: its own server, fed the way Cursor does on Windows: Windows PowerShell
+          # pipes the JSON into the command. It doesn't wait for a windowed exe or read its output, so
+          # there is no reply to check here and the job takes a moment to arrive.
+          $exe = Resolve-Path dist/CursorOffice/CursorOffice.exe
+          $env:CURSOR_OFFICE_PORT = '8798'
+          $server = Start-Process $exe -ArgumentList '--server', '8798' -PassThru
+          $up = $false
+          for ($i = 0; $i -lt 30 -and -not $up; $i++) {
+            Start-Sleep -Milliseconds 500
+            try { Invoke-RestMethod http://127.0.0.1:8798/api/ping | Out-Null; $up = $true } catch {}
+          }
+          if (-not $up) { throw 'The Cursor office server did not start.' }
+          $event = '{"hook_event_name":"beforeSubmitPrompt","conversation_id":"ci","workspace_roots":["C:/ci"],"prompt":"Write a stored procedure"}'
+          $event | & $exe --cursor-hook | Out-Null
+          for ($i = 0; $i -lt 20; $i++) {
+            $state = Invoke-RestMethod http://127.0.0.1:8798/api/state
+            if ($state.jobs | Where-Object { $_.id -eq 'ci' }) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          Stop-Process -Id $server.Id -Force
+          $state.jobs | Format-Table id, title, area, status | Out-String | Write-Host
+          if ($state.product -ne 'Cursor') { throw "Wrong office: $($state.product)" }
+          if (-not ($state.jobs | Where-Object { $_.id -eq 'ci' })) { throw 'Smoke test failed: no job from the Cursor hook.' }
+
       - name: Upload ClaudeOffice.zip
         uses: actions/upload-artifact@v4
         with:
           name: ClaudeOffice-win-x64
           path: dist/ClaudeOffice.zip
+
+      - name: Upload CursorOffice.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: CursorOffice-win-x64
+          path: dist/CursorOffice.zip
 
   release:
     runs-on: ubuntu-latest
@@ -156,6 +213,16 @@ jobs:
           name: ClaudeOffice-mac
           path: dist
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: CursorOffice-win-x64
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: CursorOffice-mac
+          path: dist
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -168,8 +235,10 @@ jobs:
           > Windows SmartScreen may warn because the exe isn't code-signed. Click **More info > Run anyway**, or right-click the zip > **Properties** > **Unblock** before unzipping.
 
           **Mac:** `ClaudeOffice-mac.zip` below (uses the Mac's own Python 3.9 or newer). Unzip it somewhere it can stay, run `xattr -dr com.apple.quarantine <that folder>` once in Terminal (the app isn't signed), run **Connect Claude Code.command**, then open **ClaudeOffice.app**.
+
+          **Using Cursor?** `CursorOffice.zip` and `CursorOffice-mac.zip` are the same steps for the Cursor office: run **Connect Cursor**, then open **CursorOffice**.
           EOF
-          gh release create "v$VERSION" dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip \
+          gh release create "v$VERSION" dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip dist/CursorOffice.zip dist/CursorOffice-mac.zip \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Claude Office $VERSION" \

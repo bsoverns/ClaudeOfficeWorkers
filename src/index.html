@@ -103,8 +103,8 @@
   <div id="stage"><canvas id="c"></canvas><div id="usageCard" hidden></div></div>
   <aside id="panel">
     <header>
-      <svg class="logo" viewBox="-32 -32 64 64"><g fill="#d97757" id="logoRays"></g><circle r="13" fill="#d97757"/></svg>
-      <div><h1>Claude Office</h1><div id="conn" class="conn">connecting…</div></div>
+      <svg class="logo" id="logo" viewBox="-32 -32 64 64"><g fill="#d97757" id="logoRays"></g><circle r="13" fill="#d97757"/></svg>
+      <div><h1 id="officeName">Claude Office</h1><div id="conn" class="conn">connecting…</div></div>
     </header>
 
     <h2>Waiting on you <span id="nWait"></span></h2>
@@ -132,6 +132,7 @@
       <label><input type="checkbox" id="optHorn" name="office-horn" autocomplete="off"> Viking horn when an adventurer is summoned (Might &amp; Mayhem)</label>
       <label><input type="checkbox" id="optRemind" name="office-remind" autocomplete="off"> Re-chime every 5 min while anyone waits</label>
       <label><input type="checkbox" id="optNotify" name="office-notify" autocomplete="off"> Desktop notification when someone waits</label>
+      <label id="optCursorCostRow" hidden title="Reads your login from the Cursor app for each check and sends it only to Cursor. Nothing is saved."><input type="checkbox" id="optCursorCost" name="office-cursor-cost" autocomplete="off"> Show my Cursor cost (uses my Cursor login)</label>
       <div class="row">
         <button id="btnTest" class="primary">Send a test task</button>
         <button id="btnChime">Test chime</button>
@@ -139,7 +140,16 @@
       </div>
     </div>
 
-    <details>
+    <details id="connectCursor" hidden>
+      <summary>How Cursor connects</summary>
+      <p>Cursor hooks run <code>cursor_hook.py</code>, which tells this office what each chat is doing: a new prompt sends a
+      worker to the boss for a work slip, finished tool calls keep them busy, a failed tool sends them to the help desk, and when
+      Cursor stops they wait in the mailroom.</p>
+      <p>Saying <code>done</code>, <code>thanks</code> or <code>task complete</code> in the chat (or pressing <b>Done ✓</b>)
+      sends the worker back to the break room.</p>
+      <p>This office is a separate process from the Claude Code one, on its own port, with its own jobs.</p>
+    </details>
+    <details id="connectClaude">
       <summary>How Claude connects</summary>
       <p>Claude Code hooks run <code>claude_hook.py</code>, which tells this office what each session is doing:
       a new prompt sends a worker to the boss for a work slip, tool calls keep them busy, a failed tool sends them to the
@@ -158,7 +168,7 @@ py src\office.py demo</pre>
 </div>
 <div id="overlay"><div class="card">
   <h3>Welcome to the office</h3>
-  <p>Pick a theme to clock in. (Browsers only allow sound after a click, and the chime is how you'll hear that Claude is done.)</p>
+  <p>Pick a theme to clock in. (Browsers only allow sound after a click, and the chime is how you'll hear that <span id="clockInName">Claude</span> is done.)</p>
   <div class="themes">
     <button class="theme" data-theme="dev"><b>💻 Dev Shop</b><span>Azure DevOps, Azure Portal, GitHub, SQL Server, Python, the QA Test Lab…</span></button>
     <button class="theme" data-theme="scifi"><b>🚀 Sci-Fi Station</b><span>Astronauts, aliens and space wizards with laser swords. Mission Control, the Wormhole, the Launch Pad…</span></button>
@@ -341,6 +351,9 @@ function play(name) {
 const RAYS = Array.from({ length: 12 }, (_, i) => `<rect x="-4" y="-30" width="8" height="30" rx="4" transform="rotate(${i * 30})"/>`).join('');
 $('#logoRays').innerHTML = RAYS;
 const FAV_OK = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -32 64 64"><g fill="#d97757">${RAYS}</g></svg>`);
+const CUBE_SVG = '<polygon points="0,-30 26,-15 0,0 -26,-15" fill="#4b515c"/><polygon points="-26,-15 0,0 0,30 -26,15" fill="#2a2e35"/><polygon points="26,-15 26,15 0,30 0,0" fill="#17191d"/>'
+  + '<polygon points="-11,-12 13,-1 2,2 -1,14" fill="#f4f5f7"/>';
+const FAV_CURSOR = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -32 64 64">${CUBE_SVG}</svg>`);
 const FAV_ALERT = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#ef4444"/><rect x="28" y="12" width="8" height="28" rx="4" fill="#fff"/><circle cx="32" cy="50" r="5" fill="#fff"/></svg>`);
 let unseen = false, lastRemind = 0;
 
@@ -357,11 +370,13 @@ function alertWaiting(j) {
     } catch (e) {}
   }
 }
+var PRODUCT = 'Claude';   // set from the server's state in setProduct(); var, so the draw code can read it from the start
 function updateTitle() {
   const n = STATE ? STATE.jobs.filter(j => j.status === 'waiting').length : 0;
   const blink = unseen && document.hidden && Math.floor(Date.now() / 1000) % 2 === 0;
-  document.title = blink ? '✉ Claude is waiting on you!' : (n ? `(${n}) ✉ Claude Office` : 'Claude Office');
-  const want = n ? FAV_ALERT : FAV_OK;
+  const name = `${PRODUCT} Office`;
+  document.title = blink ? `✉ ${PRODUCT} is waiting on you!` : (n ? `(${n}) ✉ ${name}` : name);
+  const want = n ? FAV_ALERT : PRODUCT === 'Cursor' ? FAV_CURSOR : FAV_OK;
   const fav = $('#fav'); if (fav.getAttribute('href') !== want) fav.setAttribute('href', want);
 }
 function seen() { unseen = false; updateTitle(); }
@@ -7056,22 +7071,29 @@ function starburst(cx, cy, r, c, spin) {
   for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.roundRect(-2.3, -r, 4.6, r, 2.3); g.fill(); }
   g.restore();
 }
+function cursorCube(cx, cy, r) {   // the Cursor office's mark: a dark cube, drawn in code like everything else
+  const h = r * 0.866, top = [cx, cy - r], tr = [cx + h, cy - r / 2], br = [cx + h, cy + r / 2], bot = [cx, cy + r], bl = [cx - h, cy + r / 2], tl = [cx - h, cy - r / 2], mid = [cx, cy];
+  poly([...top, ...tr, ...mid, ...tl], '#4b515c'); poly([...tl, ...mid, ...bot, ...bl], '#2a2e35'); poly([...tr, ...br, ...bot, ...mid], '#17191d');
+}
+function cursorArrow(cx, cy, r) {  // and the pointer on it
+  poly([cx - r * 0.5, cy - r * 0.55, cx + r * 0.6, cy - r * 0.05, cx + r * 0.08, cy + r * 0.08, cx - r * 0.05, cy + r * 0.62], '#f4f5f7');
+}
 function drawBoss() {
-  const x = BOSS.x, y = BOSS.y, busy = activeCount() > 0;
+  const x = BOSS.x, y = BOSS.y, busy = activeCount() > 0, cursor = PRODUCT === 'Cursor';
   RR(x - 21, y - 62, 42, 54, 10, '#24262b'); R(x - 3, y - 10, 6, 12, '#24262b');
   RR(x - 13, y - 36, 26, 28, 7, '#3a3633', 'rgba(0,0,0,.3)', 0.8);
-  poly([x - 5, y - 36, x + 5, y - 36, x, y - 26], '#fff'); poly([x - 1.6, y - 33, x + 1.6, y - 33, x + 2.2, y - 20, x, y - 17, x - 2.2, y - 20], '#d97757');
+  poly([x - 5, y - 36, x + 5, y - 36, x, y - 26], '#fff'); poly([x - 1.6, y - 33, x + 1.6, y - 33, x + 2.2, y - 20, x, y - 17, x - 2.2, y - 20], cursor ? '#4b515c' : '#d97757');
   const hand = (sx, hx, hy) => { L(sx, y - 33, hx, hy, '#3a3633', 4.6); C(hx, hy, 2.6, '#e9a183'); };
   if (BOSS.visitor) { hand(x - 11, x - 14, y - 12); hand(x + 11, x + 18, y - 16); if (!BOSS.visitor.paperSent) RR(x + 14, y - 24, 9, 11, 1, '#fffef5', '#999', 0.6); }
   else if (busy) { hand(x - 11, x - 6 + Math.sin(T * 22) * 1.2, y - 4); hand(x + 11, x + 6 + Math.cos(T * 19) * 1.2, y - 4); }
   else { hand(x - 11, x - 14, y - 12); hand(x + 11, x + 12, y - 24); RR(x + 9, y - 30, 7, 8, 1.5, '#fff', '#999', 0.8); }
   const hy = y - 50 + (busy ? Math.sin(T * 8) * 0.6 : 0);
-  starburst(x, hy, 14, '#d97757', T * (busy ? 0.9 : 0.15));
-  C(x, hy, 9, '#e08a68');
-  const blink = T % 5 < 0.14;
-  if (blink) { L(x - 4.5, hy - 1, x - 1.5, hy - 1, '#2b1a12', 1.2); L(x + 1.5, hy - 1, x + 4.5, hy - 1, '#2b1a12', 1.2); }
-  else { C(x - 3, hy - 1, 1.5, '#2b1a12'); C(x + 3, hy - 1, 1.5, '#2b1a12'); }
-  g.beginPath(); g.arc(x, hy + 1.8, 2.6, 0.2, Math.PI - 0.2); g.strokeStyle = '#2b1a12'; g.lineWidth = 1.1; g.stroke();
+  if (cursor) cursorCube(x, hy, 17);
+  else { starburst(x, hy, 14, '#d97757', T * (busy ? 0.9 : 0.15)); C(x, hy, 9, '#e08a68'); }
+  const ink = cursor ? '#f4f5f7' : '#2b1a12', blink = T % 5 < 0.14;
+  if (blink) { L(x - 4.5, hy - 1, x - 1.5, hy - 1, ink, 1.2); L(x + 1.5, hy - 1, x + 4.5, hy - 1, ink, 1.2); }
+  else { C(x - 3, hy - 1, 1.5, ink); C(x + 3, hy - 1, 1.5, ink); }
+  g.beginPath(); g.arc(x, hy + 1.8, 2.6, 0.2, Math.PI - 0.2); g.strokeStyle = ink; g.lineWidth = 1.1; g.stroke();
   if (THEME === 'scifi') {           // the boss's space helmet
     g.globalAlpha = 0.18; C(x, hy, 19, '#cfe8ff'); g.globalAlpha = 1;
     g.beginPath(); g.arc(x, hy, 19, 0, TAU); g.strokeStyle = '#e6eef7'; g.lineWidth = 1.8; g.stroke(); E(x, hy + 17, 12, 3, '#c9ced6');
@@ -7119,8 +7141,10 @@ function drawHorn(x, hy) {
 }
 function drawBossDesk() {
   R(716, 192, 168, 12, '#7a4e2d'); R(720, 204, 160, 34, '#5e3b22'); L(720, 204, 880, 204, '#4a2e1a', 2);
-  RR(774, 214, 52, 13, 2, '#d4af37'); TXT('CLAUDE', 800, 221, 'bold 8px system-ui', '#3b2a10');
-  RR(781, 164, 38, 27, 3, '#c9ccd1'); starburst(800, 177.5, 5, '#d97757', 0); R(778, 190, 44, 3, '#aeb2b8');
+  RR(774, 214, 52, 13, 2, '#d4af37'); TXT(PRODUCT.toUpperCase(), 800, 221, 'bold 8px system-ui', '#3b2a10');
+  RR(781, 164, 38, 27, 3, '#c9ccd1');
+  if (PRODUCT === 'Cursor') { cursorCube(800, 177.5, 8.5); cursorArrow(800, 177.5, 6); } else starburst(800, 177.5, 5, '#d97757', 0);
+  R(778, 190, 44, 3, '#aeb2b8');
   const n = Math.min(activeCount(), 9);
   for (let i = 0; i < n; i++) R(838 + (i % 2), 189 - i * 2.4, 26, 2.2, i % 2 ? '#ffffff' : '#ececec');
   RR(738, 182, 9, 10, 2, '#fff', '#999', 0.8);
@@ -7153,6 +7177,15 @@ function usageTotals() {
   return t;
 }
 function drawTokenMeter() {
+  if (PRODUCT === 'Cursor') {          // one screen, always there: OFF until cost is turned on (click it to do that)
+    const c = STATE && STATE.cost, [x, y, w, h] = METER[0], known = c && c.checked > 0;
+    RR(x - 1.5, y - 1.5, w + 3, h + 3, 4, '#2b2f3a'); RR(x, y, w, h, 3, '#0b1016');
+    g.globalAlpha = 0.07; R(x + 2, y + 2, w - 4, (h - 4) / 2, '#fff'); g.globalAlpha = 1;
+    TXT(!c ? 'MY COST' : c.mode === 'login' ? 'THIS CYCLE' : 'TODAY', x + w / 2, y + 6.5, 'bold 5.5px system-ui', '#7c8799');
+    if (!c) TXT('OFF', x + w / 2, y + 17, 'bold 11px monospace', '#7c8799');
+    else TXT(known ? fmtCost(c.cents / 100) : c.error ? 'ERROR' : '--', x + w / 2, y + 17, 'bold 11px monospace', c.error ? '#f87171' : '#fbbf24');
+    return;
+  }
   const t = usageTotals(), [[cx, cy, cw, ch], [kx, ky, kw, kh]] = METER;
   if (meterCost !== null && t.cost > meterCost + 0.005) meterFx.push({ t: T, text: '+' + fmtCost(t.cost - meterCost) });
   meterCost = t.cost;
@@ -7172,8 +7205,9 @@ function drawTokenMeter() {
   }
 }
 function meterAt(e) {
+  const screens = PRODUCT !== 'Cursor' ? METER : [METER[0]];
   const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - OX) / SC, y = (e.clientY - r.top - OY) / SC;
-  return METER.some(([mx, my, mw, mh]) => x >= mx - 2 && x <= mx + mw + 2 && y >= my - 2 && y <= my + mh + 2);
+  return screens.some(([mx, my, mw, mh]) => x >= mx - 2 && x <= mx + mw + 2 && y >= my - 2 && y <= my + mh + 2);
 }
 // 'claude-opus-5-5' -> 'Opus 5.5', 'claude-3-5-haiku-20241022' -> 'Haiku 3.5'
 function modelName(id) {
@@ -7181,7 +7215,33 @@ function modelName(id) {
   const fam = parts.find(p => /^[a-z]/i.test(p)) || id, ver = parts.filter(p => /^\d+$/.test(p)).join('.');
   return fam.charAt(0).toUpperCase() + fam.slice(1) + (ver ? ' ' + ver : '');
 }
+function cursorCostHtml() {
+  if (!STATE || !STATE.cost) return `<button class="x" data-usage="close" title="Close">✕</button>
+    <h3>Cursor cost</h3>
+    <div class="when">Off</div>
+    <p class="note">Shows what you've spent this billing cycle, using your Cursor login. It's read from the Cursor app for each check and sent only to Cursor. Nothing is saved. These are Cursor's private calls, so on a work account check that your company allows it.</p>
+    <div class="row"><button class="primary" data-usage="cost-on">Show my cost</button></div>`;
+  const c = STATE.cost, at =c.checked ? new Date(c.checked * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  if (c.mode === 'login') {
+    const resets = c.resets && !isNaN(new Date(c.resets)) ? ' · resets ' + new Date(c.resets).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';   // midnight UTC, as Cursor's page shows it
+    return `<button class="x" data-usage="close" title="Close">✕</button>
+      <h3>Cursor cost</h3>
+      <div class="when">This billing cycle${esc(resets)}${at ? ' · checked at ' + esc(at) : ''}</div>
+      ${c.checked ? `<table><tbody><tr><td><b>Spent</b>${c.limit ? ` <span class="sub">of ${fmtCost(c.limit / 100)}</span>` : ''}</td><td class="cost">${fmtCost(c.cents / 100)}</td></tr></tbody></table>`
+        : `<div class="empty">${c.error ? 'No number yet.' : 'Checking…'}</div>`}
+      ${c.error ? `<p class="note">${esc(c.error)}. It tries again every 15 minutes.</p>` : ''}
+      <p class="note">Through your Cursor login, read from the Cursor app for each check and sent only to Cursor. Nothing is saved. Turn it off in Settings.</p>`;
+  }
+  return `<button class="x" data-usage="close" title="Close">✕</button>
+    <h3>Cursor cost</h3>
+    <div class="when">Today (Eastern) · starts over at midnight${at ? ' · checked at ' + esc(at) : ''}</div>
+    ${c.checked ? `<table><tbody><tr><td><b>Charged today</b></td><td class="cost">${fmtCost(c.cents / 100)}</td></tr></tbody></table>`
+      : `<div class="empty">${c.email ? 'Waiting for the first check.' : 'Waiting for Cursor to say who you are: send it a prompt.'}</div>`}
+    ${c.error ? `<p class="note">${esc(c.error)}. It tries again every hour.</p>` : ''}
+    <p class="note">From Cursor's Team Admin API, checked once an hour, so it can run behind what you've just used.</p>`;
+}
 function usageCardHtml() {
+  if (PRODUCT === 'Cursor') return cursorCostHtml();
   const u = (STATE && STATE.usage) || { models: [] }, t = usageTotals();
   const day = u.day ? new Date(u.day + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Today';
   const since = u.since ? ' · since your reset at ' + new Date(u.since * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
@@ -8711,7 +8771,10 @@ function render() {
   if (!online) {
     RR(W / 2 - 230, 120, 460, 54, 10, 'rgba(20,22,28,.92)', '#ef4444', 2);
     TXT('The office server is closed', W / 2, 138, 'bold 16px system-ui', '#fff');
-    TXT(ON_MAC ? 'Start it with ClaudeOffice.app or python3 src/server.py. This page reconnects by itself.' : 'Start it with ClaudeOffice.exe or scripts\\start.bat. This page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
+    const startIt = PRODUCT === 'Cursor'
+      ? (ON_MAC ? 'Start it with Open Cursor Office.command or python3 src/server.py --cursor.' : 'Start it with Open Cursor Office.bat or scripts\\start_cursor.bat.')
+      : (ON_MAC ? 'Start it with ClaudeOffice.app or python3 src/server.py.' : 'Start it with ClaudeOffice.exe or scripts\\start.bat.');
+    TXT(startIt + ' This page reconnects by itself.', W / 2, 158, '12px system-ui', '#cfd3dd');
   }
 }
 let last = performance.now();
@@ -8755,9 +8818,11 @@ cv.addEventListener('click', e => {
   if (!w && meterAt(e)) { showUsageCard($('#usageCard').hidden); return; }
   selected = w === selected ? null : w; selectUntil = 0;
 });
+$('#optCursorCost').addEventListener('change', e => cmd({ cmd: 'cursor-cost', on: e.target.checked }));
 $('#usageCard').addEventListener('click', async e => {
   const b = e.target.closest('button[data-usage]'); if (!b) return;
   if (b.dataset.usage === 'close') showUsageCard(false);
+  if (b.dataset.usage === 'cost-on') await cmd({ cmd: 'cursor-cost', on: true });
   if (b.dataset.usage === 'reset' && confirm("Start today's token count over from now?")) await cmd({ cmd: 'usage-reset' });
 });
 addEventListener('keydown', e => { if (e.key === 'Escape') showUsageCard(false); });
@@ -8767,8 +8832,21 @@ addEventListener('keydown', e => { if (e.key === 'Escape') showUsageCard(false);
 // ============================================================================================
 let STATE = null, rev = 0, firstLoad = true, skew = 0;
 const JOBS = {}, prevStatus = {};
+function setProduct(name) {   // which tool this office watches: the Claude and Cursor offices are separate processes
+  if (!name || name === PRODUCT) return;
+  PRODUCT = name;
+  $('#officeName').textContent = `${name} Office`;
+  $('#clockInName').textContent = name;
+  $('#connectCursor').hidden = name !== 'Cursor';
+  $('#connectClaude').hidden = name === 'Cursor';
+  if (name === 'Cursor') $('#logo').innerHTML = CUBE_SVG;
+  updateTitle();
+}
 function apply(s) {
   rev = s.rev; skew = s.now - Date.now() / 1000;
+  setProduct(s.product);
+  $('#optCursorCostRow').hidden = s.product !== 'Cursor' || !!(s.cost && s.cost.mode === 'key');   // a Team API key already covers it
+  $('#optCursorCost').checked = !!s.cost;
   if (!workers.length) initWorkers(s.roster);
   STATE = s;
   const seenIds = new Set();

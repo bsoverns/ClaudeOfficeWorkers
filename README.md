@@ -3,7 +3,8 @@
 [![Build](https://github.com/bsoverns/ClaudeOfficeWorkers/actions/workflows/build.yml/badge.svg)](https://github.com/bsoverns/ClaudeOfficeWorkers/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/bsoverns/ClaudeOfficeWorkers?label=download)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest)
 
-An animated office that shows what Claude Code is doing, so you notice when it's done.
+An animated office that shows what Claude Code is doing, so you notice when it's done. Cursor can
+have an [office of its own](#cursor-office), running as a separate process.
 
 ## Download
 
@@ -28,6 +29,12 @@ For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3
 2. Double-click **Connect Claude Code.command** (then restart open Claude Code sessions).
 3. Open **ClaudeOffice.app**. It uses Chrome, Edge, Brave, Chromium or Vivaldi for its own
    window, or your default browser if none of those is installed.
+
+**Using Cursor?** It has [its own office](#cursor-office), as a separate download:
+**[⬇ CursorOffice.zip](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice.zip)** (Windows) or
+**[⬇ CursorOffice-mac.zip](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice-mac.zip)** (Mac).
+The steps are the same: unzip it somewhere it can stay, run **Connect Cursor** once, then open **CursorOffice**.
+These links work once this version has been released.
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
 machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
@@ -72,7 +79,8 @@ paths go around tables, counters and station equipment, and only step onto a cou
 chair to sit on it.
 
 Everything is drawn in code (no images or libraries) and runs on your own PC: prompts and
-tool activity go only to the local server on `127.0.0.1`, never anywhere else.
+tool activity go only to the local server on `127.0.0.1`, never anywhere else. (The only internet use is the Cursor office's
+[optional cost check](#cursor-office), and only if you turn it on.)
 
 ## Cost and privacy
 
@@ -372,14 +380,15 @@ Tip: open it as its own window on a second screen, e.g. `msedge --app=http://127
 
 ## Standalone app (no Python on the target PC)
 
-`scripts\build.bat` builds `dist\ClaudeOffice\ClaudeOffice.exe` and `dist\ClaudeOffice.zip`
-(it installs PyInstaller, needed only on the PC that builds). `build/` and `dist/` are
+`scripts\build.bat` builds `dist\ClaudeOffice\ClaudeOffice.exe` and `dist\ClaudeOffice.zip`, and
+`dist\CursorOffice\CursorOffice.exe` and `dist\CursorOffice.zip` for the [Cursor office](#cursor-office) with its own cube icon
+(`scripts\build.bat cursor` builds only that one). It installs PyInstaller, needed only on the PC that builds. `build/` and `dist/` are
 git-ignored; rebuild rather than committing them.
 
 ### Mac app
 
 `scripts/build_mac.sh` builds `dist/ClaudeOffice-mac/ClaudeOffice.app` and
-`dist/ClaudeOffice-mac.zip`. There's no PyInstaller: the app is a small bash launcher
+`dist/ClaudeOffice-mac.zip`, and the same for `CursorOffice` (launcher `package/mac/CursorOffice`). There's no PyInstaller: the app is a small bash launcher
 (`package/mac/ClaudeOffice`) that finds `python3` (Homebrew first, then the system one) and runs
 `src/app.py`, which ships inside the app with `index.html`. It runs on any machine with `python3`
 and `zip`. `VERSION=2026.10.20.1 scripts/build_mac.sh` stamps a version. The app takes the same
@@ -406,8 +415,8 @@ launcher. The two builds run in parallel and neither waits for the other; both z
 attached to the run as artifacts. When a change is merged to `main`:
 
 1. A first job stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
-2. Once both builds pass, a release job creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip` and
-   `ClaudeOffice-mac.zip` attached; the release notes are generated from the pull requests merged
+2. Once both builds pass, a release job creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip`,
+   `ClaudeOffice-mac.zip`, `CursorOffice.zip` and `CursorOffice-mac.zip` attached; the release notes are generated from the pull requests merged
    since the last release, so give PRs clear titles.
 
 `.github/workflows/auto-assign.yml` assigns every new PR to the repository owner.
@@ -428,10 +437,94 @@ ClaudeOffice.exe cmd <src\office.py args> e.g. cmd demo, cmd list
 The zip includes `Connect Claude Code.bat` / `Disconnect Claude Code.bat`. Installing exe
 hooks replaces Python hooks and vice versa. Rebuild after changing anything in `src/`.
 
+`CursorOffice.exe` is the same for the Cursor office, on port 8778, and its zip has `Connect Cursor.bat`,
+`Disconnect Cursor.bat` and `Check Cursor Cost.bat`:
+
+```
+CursorOffice.exe                      open the Cursor office in its own window
+CursorOffice.exe --server [port]      server only, no window
+CursorOffice.exe --install [--project C:\repo] [--uninstall]
+CursorOffice.exe --hook               what Cursor runs for each event (the installed hooks use --cursor-hook, the same thing)
+CursorOffice.exe --cost-check         what the cost screen finds on this PC (no secrets in it)
+CursorOffice.exe cmd <src\office.py args> e.g. cmd demo, against this office
+```
+
 ## Connect Claude Code
 
 See [docs/CONNECT_A_PROJECT.md](docs/CONNECT_A_PROJECT.md): install the hooks once for every project
 (`py src\install_hooks.py`) or per project with a paste-in prompt (`--project`).
+
+## Cursor office
+
+Cursor gets its own office: a second, separate program, `CursorOffice.exe` / `CursorOffice.app`, with its own port, jobs, window and icon, so the two
+tools never mix. Run either one or both.
+
+| | Claude Code | Cursor |
+|---|---|---|
+| Port (env) | 8777 (`CLAUDE_OFFICE_PORT`) | 8778 (`CURSOR_OFFICE_PORT`) |
+| Connect | `Connect Claude Code.bat`, `py src\install_hooks.py` | `Connect Cursor.bat`, `py src\install_cursor_hooks.py` |
+| Open | `ClaudeOffice.exe`, `scripts\start.bat` | `CursorOffice.exe`, `scripts\start_cursor.bat` |
+| Hook | `src/claude_hook.py` (`--hook`) | `src/cursor_hook.py` (`--cursor-hook`) |
+| Hooks live in | `~/.claude/settings.json` | `~/.cursor/hooks.json` |
+| Saved jobs | `state.json` | `state-8778.json` |
+
+Both offices are built from the same code (`server.py --cursor` is the second one, and `src/cursor_app.py` is `CursorOffice.exe`'s entry point), so themes and animation
+stay the same. The Cursor office's page says Cursor in its labels, its boss has a dark cube for a head (with CURSOR on the
+desk plate and a cube-and-pointer logo on the laptop, in the side panel, on the browser tab and on the exe) and its help desk has one screen, for cost (below), with no token meter. On a Mac, use
+the `.command` files with the same names and `CursorOffice.app`, or `python3 src/server.py --cursor`.
+
+Moved here from a build where the Cursor office ran from `ClaudeOffice.exe`? Run `Connect Cursor.bat` again: Cursor's hooks name the exe, and connecting replaces the old ones.
+
+What the Cursor office shows differently, because of what Cursor's hooks can report:
+
+- **The bubble shows the last finished tool**, not the one running. `postToolUse` is used because
+  `preToolUse` can block: on Cursor's permission hooks, bad output from a hook blocks the action, and an
+  "allow" could skip an approval you'd otherwise be asked for. The office never installs a permission hook.
+- **No helpers.** `subagentStart` is a permission hook too, so a subagent's work isn't shown as its own character.
+- **No mailroom trip for approvals.** Cursor has no event for "waiting for permission"; the worker
+  goes to the mailroom when Cursor stops.
+- **The slip shows your first prompt**, not the chat's name: the hook doesn't read Cursor's transcripts.
+
+**Speed: workers start about a second after you send a prompt, sometimes more.** On Windows, Cursor runs each hook through
+PowerShell and a new process starts for every event. Measured on a home PC: PowerShell alone about 590 ms, the hook about 260 ms
+(exe or Python), about 940 ms together. Most of that is PowerShell, which Cursor chooses, so it can't be tuned from here.
+Antivirus and company PowerShell policies can make it longer on a work PC. The hook posts over a plain socket and skips
+loading `urllib` to keep its part small. With the office closed a post can take up to another half second before it gives up.
+To time it, run the hook from Python with `subprocess.run`: PowerShell's `Start-Process -Wait` reads about 1 second whatever it runs.
+
+**Cost (optional, off by default).** Cursor's hooks report no tokens or cost, so the help desk screen says **MY COST / OFF** until you turn this on. Two ways:
+
+*Your Cursor login.* Click that screen and press **Show my cost**, or tick **Show my Cursor cost** in the office's Settings. It's remembered (`cursor-cost.json` beside the saved
+jobs), so it's on whenever the office starts. The screen then shows what you've spent this billing cycle, the number on Cursor's
+Settings → Plan & Usage page; click it for your limit and the reset date. It checks every 15 minutes. You don't log in to the office and it stores no
+login: for each check it reads the token the Cursor app keeps in `state.vscdb` (read-only), and sends it only to `cursor.com` and
+`api2.cursor.sh`, the addresses Cursor itself uses. It won't follow a redirect with it, and it's never written to a file, a log or the page.
+
+Know what this is: **these are Cursor's private calls, not a documented API**, found by reading open-source tools such as
+[CodexBar](https://github.com/steipete/CodexBar), so an update to Cursor can break them. It also has another program reuse your login token, so on a work
+account check that your company allows it. If the screen shows ERROR or a wrong number, run `Check Cursor Cost.bat`
+(`CursorOffice.exe --cost-check`): it writes what it finds to `cursor-cost-check.txt`, your own amounts and field names only, with no login, email, ids or team spend.
+
+*A Team API key.* The documented route, which shows today's cost instead and wins if both are on. Your Cursor admin may have to create the key. Set it once, then reopen the Cursor office:
+
+```
+setx CURSOR_ADMIN_KEY "your-key"
+```
+
+The screen then shows your cost today (Eastern time, charged cents added up from Cursor's Team Admin API,
+`/teams/filtered-usage-events`); click it for when it was last checked. It checks once an hour, as Cursor asks, so it can run behind.
+With a key set, the Cursor office's server sends the key and your email
+to `api.cursor.com`. It only ever asks for your own email (the one
+Cursor's hooks report, or `CURSOR_COST_EMAIL` to set it yourself), never the whole team. Nothing is saved. The key sits in your user
+environment variables in plain text, and `setx CURSOR_ADMIN_KEY ""` turns cost off.
+
+**Either way, these are the only things in the office that use the internet**, and no prompts or tool activity are sent. The Claude office
+never does any of this; it keeps its own token meter from local transcripts.
+
+**Cursor can also load Claude Code's hooks** (a third-party hooks feature). If it does, `claude_hook.py`
+sees Cursor's `cursor_version` field and drops the event, so Cursor work stays out of the Claude office.
+
+Tested with simulated events built from Cursor's hooks docs (`py tests\sim_cursor_hooks.py`) and the built exe through PowerShell, not yet against Cursor itself.
 
 ## Test from a command prompt
 
@@ -449,7 +542,8 @@ py src\office.py demo            (a 90-second show with three workers)
 `py tests\sim_hooks.py` simulates Claude Code sessions through the real hook script against a test
 office on port 8790 (it starts one if needed) and checks session names on the slips and that a
 team lead waits for its helpers in the meeting room, and that each subagent keeps its own
-character. It prints `all passed` or the failures.
+character. It prints `all passed` or the failures. `py tests\sim_cursor_hooks.py` does the same for the
+Cursor hook and installer on port 8791. To send `office.py` to the Cursor office, set `CLAUDE_OFFICE_PORT=8778` for that command.
 
 ## Settings (right-hand panel)
 
@@ -511,19 +605,25 @@ src/                     the program
   index.html             the animated office, themes and side panel (canvas, no libraries)
   claude_hook.py         Claude Code hook: forwards trimmed events to the server; silent, always exits 0
   install_hooks.py       adds/removes the hooks in ~/.claude/settings.json or a project's settings.local.json
+  cursor_hook.py         Cursor hook: translates events for the Cursor office; replies with harmless JSON, always exits 0
+  install_cursor_hooks.py  adds/removes the hooks in ~/.cursor/hooks.json or a project's .cursor/hooks.json
   office.py              command-line control for testing
   app.py                 entry point of the standalone exe and the Mac app (window, --hook, --install, cmd)
+  cursor_app.py          the same for CursorOffice.exe and CursorOffice.app: runs app.py as the Cursor office
 scripts/                 scripts you run
   start.bat              starts the server and opens the page
-  build.bat              builds dist/ClaudeOffice/ClaudeOffice.exe and dist/ClaudeOffice.zip
-  build_mac.sh           builds dist/ClaudeOffice-mac/ClaudeOffice.app and dist/ClaudeOffice-mac.zip
-package/                 shipped inside the zip next to the exe
-  Connect Claude Code.bat, Disconnect Claude Code.bat
-  mac/                   the Mac app's launcher, Info.plist and Connect/Disconnect .command files
+  start_cursor.bat       the same for the Cursor office (port 8778)
+  build.bat              builds ClaudeOffice.exe and CursorOffice.exe in dist/, each with its zip
+  build_mac.sh           builds ClaudeOffice.app and CursorOffice.app in dist/, each with its zip
+package/                 shipped inside the zips next to the exe
+  Connect Claude Code.bat, Disconnect Claude Code.bat   (ClaudeOffice.zip)
+  Connect Cursor.bat, Disconnect Cursor.bat, Check Cursor Cost.bat   (CursorOffice.zip)
+  mac/                   the Mac apps' launchers, Info.plist and the same Connect/Disconnect files as .command
 tools/
-  make_icon.py           draws office.ico for the build (office.icns with --icns)
+  make_icon.py           draws office.ico for the build (office.icns with --icns; the Cursor cube with --cursor)
 tests/
   sim_hooks.py           simulated sessions through the hook against a test office on port 8790
+  sim_cursor_hooks.py    simulated Cursor chats, the installer and PowerShell piping against a test office on port 8791
 docs/
   CONNECT_A_PROJECT.md   setup for a new PC, global or per-project, with a paste-in prompt
 .github/                 CI build + release, PR auto-assign, CODEOWNERS
