@@ -30,6 +30,12 @@ For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3
 3. Open **ClaudeOffice.app**. It uses Chrome, Edge, Brave, Chromium or Vivaldi for its own
    window, or your default browser if none of those is installed.
 
+**Using Cursor?** It has [its own office](#cursor-office), as a separate download:
+**[⬇ CursorOffice.zip](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice.zip)** (Windows) or
+**[⬇ CursorOffice-mac.zip](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice-mac.zip)** (Mac).
+The steps are the same: unzip it somewhere it can stay, run **Connect Cursor** once, then open **CursorOffice**.
+These links work once this version has been released.
+
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
 machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
 boss (Claude, at the big desk) pages a worker over the PA; they walk to the boss for a work
