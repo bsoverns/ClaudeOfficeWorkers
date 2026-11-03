@@ -1,0 +1,16 @@
+#!/bin/bash
+# Usage Widget launcher for macOS. Runs the widget with the Mac's own Python 3, which must have tkinter:
+# Homebrew's only does after `brew install python-tk`, and Apple's has an old Tk, so a Python with Tk 8.6 or newer wins.
+HERE="$(cd "$(dirname "$0")/../Resources/UsageWidget" && pwd)"
+export TK_SILENCE_DEPRECATION=1
+PY=""
+for need in 8.6 8.5; do
+  for c in /opt/homebrew/bin/python3 /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/Current/bin/python3 /usr/bin/python3; do
+    if [ -x "$c" ] && "$c" -c "import sys, tkinter; sys.exit(sys.version_info < (3, 9) or tkinter.TkVersion < $need)" >/dev/null 2>&1; then PY="$c"; break 2; fi
+  done
+done
+if [ -z "$PY" ]; then
+  osascript -e 'display dialog "Usage Widget needs Python 3.9 or newer with tkinter.\n\nInstall Python from python.org (it includes tkinter), or if you use Homebrew, run this in Terminal:  brew install python-tk\n\nThen open Usage Widget again." with title "Usage Widget" buttons {"OK"} default button 1 with icon caution' >/dev/null 2>&1
+  exit 1
+fi
+exec "$PY" "$HERE/usage_widget.py" "$@"

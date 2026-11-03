@@ -1,7 +1,8 @@
 r"""UsageWidget.exe: a little always-on-top window with today's Claude tokens and cost and your Cursor spend.
 
-A separate program: it needs neither office open and installs no hooks. Built by scripts/build.bat,
-or run unbuilt with `py src/usage_widget.py`. Drag it anywhere; right-click for its menu.
+A separate program: it needs neither office open and installs no hooks. Built by scripts/build.bat, or on a Mac
+as UsageWidget.app by scripts/build_mac.sh (which needs a Python with tkinter; see package/mac/UsageWidget).
+Runs unbuilt with `py src/usage_widget.py`. Drag it anywhere; right-click for its menu.
 
 Claude: every transcript under ~/.claude/projects (or CLAUDE_CONFIG_DIR) touched today, counted by the
 office's own Usage code, so the same prices and the same day (Eastern time). Local file reads only.
@@ -29,6 +30,9 @@ DRAW_MS = 2000         # how often the window redraws what the background thread
 ONE_COPY_PORT = 8779   # held while the widget runs, so a second copy just exits
 BG, FG, DIM, LINE = "#1f1f23", "#f4f5f7", "#9a9ca5", "#3a3a42"
 CLAUDE_COLOR, CURSOR_COLOR = "#d97757", "#8f96a3"
+FONT = "Helvetica Neue" if sys.platform == "darwin" else "Segoe UI"
+# Right-click is button 3 on Windows; on a Mac it's button 2, or Control-click on a one-button mouse
+MENU_CLICKS = ("<Button-2>", "<Button-3>", "<Control-Button-1>") if sys.platform == "darwin" else ("<Button-3>",)
 
 
 class AllClaude(server.Usage):
@@ -112,7 +116,7 @@ class Widget:
         self.bar = tk.Canvas(body, height=3, bg=LINE, highlightthickness=0)
         self.bar_fill = self.bar.create_rectangle(0, 0, 0, 3, fill=CURSOR_COLOR, width=0)
 
-        close = tk.Label(body, text="×", bg=BG, fg=DIM, font=("Segoe UI", 9), padx=2, cursor="hand2")
+        close = tk.Label(body, text="×", bg=BG, fg=DIM, font=(FONT, 9), padx=2, cursor="hand2")
         close.grid(row=0, column=3, sticky="ne", padx=(6, 0))
         close.bind("<Button-1>", lambda _e: root.destroy())
 
@@ -133,13 +137,13 @@ class Widget:
     def _row(self, row: int, name: str, color: str, when: str) -> tuple[tk.Label, tk.Label, tk.Label]:
         head = tk.Frame(self.body, bg=BG)
         head.grid(row=row, column=0, sticky="w")
-        tk.Label(head, text="●", bg=BG, fg=color, font=("Segoe UI", 8)).pack(side="left")
-        tk.Label(head, text=name, bg=BG, fg=FG, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(3, 4))
-        when_label = tk.Label(head, text=when, bg=BG, fg=DIM, font=("Segoe UI", 8))
+        tk.Label(head, text="●", bg=BG, fg=color, font=(FONT, 8)).pack(side="left")
+        tk.Label(head, text=name, bg=BG, fg=FG, font=(FONT, 10, "bold")).pack(side="left", padx=(3, 4))
+        when_label = tk.Label(head, text=when, bg=BG, fg=DIM, font=(FONT, 8))
         when_label.pack(side="left")
-        amount = tk.Label(self.body, bg=BG, fg=FG, font=("Segoe UI", 11, "bold"))
+        amount = tk.Label(self.body, bg=BG, fg=FG, font=(FONT, 11, "bold"))
         amount.grid(row=row, column=1, sticky="e", padx=(14, 0))
-        detail = tk.Label(self.body, bg=BG, fg=DIM, font=("Segoe UI", 8), wraplength=205, justify="left")
+        detail = tk.Label(self.body, bg=BG, fg=DIM, font=(FONT, 8), wraplength=205, justify="left")
         detail.grid(row=row + 1, column=0, columnspan=3, sticky="w")
         return when_label, amount, detail
 
@@ -148,7 +152,8 @@ class Widget:
             widget.bind("<ButtonPress-1>", self._drag_start)
             widget.bind("<B1-Motion>", self._drag)
             widget.bind("<ButtonRelease-1>", lambda _e: self._save())
-            widget.bind("<Button-3>", lambda e: self.menu.tk_popup(e.x_root, e.y_root))
+            for click in MENU_CLICKS:
+                widget.bind(click, lambda e: self.menu.tk_popup(e.x_root, e.y_root))
         for child in widget.winfo_children():
             if not isinstance(child, tk.Menu):
                 self._bind_all(child, close)

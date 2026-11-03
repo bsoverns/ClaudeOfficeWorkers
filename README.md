@@ -61,6 +61,15 @@ For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3
 For 64-bit Windows, with no Python needed. A small always-on-top window with today's Claude tokens and cost and your
 Cursor spend. It needs no setup and neither office: unzip it and open **UsageWidget.exe**. See [Usage Widget](#usage-widget).
 
+**[⬇ Download UsageWidget-mac.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/UsageWidget-mac.zip)**
+
+For macOS 11 or newer. It runs on a Python 3.9 or newer on your Mac that has `tkinter`: the one from [python.org](https://www.python.org/downloads/) does, and with Homebrew run
+`brew install python-tk`. Unzip it somewhere it can stay, e.g. `/Applications/UsageWidget-mac`, then:
+
+1. The app isn't signed, so clear the download flag once in Terminal:
+   `xattr -dr com.apple.quarantine /Applications/UsageWidget-mac` (use your folder's path).
+2. Open **UsageWidget.app**.
+
 ### What you get
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
@@ -419,7 +428,7 @@ A build on `main` also copies the widget to `..\@ActiveInProduction\UsageWidget`
 ### Mac app
 
 `scripts/build_mac.sh` builds `dist/ClaudeOffice-mac/ClaudeOffice.app` and
-`dist/ClaudeOffice-mac.zip`, and the same for `CursorOffice` (launcher `package/mac/CursorOffice`). There's no PyInstaller: the app is a small bash launcher
+`dist/ClaudeOffice-mac.zip`, and the same for `CursorOffice` (launcher `package/mac/CursorOffice`) and the [Usage Widget](#usage-widget) (`package/mac/UsageWidget`, which also looks for a Python with `tkinter`). There's no PyInstaller: the app is a small bash launcher
 (`package/mac/ClaudeOffice`) that finds `python3` (Homebrew first, then the system one) and runs
 `src/app.py`, which ships inside the app with `index.html`. It runs on any machine with `python3`
 and `zip`. `VERSION=2026.10.20.1 scripts/build_mac.sh` stamps a version. The app takes the same
@@ -441,13 +450,13 @@ the quarantine flag is cleared (see Download).
 `.github/workflows/build.yml` runs on every pull request: it compiles the Python, builds the
 exes with the same steps as `scripts\build.bat`, and smoke-tests them (starts the built server, sends one
 Claude hook event through `ClaudeOffice.exe --hook`, and checks the job arrives with the right
-work area; `UsageWidget.exe` just has to start). A macOS job runs `scripts/build_mac.sh` and the same smoke test through the app's
-launcher. The two builds run in parallel and neither waits for the other; both zips are
+work area; `UsageWidget` just has to start). A macOS job runs `scripts/build_mac.sh` and the same smoke tests through the apps'
+launchers. The two builds run in parallel and neither waits for the other; both zips are
 attached to the run as artifacts. When a change is merged to `main`:
 
 1. A first job stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
 2. Once both builds pass, a release job creates a GitHub Release tagged `v<version>` with `ClaudeOffice.zip`,
-   `ClaudeOffice-mac.zip`, `CursorOffice.zip`, `CursorOffice-mac.zip` and `UsageWidget.zip` attached; the release notes are generated from the pull requests merged
+   `ClaudeOffice-mac.zip`, `CursorOffice.zip`, `CursorOffice-mac.zip`, `UsageWidget.zip` and `UsageWidget-mac.zip` attached; the release notes are generated from the pull requests merged
    since the last release, so give PRs clear titles.
 
 `.github/workflows/auto-assign.yml` assigns every new PR to the repository owner.
@@ -616,10 +625,11 @@ count over from now; **Esc** or ✕ closes the card.
 
 ## Usage Widget
 
-`UsageWidget.exe` is a third, separate program: a small always-on-top window with no title bar. It needs neither office open
-and installs no hooks. Drag it anywhere (it remembers the spot in `usage-widget.json`, beside the office's saved jobs), close it with the ×, and right-click it for
-**Always on top**, **Show my Cursor cost**, **Check Cursor now** and **Exit**. Only one copy runs at a time; it holds port 8779 to tell. Unbuilt, it's `py src\usage_widget.py`, which
-should also work on a Mac whose Python has `tkinter`, but there's no Mac build and it hasn't been tried there.
+`UsageWidget.exe` / `UsageWidget.app` is a third, separate program: a small always-on-top window with no title bar. It needs neither office open
+and installs no hooks. Drag it anywhere (it remembers the spot in `usage-widget.json`, beside the office's saved jobs), close it with the ×, and right-click it (Control-click on a Mac also works) for
+**Always on top**, **Show my Cursor cost**, **Check Cursor now** and **Exit**. Only one copy runs at a time; it holds port 8779 to tell. Unbuilt, it's `py src\usage_widget.py`, or `python3 src/usage_widget.py` on a Mac.
+
+On a Mac it uses a Python with `tkinter`, preferring Tk 8.6 or newer. Apple's own Python has an older Tk, which it only falls back to and which can draw windows badly; if that happens, install Python from python.org. With no such Python at all, it tells you what to install.
 
 - **Claude:** today's cost and tokens, from every transcript under `~/.claude/projects` (or `CLAUDE_CONFIG_DIR`) changed today, looked at every 15 seconds. It uses the [token meter](#token-meter)'s
   counting and prices, so the same rules apply: API list prices, the day in Eastern time, and "in" includes cache writes and reads. It reads local files only and keeps only counts, in memory.
@@ -663,7 +673,7 @@ scripts/                 scripts you run
   start_cursor.bat       the same for the Cursor office (port 8778)
   build.bat              builds ClaudeOffice.exe, CursorOffice.exe and UsageWidget.exe in dist/, each with its zip
   copy_widget.ps1        run by build.bat on main: copies the widget to ..\@ActiveInProduction\UsageWidget
-  build_mac.sh           builds ClaudeOffice.app and CursorOffice.app in dist/, each with its zip
+  build_mac.sh           builds ClaudeOffice.app, CursorOffice.app and UsageWidget.app in dist/, each with its zip
 package/                 shipped inside the zips next to the exe
   Connect Claude Code.bat, Disconnect Claude Code.bat   (ClaudeOffice.zip)
   Connect Cursor.bat, Disconnect Cursor.bat, Check Cursor Cost.bat   (CursorOffice.zip)

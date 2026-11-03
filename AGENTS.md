@@ -8,7 +8,7 @@ Claude Office Workers: an animated office that shows what Claude Code sessions a
 `src/server.py` (Python standard library, `http.server`) holds the jobs and worker rotation and
 serves `src/index.html`, a single canvas page with no libraries. Claude Code reaches it through
 hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). Cursor has its own office, a separate process of the
-same server, fed by `src/cursor_hook.py` and built as its own program, `CursorOffice.exe` (`src/cursor_app.py`). `UsageWidget.exe` (`src/usage_widget.py`) is a third program:
+same server, fed by `src/cursor_hook.py` and built as its own program, `CursorOffice.exe` (`src/cursor_app.py`). `UsageWidget.exe` / `UsageWidget.app` (`src/usage_widget.py`) is a third program:
 a small `tkinter` window with today's Claude tokens and cost and your Cursor spend, reusing `Usage` and `CursorCost` from `server.py`. See `README.md` (its Files section maps the folders).
 
 ## Commands
