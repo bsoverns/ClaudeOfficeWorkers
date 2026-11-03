@@ -31,25 +31,6 @@ BG, FG, DIM, LINE = "#1f1f23", "#f4f5f7", "#9a9ca5", "#3a3a42"
 CLAUDE_COLOR, CURSOR_COLOR = "#d97757", "#8f96a3"
 
 
-class AllClaude(server.Usage):
-    """The office's Usage, but reading every transcript touched today instead of waiting for hooks."""
-
-    def scan_all(self) -> None:
-        root = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "projects")
-        now = time.time()
-        midnight = now - (now + server.eastern_offset(now) * 3600) % 86400
-        for folder, _, names in os.walk(root):
-            for name in names:
-                path = os.path.join(folder, name)
-                try:
-                    if name.endswith(".jsonl") and os.path.getmtime(path) >= midnight:
-                        with self.lock:
-                            self._roll()
-                            self._read(path)
-                except OSError:
-                    pass
-
-
 def short_tokens(n: int) -> str:
     if n >= 1_000_000:
         return f"{n / 1_000_000:.1f}M"
@@ -211,11 +192,10 @@ class Widget:
         self._draw()
 
     def _watch_claude(self) -> None:
-        usage = AllClaude()
         while True:
             try:
-                usage.scan_all()
-                self.claude = usage.public()
+                server.USAGE.scan_today()
+                self.claude = server.USAGE.public()
             except Exception:      # a transcript in a shape we don't expect: try again next time
                 pass
             time.sleep(CLAUDE_SECONDS)

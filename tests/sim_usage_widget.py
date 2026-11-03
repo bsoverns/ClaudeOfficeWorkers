@@ -37,8 +37,8 @@ with open(stale, "w") as f:
     f.write(rec("skipped-file") + "\n")
 os.utime(stale, (time.time() - 3 * 86400,) * 2)                    # not touched today: never opened
 
-u = w.AllClaude()
-u.scan_all()
+u = w.server.Usage()
+assert u.scan_today() is True
 pub = u.public()
 models = {m["model"]: m for m in pub["models"]}
 assert set(models) == {"claude-opus-5-5", "claude-sonnet-5-5"}, models
@@ -51,15 +51,23 @@ assert w.claude_lines(pub) == (f"${opus + sonnet:,.2f}", "5.0K in · 1.5K out")
 # a line added later is picked up, and a repeat scan doesn't double count
 with open(os.path.join(proj, "sess.jsonl"), "a") as f:
     f.write(rec("c", out=100) + "\n")
-u.scan_all()
-u.scan_all()
+assert u.scan_today() is True
+assert u.scan_today() is False
 assert {m["model"]: m["messages"] for m in u.public()["models"]}["claude-opus-5-5"] == 2
+
+# a reset lasts while the office is open; opening it again counts all of today
+u.reset()
+u.scan_today()
+assert u.public()["models"] == []
+reopened = w.server.Usage()
+reopened.scan_today()
+assert {m["model"]: m["messages"] for m in reopened.public()["models"]}["claude-opus-5-5"] == 2
 
 # an unpriced model still counts tokens and marks the cost
 with open(os.path.join(proj, "sess.jsonl"), "a") as f:
     f.write(rec("d", model="claude-new-9") + "\n")
-u.scan_all()
-assert w.claude_lines(u.public())[0].endswith("+")
+reopened.scan_today()
+assert w.claude_lines(reopened.public())[0].endswith("+")
 assert w.claude_lines(None)[0] == "…"
 
 assert w.short_tokens(999) == "999" and w.short_tokens(1500) == "1.5K" and w.short_tokens(2_500_000) == "2.5M"

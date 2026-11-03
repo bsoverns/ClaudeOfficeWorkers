@@ -597,20 +597,21 @@ The front of the help desk counter (in every theme) has two small screens: today
 left, today's input and output tokens on the right. A "+$0.04" floats up when the cost grows.
 Click either screen for the details card: each model's replies, input tokens (split into new
 input, cache writes and cache reads), output tokens and cost, plus a total. **Reset** starts the
-count over from now; **Esc** or ✕ closes the card.
+count over from now until you close the office; **Esc** or ✕ closes the card.
 
 - **Where the numbers come from:** Claude Code writes each reply's model and token counts to the
-  session's transcript. Whenever a session's hook reports in, the server reads the lines added
-  to that transcript (and its subagents' transcripts) since it last looked, and counts each
-  reply once. The test buttons and `office.py` have no transcript, so they never count.
+  session's transcript. When the office opens, the server reads every transcript under `~/.claude/projects` (or `CLAUDE_CONFIG_DIR`)
+  changed today, so closing it doesn't lose today's count. After that, whenever a session's hook reports in, it reads the lines added
+  to that transcript (and its subagents' transcripts) since it last looked. Each
+  reply counts once. The test buttons and `office.py` have no transcript, so they never count.
 - **Today:** the day is US Eastern time (daylight saving included) and starts over at midnight.
 - **Cost** is at Anthropic's API list prices, from the `PRICES` table in `src/server.py`: cache
   writes at 1.25× input (5-minute cache) or 2× (1-hour cache), cache reads at the model's cache
   price, fast mode at 2×, US-only inference at 1.1×. On a Pro or Max plan it's what the same use would cost on the API, not
   what you pay. A model missing from the table counts its tokens but shows "no price" (and the
   total gets a "+"): add it to `PRICES` when a new model comes out or prices change.
-- **Memory only:** nothing is saved. After a restart the office counts today again from the
-  transcripts as each session reports in (a reset is forgotten too).
+- **Memory only:** nothing is saved. Reopening the office counts today again from the
+  transcripts, and a reset is forgotten too. A transcript you've deleted can't be counted.
 
 `py src\office.py usage` prints the same numbers; `py src\office.py usage reset` resets them.
 
@@ -623,7 +624,7 @@ should also work on a Mac whose Python has `tkinter`, but there's no Mac build a
 
 - **Claude:** today's cost and tokens, from every transcript under `~/.claude/projects` (or `CLAUDE_CONFIG_DIR`) changed today, looked at every 15 seconds. It uses the [token meter](#token-meter)'s
   counting and prices, so the same rules apply: API list prices, the day in Eastern time, and "in" includes cache writes and reads. It reads local files only and keeps only counts, in memory.
-  It can show more than the office, which only counts sessions that have reported in since it started.
+  It ignores the office's **Reset**, which only applies inside the office.
 - **Cursor:** your spend this billing cycle, with your limit, its reset date and a bar. It's the Cursor office's [cost check](#cursor-office), with the same rules and the same saved setting (`cursor-cost.json`), so
   it's off until you turn it on here or there. Your login is read fresh for each check and never saved or logged, and it goes only to Cursor. Checks run every 15 minutes. A Team API key (`CURSOR_ADMIN_KEY`) shows today's cost instead;
   set `CURSOR_COST_EMAIL` too, because the widget gets no hooks to learn your email from. Cursor reports no tokens this way, so only the Claude row has them.
