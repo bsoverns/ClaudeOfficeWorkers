@@ -2,9 +2,9 @@ name: Build
 
 # A version job stamps the version once. Then the Mac and Windows builds run in parallel: each
 # compiles the Python, builds ClaudeOffice and CursorOffice (scripts/build_mac.sh, or the same
-# steps as scripts/build.bat), smoke-tests them and uploads the zips. Pushes to main (merged PRs) then
-# run a release job after both builds, which publishes a GitHub Release with the four zips
-# attached and release notes generated from the merged PRs.
+# steps as scripts/build.bat), smoke-tests them and uploads the zips; Windows also builds UsageWidget.
+# Pushes to main (merged PRs) then run a release job after both builds, which publishes a GitHub
+# Release with the five zips attached and release notes generated from the merged PRs.
 
 on:
   push:
@@ -116,9 +116,12 @@ jobs:
           Write-Host "Version: $version"
 
       - name: Check the Python compiles
-        run: python -m py_compile src/app.py src/cursor_app.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py src/install_cursor_hooks.py src/cursor_hook.py tools/make_icon.py
+        run: python -m py_compile src/app.py src/cursor_app.py src/usage_widget.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py src/install_cursor_hooks.py src/cursor_hook.py tools/make_icon.py
 
-      - name: Build ClaudeOffice.exe and CursorOffice.exe (same steps as scripts/build.bat)
+      - name: Check the usage widget's numbers
+        run: python tests/sim_usage_widget.py
+
+      - name: Build ClaudeOffice.exe, CursorOffice.exe and UsageWidget.exe (same steps as scripts/build.bat)
         shell: pwsh
         run: |
           python -m pip install --upgrade pyinstaller
@@ -132,6 +135,26 @@ jobs:
           Copy-Item README.md, LICENSE, docs/CONNECT_A_PROJECT.md, "package/Connect Cursor.bat", "package/Disconnect Cursor.bat", "package/Check Cursor Cost.bat" dist/CursorOffice/
           Set-Content dist/CursorOffice/VERSION.txt "$env:VERSION" -Encoding utf8
           Compress-Archive -Force -Path dist/CursorOffice -DestinationPath dist/CursorOffice.zip
+          python tools/make_icon.py
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name UsageWidget --distpath dist/UsageWidget --icon office.ico src/usage_widget.py
+          Copy-Item README.md, LICENSE dist/UsageWidget/
+          Set-Content dist/UsageWidget/VERSION.txt "$env:VERSION" -Encoding utf8
+          Compress-Archive -Force -Path dist/UsageWidget -DestinationPath dist/UsageWidget.zip
+
+      - name: Smoke test UsageWidget.exe
+        shell: pwsh
+        run: |
+          # It has no API to ask, but it holds port 8779 once everything it bundles has loaded, just before its
+          # window opens. A crash on the way there never takes the port.
+          $widget = Start-Process (Resolve-Path dist/UsageWidget/UsageWidget.exe) -PassThru
+          $up = $false
+          for ($i = 0; $i -lt 60 -and -not $up; $i++) {
+            Start-Sleep -Milliseconds 500
+            $probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 8779)
+            try { $probe.Start(); $probe.Stop() } catch { $up = $true }
+          }
+          Get-Process UsageWidget -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $up) { throw 'Smoke test failed: the widget never started.' }
 
       - name: Smoke test the exe
         shell: pwsh
@@ -195,6 +218,12 @@ jobs:
           name: CursorOffice-win-x64
           path: dist/CursorOffice.zip
 
+      - name: Upload UsageWidget.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: UsageWidget-win-x64
+          path: dist/UsageWidget.zip
+
   release:
     runs-on: ubuntu-latest
     needs: [version, build-mac, build]
@@ -223,6 +252,11 @@ jobs:
           name: CursorOffice-mac
           path: dist
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: UsageWidget-win-x64
+          path: dist
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -237,8 +271,10 @@ jobs:
           **Mac:** `ClaudeOffice-mac.zip` below (uses the Mac's own Python 3.9 or newer). Unzip it somewhere it can stay, run `xattr -dr com.apple.quarantine <that folder>` once in Terminal (the app isn't signed), run **Connect Claude Code.command**, then open **ClaudeOffice.app**.
 
           **Using Cursor?** `CursorOffice.zip` and `CursorOffice-mac.zip` are the same steps for the Cursor office: run **Connect Cursor**, then open **CursorOffice**.
+
+          **Just want the costs?** `UsageWidget.zip` (Windows) is a small always-on-top window with today's Claude tokens and cost and your Cursor spend. Unzip it and open **UsageWidget.exe**; it needs no setup and neither office.
           EOF
-          gh release create "v$VERSION" dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip dist/CursorOffice.zip dist/CursorOffice-mac.zip \
+          gh release create "v$VERSION" dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip dist/CursorOffice.zip dist/CursorOffice-mac.zip dist/UsageWidget.zip \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Claude Office $VERSION" \
