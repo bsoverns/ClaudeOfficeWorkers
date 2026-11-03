@@ -8,16 +8,18 @@ Claude Office Workers: an animated office that shows what Claude Code sessions a
 `src/server.py` (Python standard library, `http.server`) holds the jobs and worker rotation and
 serves `src/index.html`, a single canvas page with no libraries. Claude Code reaches it through
 hooks that run `src/claude_hook.py` (or `ClaudeOffice.exe --hook`). Cursor has its own office, a separate process of the
-same server, fed by `src/cursor_hook.py` and built as its own program, `CursorOffice.exe` (`src/cursor_app.py`). See `README.md` (its Files section maps the folders).
+same server, fed by `src/cursor_hook.py` and built as its own program, `CursorOffice.exe` (`src/cursor_app.py`). `UsageWidget.exe` (`src/usage_widget.py`) is a third program:
+a small `tkinter` window with today's Claude tokens and cost and your Cursor spend, reusing `Usage` and `CursorCost` from `server.py`. See `README.md` (its Files section maps the folders).
 
 ## Commands
 
-- Check: `py -m py_compile src/app.py src/cursor_app.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py src/install_cursor_hooks.py src/cursor_hook.py tools/make_icon.py`
+- Check: `py -m py_compile src/app.py src/cursor_app.py src/usage_widget.py src/server.py src/office.py src/install_hooks.py src/claude_hook.py src/install_cursor_hooks.py src/cursor_hook.py tools/make_icon.py`
 - Run: `py src/server.py 8790` (a spare port; see Testing), page at `http://127.0.0.1:8790/`
 - Demo: `set CLAUDE_OFFICE_PORT=8790` then `py src/office.py demo`
 - Build the exe: `scripts/build.bat` (output in `dist/`, git-ignored). CI (`.github/workflows/build.yml`)
   builds and smoke-tests it on every PR and publishes a GitHub Release on every merge to `main`;
-  keep its build steps in step with `scripts/build.bat`.
+  keep its build steps in step with `scripts/build.bat`. On `main`, `build.bat` also copies the widget to
+  `..\@ActiveInProduction\UsageWidget` if that folder's parent exists (`scripts/copy_widget.ps1`); on a branch it never does.
 - Build the Mac app: `scripts/build_mac.sh` (output in `dist/`; no PyInstaller, runs anywhere with
   `python3` and `zip`). CI builds and smoke-tests it on `macos-latest` and attaches the zip to the release;
   keep the CI step in step with `scripts/build_mac.sh`. Mac-only code paths check `sys.platform == "darwin"`.
@@ -34,10 +36,11 @@ same server, fed by `src/cursor_hook.py` and built as its own program, `CursorOf
   it changes `~/.claude/settings.json` for every session. The same goes for `src/install_cursor_hooks.py` and `~/.cursor/hooks.json`.
 - The Cursor office is a second process (`server.py --cursor`, port 8778; test on 8791). `py tests/sim_cursor_hooks.py`
   covers its hook and installer on port 8791. Run it after changing `cursor_hook.py`, `install_cursor_hooks.py` or `handle_hook`.
+- `py tests/sim_usage_widget.py` checks the widget's numbers on made-up transcripts, with no window or internet. Run it after changing the widget, or `Usage` or `CursorCost` in `server.py`.
 
 ## Rules
 
-- No internet except `CursorCost` in `server.py`: Cursor office only and off until the user turns it on (the help desk screen's button, the Settings checkbox or `CURSOR_ADMIN_KEY`).
+- No internet except `CursorCost` in `server.py`: Cursor office and usage widget only (never the Claude office), and off until the user turns it on (the help desk screen's button, the Settings checkbox, the widget's menu or `CURSOR_ADMIN_KEY`).
   The Team API call must always filter by the user's email. The login route must read the token fresh, never save or log it, send it only to Cursor's own hosts, never follow a redirect with it, and show only the user's own spend (never `teamUsage`).
 - Standard library only for the office; PyInstaller is only for building. Ask before adding
   packages, frameworks, CDNs or a build step for the page.
