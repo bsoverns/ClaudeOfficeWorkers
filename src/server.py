@@ -313,11 +313,11 @@ def eastern_day(ts: float) -> str:
 
 
 class Usage:
-    """Tokens and cost per model for today (Eastern time), read from the transcripts of the sessions
-    that report in. Claude Code writes each reply's model and token counts to the session's transcript;
-    the office reads only the lines added since it last looked, counts each message once, and starts
-    over at midnight Eastern or when you reset it. Kept in memory only: a restart counts today again
-    from the transcripts as their sessions report in (minus anything before a reset)."""
+    """Tokens and cost per model for today (Eastern time), read from Claude Code's transcripts. It writes
+    each reply's model and token counts to the session's transcript; the office reads only the lines added
+    since it last looked, counts each message once, and starts over at midnight Eastern or when you reset
+    it. Kept in memory only: opening the office counts today again from every transcript changed today
+    (scan_today), and after that from the sessions that report in. A reset lasts until the office closes."""
 
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -417,6 +417,24 @@ class Usage:
                 except OSError:
                     pass
             return changed
+
+    def scan_today(self) -> bool:
+        """Read what's new in every transcript changed today, reporting in or not. True if a count changed."""
+        root = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "projects")
+        now = time.time()
+        midnight = now - (now + eastern_offset(now) * 3600) % 86400
+        changed = False
+        for folder, _, names in os.walk(root):
+            for name in names:
+                path = os.path.join(folder, name)
+                try:
+                    if name.endswith(".jsonl") and os.path.getmtime(path) >= midnight:
+                        with self.lock:       # file by file, so hooks and the page never wait for the whole walk
+                            self._roll()
+                            changed = self._read(path) or changed
+                except OSError:
+                    pass
+        return changed
 
     def reset(self) -> None:
         """Start today's count over from now."""
@@ -1370,6 +1388,15 @@ def state_file(port: int) -> str:
     return os.path.join(base, "state.json" if port == DEFAULT_PORT else f"state-{port}.json")
 
 
+def _load_todays_usage() -> None:
+    """The token meter on opening the office: in the background, since a long transcript's first read takes a moment."""
+    try:
+        if USAGE.scan_today():
+            OFFICE.poke()
+    except Exception:      # a transcript in a shape we don't expect: never the office's problem
+        pass
+
+
 def make_server(port: int) -> ThreadingHTTPServer:
     """Bind the office on 127.0.0.1:port, reload its saved jobs and start the stale-job reaper
     (raises OSError if the port is taken)."""
@@ -1380,6 +1407,8 @@ def make_server(port: int) -> ThreadingHTTPServer:
     threading.Thread(target=_reaper, daemon=True).start()
     if PRODUCT == "Cursor":
         CURSOR_COST.start()
+    else:
+        threading.Thread(target=_load_todays_usage, daemon=True).start()
     return httpd
 
 
