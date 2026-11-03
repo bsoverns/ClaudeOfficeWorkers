@@ -4,7 +4,8 @@
 [![Latest release](https://img.shields.io/github/v/release/bsoverns/ClaudeOfficeWorkers?label=download)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest)
 
 An animated office that shows what Claude Code is doing, so you notice when it's done. Cursor can
-have an [office of its own](#cursor-office), running as a separate process.
+have an [office of its own](#cursor-office), running as a separate process. If you only want the numbers, the
+[Usage Widget](#usage-widget) is a small separate window with your Claude tokens and cost and your Cursor spend.
 
 ## Download
 
@@ -129,7 +130,7 @@ tool activity go only to the local server on `127.0.0.1`, never anywhere else. (
 | 🤫 **Hook output** | The script prints nothing and always exits 0, even on errors. | For some events (like `UserPromptSubmit`) Claude Code adds a hook's output to Claude's context. No output means nothing is added. |
 | ⚡ **Speed** | Every hook is `async` with a 5-second limit, and the post gives up after half a second. | Claude never waits on the office. If it isn't running, the post fails instantly and nothing happens. |
 | 🏠 **Network** | The script posts the event to `http://127.0.0.1:<port>/api/hook`, your own PC. | No internet, no API keys, no telemetry, no update checks. The page loads no CDNs, fonts or images. |
-| 📄 **Your files** | The script reads the end of the session's transcript (on disk) to find its name, and a subagent's small `.meta.json` for its task description. The server reads the new lines of the session's transcripts for the [token meter](#token-meter). | Plain local file reads. Prompts and messages are trimmed to 2,000 characters and tool results are dropped before the post. The token meter keeps only token counts per model. |
+| 📄 **Your files** | The script reads the end of the session's transcript (on disk) to find its name, and a subagent's small `.meta.json` for its task description. For the [token meter](#token-meter), the server reads every transcript changed today when it opens, then the new lines of each session's transcripts as it reports in. | Plain local file reads. Prompts and messages are trimmed to 2,000 characters and tool results are dropped before the post. The token meter keeps only token counts per model. |
 
 What it does cost is a moment of CPU: each hook starts a short-lived Python process (or
 `ClaudeOffice.exe --hook`). The office remembers its jobs in a local state file (see
@@ -451,7 +452,7 @@ the quarantine flag is cleared (see Download).
 exes with the same steps as `scripts\build.bat`, and smoke-tests them (starts the built server, sends one
 Claude hook event through `ClaudeOffice.exe --hook`, and checks the job arrives with the right
 work area; `UsageWidget` just has to start). A macOS job runs `scripts/build_mac.sh` and the same smoke tests through the apps'
-launchers. The two builds run in parallel and neither waits for the other; both zips are
+launchers. The two builds run in parallel and neither waits for the other; all their zips are
 attached to the run as artifacts. When a change is merged to `main`:
 
 1. A first job stamps the version as `YYYY.M.D.<run number>`, for example `2026.10.19.7` (written to `VERSION.txt`).
