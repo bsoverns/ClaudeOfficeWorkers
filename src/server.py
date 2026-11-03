@@ -7,8 +7,8 @@ Open:  http://127.0.0.1:8777/
 Claude Code reports in through claude_hook.py (wired up by install_hooks.py), which
 POSTs each hook payload to /api/hook. office.py sends manual commands to /api/cmd.
 The page long-polls /api/state and does all the animation itself; on closing it posts /api/bye.
-Each hook also lets the office read what's new in that session's transcript, for today's token
-usage and cost (see Usage).
+Opening the office reads every transcript changed today, and each hook lets it read what's new in
+that session's transcript, for today's token usage and cost (see Usage).
 
 Standard library only. Binds to 127.0.0.1, so nothing outside this PC can reach it.
 """

@@ -10,6 +10,8 @@ Both halves live on the same machine. Each machine gets its own copy.
 
 Using Cursor? It has a separate office and separate hooks: see [Cursor](#cursor) below. The rest of this page is about Claude Code.
 
+Only want your tokens and costs? The [Usage Widget](../README.md#usage-widget) needs none of this: no hooks and no office.
+
 ---
 
 ## Cursor
