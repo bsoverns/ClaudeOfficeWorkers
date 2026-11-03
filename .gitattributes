@@ -15,4 +15,5 @@
 *.command text eol=lf
 *.plist text eol=lf
 package/mac/ClaudeOffice text eol=lf
+package/mac/UsageWidget text eol=lf
 *.icns binary

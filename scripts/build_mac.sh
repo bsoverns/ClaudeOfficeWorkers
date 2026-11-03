@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds dist/ClaudeOffice-mac/ClaudeOffice.app and dist/ClaudeOffice-mac.zip, and the same for CursorOffice
-# (copy a zip to another Mac).
+# and UsageWidget (copy a zip to another Mac).
 # No PyInstaller: each app is a small launcher that runs src/ with the Mac's own python3, so the
 # build runs on any machine with python3 and zip (CI builds it on macOS). Run from anywhere.
 # VERSION=2026.10.20.1 scripts/build_mac.sh stamps that version into the apps and VERSION.txt.
@@ -39,5 +39,19 @@ echo "$VERSION" > "$OUT/VERSION.txt"
 chmod +x "$APP/MacOS/CursorOffice" "$OUT/"*.command
 (cd dist && zip -qry CursorOffice-mac.zip CursorOffice-mac)
 
+OUT=dist/UsageWidget-mac
+APP="$OUT/UsageWidget.app/Contents"
+rm -rf "$OUT" dist/UsageWidget-mac.zip
+mkdir -p "$APP/MacOS" "$APP/Resources/UsageWidget"
+cp office.icns "$APP/Resources/office.icns"
+cp src/usage_widget.py src/server.py "$APP/Resources/UsageWidget/"
+cp package/mac/UsageWidget "$APP/MacOS/UsageWidget"
+sed -e "s|<string>1.0</string>|<string>$VERSION</string>|g" -e "s|Claude Office|Usage Widget|g" \
+    -e "s|claudeoffice|usagewidget|g" -e "s|ClaudeOffice|UsageWidget|g" package/mac/Info.plist > "$APP/Info.plist"
+cp README.md LICENSE "$OUT/"
+echo "$VERSION" > "$OUT/VERSION.txt"
+chmod +x "$APP/MacOS/UsageWidget"
+(cd dist && zip -qry UsageWidget-mac.zip UsageWidget-mac)
+
 echo
-echo "Built dist/ClaudeOffice-mac/ClaudeOffice.app, dist/CursorOffice-mac/CursorOffice.app and their zips"
+echo "Built dist/ClaudeOffice-mac/ClaudeOffice.app, dist/CursorOffice-mac/CursorOffice.app, dist/UsageWidget-mac/UsageWidget.app and their zips"

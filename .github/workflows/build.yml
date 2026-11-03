@@ -2,9 +2,9 @@ name: Build
 
 # A version job stamps the version once. Then the Mac and Windows builds run in parallel: each
 # compiles the Python, builds ClaudeOffice and CursorOffice (scripts/build_mac.sh, or the same
-# steps as scripts/build.bat), smoke-tests them and uploads the zips; Windows also builds UsageWidget.
+# steps as scripts/build.bat) and UsageWidget, smoke-tests them and uploads the zips.
 # Pushes to main (merged PRs) then run a release job after both builds, which publishes a GitHub
-# Release with the five zips attached and release notes generated from the merged PRs.
+# Release with the six zips attached and release notes generated from the merged PRs.
 
 on:
   push:
@@ -84,6 +84,23 @@ jobs:
           kill $server
           python3 -c "import json, sys; s = json.load(open('state.json')); r = json.load(open('reply.json')); print(s['jobs'], r); sys.exit(0 if s['product'] == 'Cursor' and r == {'continue': True} and any(j['id'] == 'ci' for j in s['jobs']) else 'Smoke test failed: no Cursor job or reply from the hook.')"
 
+      - name: Smoke test UsageWidget.app
+        run: |
+          # As on Windows: it holds port 8779 once everything has loaded, just before its window opens.
+          for c in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+            [ -x "$c" ] && "$c" -c 'import sys, tkinter; print(sys.executable, sys.version_info[:2], "Tk", tkinter.TkVersion)' || echo "$c: no tkinter"
+          done
+          dist/UsageWidget-mac/UsageWidget.app/Contents/MacOS/UsageWidget > widget.log 2>&1 &
+          widget=$!
+          up=""
+          for i in $(seq 40); do
+            sleep 0.5
+            python3 -c 'import socket; socket.socket().bind(("127.0.0.1", 8779))' 2>/dev/null || { up=1; break; }
+          done
+          kill $widget 2>/dev/null || true
+          cat widget.log
+          [ -n "$up" ] || { echo "Smoke test failed: the widget never started."; exit 1; }
+
       - name: Upload ClaudeOffice-mac.zip
         uses: actions/upload-artifact@v4
         with:
@@ -95,6 +112,12 @@ jobs:
         with:
           name: CursorOffice-mac
           path: dist/CursorOffice-mac.zip
+
+      - name: Upload UsageWidget-mac.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: UsageWidget-mac
+          path: dist/UsageWidget-mac.zip
 
   build:
     runs-on: windows-latest
@@ -257,6 +280,11 @@ jobs:
           name: UsageWidget-win-x64
           path: dist
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: UsageWidget-mac
+          path: dist
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -272,9 +300,9 @@ jobs:
 
           **Using Cursor?** `CursorOffice.zip` and `CursorOffice-mac.zip` are the same steps for the Cursor office: run **Connect Cursor**, then open **CursorOffice**.
 
-          **Just want the costs?** `UsageWidget.zip` (Windows) is a small always-on-top window with today's Claude tokens and cost and your Cursor spend. Unzip it and open **UsageWidget.exe**; it needs no setup and neither office.
+          **Just want the costs?** `UsageWidget.zip` (Windows) and `UsageWidget-mac.zip` (Mac) are a small always-on-top window with today's Claude tokens and cost and your Cursor spend. Unzip and open **UsageWidget**; it needs no setup and neither office. On a Mac, clear the quarantine flag first, as above; it needs a Python with tkinter.
           EOF
-          gh release create "v$VERSION" dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip dist/CursorOffice.zip dist/CursorOffice-mac.zip dist/UsageWidget.zip \
+          gh release create "v$VERSION" dist/ClaudeOffice.zip dist/ClaudeOffice-mac.zip dist/CursorOffice.zip dist/CursorOffice-mac.zip dist/UsageWidget.zip dist/UsageWidget-mac.zip \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Claude Office $VERSION" \
