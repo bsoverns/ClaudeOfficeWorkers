@@ -8,16 +8,21 @@ have an [office of its own](#cursor-office), running as a separate process.
 
 ## Download
 
+There are two separate programs, one for each tool. Get the one you use, or both. Every change merged
+to `main` builds a new release automatically; see
+[all releases and their notes](https://github.com/bsoverns/ClaudeOfficeWorkers/releases).
+`VERSION.txt` in the folder says which build you have.
+
+> The Windows exes aren't code-signed, so SmartScreen may warn the first time. Click
+> **More info → Run anyway**, or right-click the zip → **Properties** → tick **Unblock** before unzipping.
+
+### For Claude Code
+
 **[⬇ Download ClaudeOffice.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/ClaudeOffice.zip)**
 
 For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, double-click
 **Connect Claude Code.bat** once (then restart open Claude Code sessions), and open
-**ClaudeOffice.exe**. Every change merged to `main` builds a new release automatically; see
-[all releases and their notes](https://github.com/bsoverns/ClaudeOfficeWorkers/releases).
-`VERSION.txt` in the folder says which build you have.
-
-> The exe isn't code-signed, so Windows SmartScreen may warn the first time. Click
-> **More info → Run anyway**, or right-click the zip → **Properties** → tick **Unblock** before unzipping.
+**ClaudeOffice.exe**.
 
 **[⬇ Download ClaudeOffice-mac.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/ClaudeOffice-mac.zip)**
 
@@ -30,11 +35,26 @@ For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3
 3. Open **ClaudeOffice.app**. It uses Chrome, Edge, Brave, Chromium or Vivaldi for its own
    window, or your default browser if none of those is installed.
 
-**Using Cursor?** It has [its own office](#cursor-office), as a separate download:
-**[⬇ CursorOffice.zip](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice.zip)** (Windows) or
-**[⬇ CursorOffice-mac.zip](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice-mac.zip)** (Mac).
-The steps are the same: unzip it somewhere it can stay, run **Connect Cursor** once, then open **CursorOffice**.
-These links work once this version has been released.
+### For Cursor
+
+**[⬇ Download CursorOffice.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice.zip)**
+
+For 64-bit Windows, with no Python needed. Unzip it somewhere it can stay, double-click
+**Connect Cursor.bat** once (restart Cursor if nothing shows up), and open **CursorOffice.exe**.
+See [Cursor office](#cursor-office) for how it differs from the Claude one and how to show your Cursor cost.
+
+**[⬇ Download CursorOffice-mac.zip (latest)](https://github.com/bsoverns/ClaudeOfficeWorkers/releases/latest/download/CursorOffice-mac.zip)**
+
+For macOS 11 or newer. It runs on the Mac's own Python 3.9 or newer (if `python3` is missing, run
+`xcode-select --install` once). Unzip it somewhere it can stay, e.g. `/Applications/CursorOffice-mac`, then:
+
+1. The app isn't signed, so clear the download flag once in Terminal:
+   `xattr -dr com.apple.quarantine /Applications/CursorOffice-mac` (use your folder's path).
+2. Double-click **Connect Cursor.command** (restart Cursor if nothing shows up).
+3. Open **CursorOffice.app**. It uses Chrome, Edge, Brave, Chromium or Vivaldi for its own
+   window, or your default browser if none of those is installed.
+
+### What you get
 
 Sixteen workers hang out in the break room (TV, couch, pool, ping pong, kitchen, vending
 machine, arcade, a nap room with cots, smoking patio with a cat). When you give Claude a task, the
