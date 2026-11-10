@@ -217,7 +217,10 @@ pick yet the office opens in Might & Mayhem.
   (psychokinesis) sends a ripple across the floor that makes everyone nearby hop; and Facade
   (shapeshifting) borrows a coworker's face for a few seconds (hover him: the tooltip still says
   who he really is); and Veil puts a force-field bubble over herself or someone idle nearby for a
-  few seconds (whoever is inside doesn't hop when Rupture shakes the floor). To see one right away, run `heroTry(w, true)` in the browser console with a
+  few seconds (whoever is inside doesn't hop when Rupture shakes the floor). When the ping pong table
+  is free, Dash (super speed) plays against herself, racing around the front of the table after every
+  hit, and Blink (teleportation) does too, blinking from one end to the other in a puff; nobody else
+  can sit down at the table until the game is over. To see one right away, run `heroTry(w, true)` in the browser console with a
   worker from `workers`.
   The break-room furniture takes a beating too, but only a piece nobody is using: heat and eye rays
   set the couch, dining table, pool table, ping pong table, vending machine, arcade or patio bench
