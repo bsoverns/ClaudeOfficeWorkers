@@ -5522,11 +5522,11 @@ function updHero(dt) {
     if (w.blink && w.blink.path !== w.path) heroCancelBlink(w);         // teleported or paged mid-blink: don't stay invisible
     let fade = 1;
     if ((p === 'invisible' && moving) || T < (w.fadeUntil || 0)) fade = 0.18;
-    if (w.blink) fade = 0;
+    if (w.blink || (w.hx && w.hx.gone)) fade = 0;                      // mid-trip, or blinking across the ping pong table
     w.fade = lerp(w.fade ?? 1, fade, Math.min(1, dt * (w.blink ? 9 : 5)));
     w.jx = T < (w.jxUntil || 0) ? w.jxTo : T < (w.dashUntil || 0) ? Math.sin((w.dashUntil - T) * 28) * 12 : 0;
     if (w.mimic && T > w.mimicUntil) w.mimic = null;
-    if (p === 'speed' && (moving || T < (w.dashUntil || 0))) {             // afterimages behind the speedster
+    if (p === 'speed' && (moving || T < (w.dashUntil || 0) || (w.hx && w.hx.run))) {   // afterimages behind the speedster
       if (T > (w.trailT || 0)) { (w.trail = w.trail || []).unshift({ x: w.x + w.jx, y: w.y, f: w.facing }); if (w.trail.length > 4) w.trail.length = 4; w.trailT = T + 0.035; }
     } else w.trail = null;
   }
@@ -5541,6 +5541,7 @@ function drawHeroWorker(w) {
   if (hx && hx.kind === 'catprank' && hx.cat) {                                  // Facade as the patio cat, a green glint in his eye now and then
     catLoaf(x, w.y); if ((T - hx.t0) % 1.6 < 0.2) C(x + 3.5, w.y - 8, 1.1, '#a3e635'); return;
   }
+  if (hx && hx.kind === 'pong' && hx.run) { st.moving = true; st.walk = w.walk; st.ra = 1.2; st.la = Math.sin(w.walk) * 0.5; st.item = 'paddle'; }   // Dash running round the table
   if (hx && hx.kind === 'float') { st.item = null; st.busyHands = true; st.ra = st.la = 2.5; st.open = true; }
   if (hx && (hx.kind === 'blast' || hx.kind === 'fix') && !hx.held && T < (w.zapUntil || 0)) { st.item = null; st.busyHands = true; st.ra = 1.6; st.la = 1.35; st.open = true; }
   if (hx && hx.kind === 'fix' && hx.held) { const side = st.facing === 'left' || st.facing === 'right'; st.item = null; st.busyHands = true; st.ra = side ? 1.4 : 0.5; st.la = side ? 1.1 : 0.15; }
@@ -5621,10 +5622,11 @@ function drawRipples() {
 // load, then every 40-90 s each; a try that finds them busy retries in 4-10 s):
 // Bulwark lifts a free piece of furniture (more in "powers vs. the break-room furniture" below), Mend's arm pops off and grows back, Paradox rewinds
 // people walking by, Mindwave links minds, Rupture shakes the floor (anyone in Veil's bubble doesn't hop), Facade borrows
-// a face and Veil puts a force-field bubble over herself or someone idle nearby for 4 s.
+// a face and Veil puts a force-field bubble over herself or someone idle nearby for 4 s. Dash and Blink play ping pong
+// against themselves when the table is free (more in "solo ping pong" below).
 // w.hx is the effect in progress; it ends the moment that person is paged, walks off or duels, or
 // the theme changes. heroTry(w, true) starts one right away (for testing), keeping the safety checks.
-const HX_DUR = { regen: 2.9, time: 1.6, mind: 2.5, quake: 1.2, mimic: 7, float: 4, shield: 4 };
+const HX_DUR = { regen: 2.9, time: 1.6, mind: 2.5, quake: 1.2, mimic: 7, float: 4, shield: 4, pong: 9.5 };
 const HX_SHIELD = ['Personal space, please.', 'Bubble time.', 'Do not disturb.', 'Quiet zone. Sound-proof, too.'];
 const HX_SHIELD_FOR = ['Got you covered, {name}.', '{name}, you looked unprotected.', 'Stay safe in there, {name}.'];
 const HX_SHIELDED = ['Uh... thanks?', 'Is this a bubble?', 'I can hear the ocean in here.', 'Can I keep it?'];
@@ -5695,6 +5697,8 @@ const HX_START = {
   eyerays: (w, force, only) => blastStart(w, 'fire', force, only),
   cold: (w, force, only) => blastStart(w, 'ice', force, only),
   electro: (w, force, only) => blastStart(w, 'zap', force, only),
+  speed: w => pongStart(w),
+  teleport: w => pongStart(w),
   regen(w) {
     const dir = w.facing === 'left' ? -1 : 1, side = w.facing === 'left' || w.facing === 'right', Lk = lookOf(w), bo = w.spot.pose === 'sit' ? 6 : 0;
     w.hx = { kind: 'regen', t0: T };
@@ -5810,6 +5814,7 @@ function hxTick(w, dt) {
   if (x.kind === 'blast') return blastTick(w);
   if (x.kind === 'fix') return fixTick(w, dt);
   if (x.kind === 'catprank') return prankTick(w, dt);
+  if (x.kind === 'pong') return pongTick(w, dt);
   if (x.kind === 'strength' || x.kind === 'float') {
     if (!HEAVE || HEAVE.who !== w || w.mode !== 'idle' || w.duel || w.spot !== HEAVE.spot) return hxEnd(w, true);
     if (HEAVE.t0 == null) {                                             // still walking over
@@ -5858,7 +5863,90 @@ function hxEnd(w, quiet) {
   if (x.kind === 'mimic') { w.mimic = null; if (THEME === 'hero') hxPoof(w); }
   if (x.kind === 'fix') fixDrop(w, x);
   if (x.kind === 'catprank') prankEnd(w, x, quiet);
+  if (x.kind === 'pong') pongEnd(w, x);
   hxDropBeams(w);
+}
+
+// ---- Hero HQ: solo ping pong ------------------------------------------------------------------
+// Dash and Blink play against themselves: walk to the nearer end of a free table (both seats and the room around
+// it), then rally for 8-9.5 s, a hit every 0.75 s. After each hit they get to the other end before the ball does:
+// Dash runs around the front of the table (below its legs) with afterimages, Blink vanishes and reappears in a puff.
+// They hold both seats while playing and finish back on their own spot. heroTry(w, true) starts one now.
+const PONG_HIT = 0.75, PONG_FRONT = 572;          // seconds per hit; the lane in front of the table (its legs end at y 559)
+const HX_PONG = ['Doubles? I AM doubles.', 'Nobody returns my serve. Except me.', 'Best of one... thousand.', 'Finally, a worthy opponent.'];
+const HX_PONG_END = ['Tie game. Again.', 'Undefeated. Also winless.', 'Good game, me.', 'Rematch? Obviously.'];
+function pongStart(w) {
+  const p = OBJS.pingpong, a = SPOT_BY_ID.pp1, b = SPOT_BY_ID.pp2;
+  if (w.spot.area !== 'break') return 'not in the break room';
+  if (!objFree(p, w)) return 'the ping pong table is busy';
+  if (w.spot === a || w.spot === b) { pongBegin(w); return true; }
+  if (!navGrid) buildNav();
+  const spot = [a, b].sort((s, o) => Math.hypot(s.x - w.x, s.y - w.y) - Math.hypot(o.x - w.x, o.y - w.y))
+    .find(s => allowed(s, w) && findPath(w.x, w.y, s.x, s.y));
+  if (!spot) return 'the ping pong table is out of reach';
+  goTo(w, spot); SPOT_BY_ID[spot.partner].by = w.id;                  // hold the far end too, so nobody sits down meanwhile
+  w.hx = { kind: 'pong', t0: T, spot, at: 0 };
+  w.actUntil = Math.max(w.actUntil, T + 60);
+  return true;
+}
+function pongBegin(w) {
+  const own = w.spot, home = own === SPOT_BY_ID.pp1 ? 0 : 1;
+  SPOT_BY_ID[own.partner].by = w.id;
+  w.x = own.x; w.y = own.y; w.facing = own.face;
+  const x = w.hx = { kind: 'pong', t0: T, spot: own, at: T, home, side: home, next: T + 0.6, until: T + rand(8, 9.5), ball: null, move: null, n: 0 };
+  w.actUntil = Math.max(w.actUntil, x.until + 4);
+  if (Math.random() < 0.5) say(w, pick(HX_PONG), 2.5);
+}
+// the point k (0..1) of the way round the front of the table, starting from end `from` (0 = pp1, left)
+function pongLane(from, k) {
+  const a = SPOT_BY_ID.pp1, b = SPOT_BY_ID.pp2;
+  const P = [[a.x, a.y], [a.x + 6, PONG_FRONT], [b.x - 6, PONG_FRONT], [b.x, b.y]];
+  if (from) P.reverse();
+  const len = [1, 2, 3].map(i => Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+  let d = k * (len[0] + len[1] + len[2]);
+  for (let i = 0; i < 3; i++) {
+    if (d <= len[i] || i === 2) { const t = Math.min(1, d / len[i]); return { x: lerp(P[i][0], P[i + 1][0], t), y: lerp(P[i][1], P[i + 1][1], t) }; }
+    d -= len[i];
+  }
+}
+function pongTick(w, dt) {
+  const x = w.hx, S = [SPOT_BY_ID.pp1, SPOT_BY_ID.pp2], c = powerOf(w).fx, dash = powerOf(w).power === 'speed';
+  if (w.mode !== 'idle' || w.duel || w.talk || w.spot !== x.spot) return hxEnd(w, true);
+  if (!x.at) {                                                          // still walking over
+    if (!w.arrived || w.path.length) return;
+    if (!objFree(OBJS.pingpong, w)) { hxEnd(w, true); return chooseIdle(w); }   // someone got there first
+    return pongBegin(w);
+  }
+  if (w.path.length) return hxEnd(w, true);
+  const m = x.move;
+  if (m && T >= m.t0) {                                                 // on the way to the other end
+    const k = Math.min(1, (T - m.t0) / m.dur);
+    if (dash) { const p = pongLane(m.from, k * k * (3 - 2 * k)); w.x = p.x; w.y = p.y; w.facing = m.from ? 'left' : 'right'; x.run = k < 1; w.walk += dt * 30; }
+    else if (!x.gone && k < 1) { heroBlinkFx(w, w.x, w.y); x.gone = true; w.fade = 0; }
+    if (k >= 1) {
+      const s = S[1 - m.from]; w.x = s.x; w.y = s.y; w.facing = s.face; x.side = 1 - m.from; x.move = null; x.run = false;
+      if (x.gone) { x.gone = false; w.fade = 1; heroBlinkFx(w, w.x, w.y); if (Math.random() < 0.2) heroPow(w.x, w.y - 72, 'BLINK!', c); }
+    }
+  }
+  if (!x.move && T >= x.next) {
+    if (T >= x.until && x.side === x.home) {                            // caught it on their own end: game over
+      x.ball = null; w.x = x.spot.x; w.y = x.spot.y; w.facing = x.spot.face;
+      hxEnd(w); if (Math.random() < 0.5) say(w, pick(HX_PONG_END), 2.5);
+      return;
+    }
+    x.ball = { from: x.side, t0: T }; x.next = T + PONG_HIT; x.n++;
+    x.move = { from: x.side, t0: T + (dash ? 0.1 : 0.12), dur: dash ? 0.4 : 0.18 };
+    if (Math.random() < 0.3) puff(S[x.side].x + (x.side ? -18 : 18), 466, { kind: 'text', text: x.n % 2 ? 'Ping!' : 'Pong!', vy: -14, life: 0.7, color: '#fff', font: 'bold 10px system-ui' });
+  }
+}
+// The game is over or cut short: free the far seat; back on their own spot unless they're already off somewhere
+// (paging computed its path from where they stand).
+function pongEnd(w, x) {
+  const far = SPOT_BY_ID[x.spot.partner];
+  if (far.by === w.id && far !== w.spot) far.by = null;
+  if (x.gone && THEME === 'hero') heroBlinkFx(w, w.x, w.y);            // cut short mid-blink: reappear in a puff
+  w.fade = 1;
+  if (x.at && !w.path.length && w.spot === x.spot) { w.x = x.spot.x; w.y = x.spot.y; if (w.mode === 'idle') w.facing = x.spot.face; }
 }
 
 // ---- Hero HQ: powers vs. the break-room furniture ----------------------------------------------
@@ -7337,6 +7425,16 @@ function drawPingPongBall() {
   const a = SPOT_BY_ID.pp1, b = SPOT_BY_ID.pp2;
   const wa = a.by !== null ? workers[a.by] : null, wb = b.by !== null ? workers[b.by] : null;
   const ready = w => w && w.arrived && w.mode === 'idle' && w.spot && w.spot.act === 'pingpong';
+  const solo = THEME === 'hero' && workers.find(w => w.hx && w.hx.kind === 'pong' && w.hx.at);
+  if (solo) {                                                           // Hero HQ: Dash or Blink rallying against themselves
+    const x = solo.hx;
+    if (!x.ball) { if (!x.move) { const dir = solo.facing === 'right' ? 1 : -1; C(solo.x + dir * 18, solo.y - 40 - Math.abs(Math.sin(T * 5)) * 16, 2.4, '#fff'); } return; }
+    const k = Math.min(1, (T - x.ball.t0) / PONG_HIT), x0 = x.ball.from ? b.x - 18 : a.x + 18, x1 = x.ball.from ? a.x + 18 : b.x - 18;
+    const h = k < 0.65 ? lerp(18, 0, k / 0.65) + Math.sin(k / 0.65 * Math.PI) * 22 : Math.sin((k - 0.65) / 0.35 * Math.PI / 2) * 18;   // over the net, one bounce on the far half
+    const bx = lerp(x0, x1, k);
+    E(bx, 506, 3, 1.2, 'rgba(0,0,0,.2)'); C(bx, 506 - h, 2.4, '#fff');
+    return;
+  }
   if (ready(wa) && ready(wb)) {
     const k = (Math.sin(T * Math.PI * 0.7) + 1) / 2, bx = lerp(a.x + 18, b.x - 18, k), by = 492 - Math.abs(Math.sin(T * Math.PI * 1.4)) * 26;
     E(bx, 506, 3, 1.2, 'rgba(0,0,0,.2)'); C(bx, by, 2.4, '#fff');
