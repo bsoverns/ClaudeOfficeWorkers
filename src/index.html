@@ -799,17 +799,34 @@ const TV_REACT = { sports: ['GOOOAL!', 'YES!!', 'What a strike!'], talk: ['OHHHH
   weather: ['STORM WARNING!', 'Rebase! REBASE!', 'Take cover!'], reno: ['THE CEILING!', 'Load-bearing!', 'Called it!'],
   golf: ['*polite clapping*', 'It moved!', 'Ooooh.'], bachelor: ['The ROSE!', 'Five nines!', 'Awww!'],
   robots: ['THE WINDOW!', 'CHAIR!!', "THAT'S IT?!", 'It tells TIME?!'] };
-function tvShow() { return TV_SHOWS[Math.floor(T / 40) % TV_SHOWS.length]; }
+// The TV runs on its own clock, the office clock T plus tvOff. The channel buttons under the TV (tvFlip) move tvOff so
+// the next or previous show starts from the top; from there the 40-second rotation carries on as before.
+let tvOff = 0, tvFlipAt = -9, tvFlipDir = 0;  // when a button was last pressed (shows the channel number), and which
+let tvClickAt = -1e9;                         // the last click's event time, in ms
+function tvT() { return T + tvOff; }
+function tvShow() { return TV_SHOWS[Math.floor(tvT() / 40) % TV_SHOWS.length]; }
+function tvFlip(d) {                          // d = +1 next channel, -1 previous
+  let to = (Math.floor(tvT() / 40) + d) * 40;
+  if (to < 0) to += TV_SHOWS.length * 40;     // back from the first channel wraps to the last
+  tvOff = to + 0.001 - T; tvFlipAt = T; tvFlipDir = d;   // + 0.001: rounding can't land on the previous channel's end
+}
+// the channel buttons: [x, y] of the previous (red) and next (green) button, on a plate under the TV's bottom-right corner
+const TV_BTNS = [[477, 142, -1], [494, 142, 1]];
+function tvBtnAt(e) {
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - OX) / SC, y = (e.clientY - r.top - OY) / SC;
+  const b = TV_BTNS.find(([bx, by]) => Math.hypot(x - bx, y - by) < 8);
+  return b ? b[2] : 0;
+}
 // the dramatic moment on each show (the couch throws its hands up); p = seconds into the 40-second channel
 const TV_BIG = {
-  sports: p => (T % 25) < 1.6, talk: p => p > 30, game: p => (p % 10) > 8.6, soap: p => (p % 13) > 11.2,
+  sports: p => (tvT() % 25) < 1.6, talk: p => p > 30, game: p => (p % 10) > 8.6, soap: p => (p % 13) > 11.2,
   price: p => p > 32 && p < 38, judge: p => (p % 20) > 17, chef: p => (p % 20) > 16, deploy: p => (p % 10) > 7.5,
   nature: p => p > 34, shop: p => (p % 20) > 16.5, promo: p => p > 20 && p < 25, paint: p => (p % 20) > 17,
   crime: p => p > 30 && p < 35, roadshow: p => p > 28 && p < 34, wrestle: p => (p % 20) > 16, news: p => (p % 20) > 17,
   weather: p => p > 25 && p < 30, reno: p => p > 33, golf: p => p > 35, bachelor: p => (p % 20) > 16.5,
   robots: p => (p > 14.4 && p < 17) || p > 37.5,           // the chairs go through the windows; "THAT'S IT?!"
 };
-function tvBig() { return TV_BIG[tvShow()](T % 40); }
+function tvBig() { return TV_BIG[tvShow()](tvT() % 40); }
 const GO_LINES = ['On it!', 'Coming, boss!', 'Ooh, a task!', 'Duty calls!', 'My turn!', 'Back to work!'];
 const BRIEF_LINES = ["Here's your slip!", 'Make it shine.', "You've got this!", 'Fresh one, hot off the press.', "Go get 'em!"];
 const DONE_LINES = ['Done! ✓', 'Nailed it!', 'Clocking out!', 'Break time!', 'Easy.'];
@@ -8338,6 +8355,7 @@ function drawStatic() {
 // The TV screen (drawn in a 288..412 x 35..93 box, scaled 1.6x onto 300..498.4 x 36..128.8): the match, a paternity-test talk show,
 // a survey game show, a soap, then the parody channels listed in TV_SHOWS.
 function drawTV() {
+  const T = tvT();                            // the shows run on the TV's clock, so a flipped-to show starts over
   const show = tvShow(), p = T % 40, big = tvBig();
   const guy = (x, y, c, up) => { RR(x - 4, y - 12, 8, 12, 2, c); C(x, y - 15, 3.4, '#e0ac69');
     if (up) { L(x - 3, y - 11, x - 6, y - 19, c, 1.6); L(x + 3, y - 11, x + 6, y - 19, c, 1.6); } };
@@ -8630,6 +8648,17 @@ function drawDynamicBg() {
   // TV
   RR(295, 31, 208.4, 102.8, 4, '#111');
   drawTV();
+  if (T - tvFlipAt < 2) {                     // the channel number, for two seconds after a button press
+    const ch = 'CH ' + (Math.floor(tvT() / 40) % TV_SHOWS.length + 1);
+    RR(452, 40, 42, 15, 2, 'rgba(0,0,0,.55)'); TXT(ch, 490, 48, 'bold 11px monospace', '#4ade80', 'right');
+  }
+  // the channel buttons on a plate under the bottom-right corner: red = previous, green = next
+  RR(467, 133, 37, 17, 3, '#111');            // clear of North Pole's stockings (the last ends at x 465)
+  for (const [bx, by, d] of TV_BTNS) {
+    const lit = T - tvFlipAt < 0.25 && tvFlipDir === d;          // the pressed button lights up for a moment
+    C(bx, by, 6, d < 0 ? (lit ? '#fca5a5' : '#dc2626') : (lit ? '#86efac' : '#16a34a'));
+    poly(d < 0 ? [bx + 2, by - 3, bx + 2, by + 3, bx - 3, by] : [bx - 2, by - 3, bx - 2, by + 3, bx + 3, by], '#fff');
+  }
   g.globalAlpha = 0.07 + Math.sin(T * 3) * 0.02; E(399, 158, 104, 32, '#9fd3ff'); g.globalAlpha = 1;
   // real wall clock in the break room
   const now = new Date(), ox = 532, oy = 50;
@@ -8752,7 +8781,7 @@ function drawBubble(b) {
 // Themed rooms keep Classic's footprints, so one list serves every theme; station plaques are added per station.
 const FOCAL = [
   [250, 2, 136, 16], [738, 2, 136, 16], [1062, 2, 136, 16], [1382, 2, 136, 16],   // room names in the top margin
-  [300, 36, 199, 93], [245, 30, 26, 32], [530, 349, 66, 12],                       // break room TV, MVP board, nap room sign
+  [300, 36, 199, 93], [467, 133, 37, 17], [245, 30, 26, 32], [530, 349, 66, 12],   // break room TV, its buttons, MVP board, nap room sign
   [668, 28, 120, 58], [796, 30, 78, 40],                                           // boss's window and title
   [1030, 24, 200, 24], [1062, 56, 96, 30], [990, 54, 34, 34],                      // help desk sign, NOW SERVING, "restarting?" note
   [1336, 24, 228, 22], [1330, 52, 240, 98],                                        // mailroom sign, pigeonholes
@@ -9008,9 +9037,12 @@ function workerAt(e) {
   }
   return best;
 }
-cv.addEventListener('mousemove', e => { hovered = workerAt(e); cv.style.cursor = hovered || meterAt(e) ? 'pointer' : 'default'; });
+cv.addEventListener('mousemove', e => { const tb = tvBtnAt(e); hovered = tb ? null : workerAt(e);   // the TV buttons win over a head in front
+  cv.style.cursor = hovered || tb || meterAt(e) ? 'pointer' : 'default'; });
 cv.addEventListener('mouseleave', () => { hovered = null; });
 cv.addEventListener('click', e => {
+  const d = tvBtnAt(e);                                         // the TV's channel buttons; a double-click counts once
+  if (d) { if (e.timeStamp - tvClickAt > 150) tvFlip(d); tvClickAt = e.timeStamp; return; }
   const w = workerAt(e);
   if (!w && meterAt(e)) { showUsageCard($('#usageCard').hidden); return; }
   selected = w === selected ? null : w; selectUntil = 0;

@@ -113,7 +113,10 @@ legacy-code appraisal, a tabs-vs-spaces cage match, the news, the weather, a ren
 slow-motion golf, a dating show for servers, and American Chopbot, a family robot shop with
 confessional interviews, chairs through windows and a six-week build that only tells the time),
 and the couch comments on each and reacts to the big moments; on American Chopbot each theme has
-some lines of its own (the Sci-Fi crew fears an uprising, Might & Mayhem calls it a golem). Everyone walks around the furniture:
+some lines of its own (the Sci-Fi crew fears an uprising, Might & Mayhem calls it a golem). You have the remote:
+the two buttons under the TV's bottom-right corner change the channel (red goes back, green goes forward),
+the new show starts from the top with its channel number on screen for a moment, and the 40-second
+rotation carries on from there. Everyone walks around the furniture:
 paths go around tables, counters and station equipment, and only step onto a couch, beanbag or
 chair to sit on it.
 
