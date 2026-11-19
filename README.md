@@ -105,13 +105,15 @@ On break, people chat with whoever is nearby: short back-and-forth exchanges abo
 microwave, last night's game, the stock market, reply-all disasters, TPS reports and the
 cover-sheet memo, being asked to come in on Saturday (and Sunday), and more. The break room's big
 wall TV (with the couch and rug lined up under it; the vending machine and arcade stand by the
-pool table, the dining table by the kitchen) flips channels every 40 seconds through 20 shows
+pool table, the dining table by the kitchen) flips channels every 40 seconds through 21 shows
 (the match, a paternity-test talk show, a survey game show, a soap opera, then parodies: a
 cloud-bill pricing game, small-claims court, a screaming chef, a briefcase game full of stack traces, a nature documentary, the shopping
 channel, an infomercial, a flowchart-painting show, a true-crime series about the stapler, a
 legacy-code appraisal, a tabs-vs-spaces cage match, the news, the weather, a renovation show,
-slow-motion golf and a dating show for servers), and the couch comments on each and reacts to
-the big moments. Everyone walks around the furniture:
+slow-motion golf, a dating show for servers, and American Chopbot, a family robot shop with
+confessional interviews, chairs through windows and a six-week build that only tells the time),
+and the couch comments on each and reacts to the big moments; on American Chopbot each theme has
+some lines of its own (the Sci-Fi crew fears an uprising, Might & Mayhem calls it a golem). Everyone walks around the furniture:
 paths go around tables, counters and station equipment, and only step onto a couch, beanbag or
 chair to sit on it.
 
