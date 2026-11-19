@@ -741,12 +741,13 @@ const DUEL_END = ['Truce. Break is almost over.', 'Same time tomorrow?', "We'll 
 const DUEL_CUT = ['Saved by the page!', 'This isn’t over!', 'Truce. For now.', 'Duty calls. Rain check!'];
 // The break room TV flips channels every 40 seconds; TV_CHAT is what the couch says about each.
 const TV_SHOWS = ['sports', 'talk', 'game', 'soap', 'price', 'judge', 'chef', 'deploy', 'nature', 'shop', 'promo', 'paint',
-  'crime', 'roadshow', 'wrestle', 'news', 'weather', 'reno', 'golf', 'bachelor'];
+  'crime', 'roadshow', 'wrestle', 'news', 'weather', 'reno', 'golf', 'bachelor', 'robots'];
 const TV_NAMES = { sports: 'the match', talk: 'a trashy talk show', game: 'a game show', soap: 'a soap opera',
   price: 'a pricing game show', judge: 'a courtroom show', chef: 'a cooking show', deploy: 'a briefcase game show',
   nature: 'a nature documentary', shop: 'the shopping channel', promo: 'an infomercial', paint: 'a painting show',
   crime: 'a true crime series', roadshow: 'an antiques show', wrestle: 'the wrestling', news: 'the news',
-  weather: 'the weather', reno: 'a home renovation show', golf: 'the golf', bachelor: 'a dating show' };
+  weather: 'the weather', reno: 'a home renovation show', golf: 'the golf', bachelor: 'a dating show',
+  robots: 'a robot-shop reality show' };
 const TV_CHAT = {
   sports: ['GOOOAL!', 'Ref! Come on!', 'Who has the remote?', 'Best match all season.'],
   talk: ['He is SO not the father.', 'Look at him dance!', 'Who even ARE these people?', 'Third DNA test this season...', 'Security! SECURITY!'],
@@ -768,7 +769,25 @@ const TV_CHAT = {
   reno: ["It's load-bearing?!", 'Open concept database!', "Don't swing that hammer...", 'Who wrote that procedure?', 'Demo day!'],
   golf: ['*whisper* He is lining it up.', 'Still lining it up...', 'Is this paused?', 'Riveting.', 'Wake me when he putts.'],
   bachelor: ['Five nines? Swoon.', 'That one is NOT here for the right reasons.', 'That one rebooted twice!', 'Give the rose to the mainframe!', 'Pack your cables.'],
+  robots: ["He's gonna throw a chair. He's gonna throw a chair...", 'How do they still HAVE windows?', "Six weeks and it's a clock.",
+    'That mustache has its own zip code.', "Honestly? Skip's not wrong.", 'Judgment Day was due Tuesday.', 'Carmine deserves a raise.'],
 };
+// extra couch lines for one show in one theme (mixed in with TV_CHAT); only the robot shop has any
+const TV_THEME_CHAT = { robots: {
+  dev: ['Six weeks for new Date()?', 'Who wrote the firmware? No tests.', 'That clock needed a microservice.', 'Ship it, Dad. SHIP IT.'],
+  scifi: ['Never teach it to want things.', "That's how the uprising starts.", 'Keep it away from the airlock controls.', 'First it tells time. Then it ENDS time.'],
+  horror: ['It moved. I swear it moved.', 'Its eyes follow you around the room...', 'Ask it what hour we die.', 'A clock that talks? Nope. Nope.'],
+  cyber: ["Cute. My arm's newer than that bot.", 'Unchipped chrome? So retro.', 'My toaster has more RAM.', 'Just jack it into the net already.'],
+  xmas: ['We build those by the thousand. In December.', 'Santa never throws chairs.', 'Needs more bells.', 'Is it on the nice list?'],
+  pirate: ['A brass first mate? Arr.', 'Can it swab a deck?', 'The sun tells time too, matey.', "That one'll mutiny in a week."],
+  stone: ['Shiny rock man!', 'Why throw chair? Chair good.', 'Ugg not understand robot.', 'Sun up. Sun down. Ugg tell time free.'],
+  hero: ['Classic villain origin story.', 'Bet it turns evil in the sequel.', "That's a henchbot if I ever saw one.", 'Somebody call window repair. Again.'],
+  fantasy: ['A golem! Bound by what runes?', 'Roll to throw the chair!', 'The artificers guild would never.', 'A golem that tells the hour? Lame loot.'],
+} };
+function tvChat() {                           // what the couch says about the show on now
+  const th = (TV_THEME_CHAT[tvShow()] || {})[THEME];
+  return th && Math.random() < 0.5 ? th : TV_CHAT[tvShow()];
+}
 const TV_REACT = { sports: ['GOOOAL!', 'YES!!', 'What a strike!'], talk: ['OHHHH!', 'I KNEW IT!', 'Called it!'],
   game: ['Ouch!', 'Nooo!', 'Big red X!'], soap: ['*gasp*', 'NO WAY!', 'I knew it!'],
   price: ['HOW MUCH?!', 'Egress fees!', 'Nobody was close!'], judge: ['ORDER!', 'GUILTY!', 'Ooooh, burn!'],
@@ -778,7 +797,8 @@ const TV_REACT = { sports: ['GOOOAL!', 'YES!!', 'What a strike!'], talk: ['OHHHH
   crime: ['IT WAS HIM!', '*gasp*', 'Plot twist!'], roadshow: ['VB6?!', 'He went pale!', 'Burn it!'],
   wrestle: ['OH MY GOD!', 'FOLDING CHAIR!', 'Tabs is DOWN!'], news: ['NOT THE COFFEE!', 'Who did this?!', 'Breaking!'],
   weather: ['STORM WARNING!', 'Rebase! REBASE!', 'Take cover!'], reno: ['THE CEILING!', 'Load-bearing!', 'Called it!'],
-  golf: ['*polite clapping*', 'It moved!', 'Ooooh.'], bachelor: ['The ROSE!', 'Five nines!', 'Awww!'] };
+  golf: ['*polite clapping*', 'It moved!', 'Ooooh.'], bachelor: ['The ROSE!', 'Five nines!', 'Awww!'],
+  robots: ['THE WINDOW!', 'CHAIR!!', "THAT'S IT?!", 'It tells TIME?!'] };
 function tvShow() { return TV_SHOWS[Math.floor(T / 40) % TV_SHOWS.length]; }
 // the dramatic moment on each show (the couch throws its hands up); p = seconds into the 40-second channel
 const TV_BIG = {
@@ -787,6 +807,7 @@ const TV_BIG = {
   nature: p => p > 34, shop: p => (p % 20) > 16.5, promo: p => p > 20 && p < 25, paint: p => (p % 20) > 17,
   crime: p => p > 30 && p < 35, roadshow: p => p > 28 && p < 34, wrestle: p => (p % 20) > 16, news: p => (p % 20) > 17,
   weather: p => p > 25 && p < 30, reno: p => p > 33, golf: p => p > 35, bachelor: p => (p % 20) > 16.5,
+  robots: p => (p > 14.4 && p < 17) || p > 37.5,           // the chairs go through the windows; "THAT'S IT?!"
 };
 function tvBig() { return TV_BIG[tvShow()](T % 40); }
 const GO_LINES = ['On it!', 'Coming, boss!', 'Ooh, a task!', 'Duty calls!', 'My turn!', 'Back to work!'];
@@ -5204,7 +5225,7 @@ function updateWorker(w, dt) {
   if (w.mode === 'idle') {
     if (w.arrived && T > w.actUntil) chooseIdle(w);
     else if (w.arrived && T > w.nextChat && !w.talk && !w.duel) {
-      const lines = w.spot && (w.spot.act === 'tv' ? TV_CHAT[tvShow()] : (THEME === 'fantasy' && FAN_CHAT[w.spot.act]) || CHAT[w.spot.act]);
+      const lines = w.spot && (w.spot.act === 'tv' ? tvChat() : (THEME === 'fantasy' && FAN_CHAT[w.spot.act]) || CHAT[w.spot.act]);
       if (Math.random() < 0.55 && lines) say(w, pick(lines));
       w.nextChat = T + rand(14, 40);
     }
@@ -8512,6 +8533,84 @@ function drawTV() {
     if (big) { L(356, 50, 356, 44, '#16a34a', 0.8); C(356, 43, 2.4, '#e11d48'); for (const hx of [348, 364]) C(hx, 45 - (T * 6) % 4, 1.2, '#f472b6'); }
     else { L(308, 70, 312, 64, '#16a34a', 0.8); C(312, 63, 1.8, '#e11d48'); }
     R(288, 86, 124, 7, '#000'); FT(big ? 'WILL YOU ACCEPT THIS ROSE?' : 'ROSES FOR UPTIME', 350, 89.5, 5, '#f9a8d4');
+  } else if (show === 'robots') {                           // AMERICAN CHOPBOT: a family shop builds a robot, chairs fly, it only tells the time
+    const fig = (x, y, s, who, up, red) => { g.save(); g.translate(x, y); g.scale(s, s); const sk = red ? '#f87171' : '#e0ac69';
+      if (who === 'gus') {                                  // the dad: large, bald, tattooed forearms, handlebar mustache
+        E(0, -7, 9, 8, '#1f2937');
+        for (const sx of [-1, 1]) { const hx = sx * (up ? 10 : 11), hy = up ? -24 : -3;
+          L(sx * 7, -12, hx, hy, sk, 3.2); C(hx, hy, 1.8, sk); L(sx * 8.4, up ? -15 : -9, sx * 9.6, up ? -19 : -6, '#1d4ed8', 1); }
+        C(0, -18, 5.2, sk); C(-1.8, -20.6, 1.3, 'rgba(255,255,255,.35)');
+        C(-1.8, -18.6, 0.6, '#111'); C(1.8, -18.6, 0.6, '#111'); L(-3, -20, -0.8, -19.4, '#111', 0.6); L(3, -20, 0.8, -19.4, '#111', 0.6);
+        R(-3.6, -16.6, 7.2, 1.6, '#78716c'); L(-3.3, -15.8, -5.6, -12.4, '#78716c', 1.4); L(3.3, -15.8, 5.6, -12.4, '#78716c', 1.4);
+      } else {
+        const col = { rusty: '#1d4ed8', skip: '#f59e0b', nunzio: '#57534e' }[who];
+        RR(-4, -12, 8, 12, 2, col); if (up) { L(-3, -11, -6, -19, col, 1.6); L(3, -11, 6, -19, col, 1.6); }
+        C(0, -15, 3.6, sk); C(-1.2, -15.2, 0.45, '#111'); C(1.2, -15.2, 0.45, '#111');
+        if (who === 'rusty') { E(0, -18.2, 3.7, 2.3, '#dc2626'); E(0, -16.4, 4.4, 0.7, '#991b1b'); C(0, -20.4, 0.5, '#991b1b'); }   // ball cap
+        else if (who === 'skip') { E(0, -18, 4.2, 2, '#fde047'); R(-4.4, -17.6, 2.2, 9, '#fde047'); R(2.2, -17.6, 2.2, 9, '#fde047'); E(0, -13.2, 1.6, 0.8, '#7f1d1d'); R(-0.8, -14, 1.6, 0.5, '#fff'); }   // long blonde hair, goofy grin
+        else { E(0, -18, 3.8, 2.2, '#111827'); R(-3.9, -17.4, 7.8, 1.3, '#374151'); R(-1.4, -14, 2.8, 0.6, '#1c1917'); E(0, -12.4, 1.3, 1.5, '#1c1917'); }   // beanie, dark goatee
+      }
+      g.restore(); };
+    const win = (x, st) => { RR(x - 12, 41, 24, 18, 1, st ? '#0f172a' : '#bae6fd', '#27272a', 1.4);   // 0 glass, 1 smashed, 2 boarded up
+      if (!st) { L(x, 41, x, 59, '#27272a', 1); L(x - 12, 50, x + 12, 50, '#27272a', 1); L(x - 9, 44, x - 5, 48, 'rgba(255,255,255,.7)', 0.8); }
+      else if (st === 1) { poly([x - 12, 41, x - 5, 41, x - 10, 48], '#bae6fd'); poly([x + 3, 41, x + 12, 41, x + 12, 47], '#bae6fd');
+        poly([x + 12, 59, x + 12, 52, x + 5, 59], '#bae6fd'); poly([x - 12, 59, x - 12, 53, x - 4, 59], '#bae6fd'); }
+      else { L(x - 11, 42, x + 11, 58, '#a16207', 3); L(x + 11, 42, x - 11, 58, '#a16207', 3); } };
+    const shop = (wl, wr) => { R(288, 35, 124, 41, '#57534e'); for (let j = 0; j < 5; j++) L(288, 44 + j * 8, 412, 44 + j * 8, 'rgba(0,0,0,.2)', 0.5);
+      R(288, 76, 124, 17, '#3f3f46'); win(300, wl); win(400, wr); RR(322, 36, 56, 6, 1, '#111'); FT('AMERICAN CHOPBOT', 350, 39, 4.5, '#f97316'); };
+    const halfBot = () => { R(348, 75, 4, 9, '#71717a'); R(340, 84, 20, 2, '#52525b'); R(330, 72, 40, 3, '#facc15');   // on the lift, no head yet
+      RR(340, 54, 20, 18, 2, '#9ca3af', '#4b5563', 0.6); R(345, 58, 10, 7, '#111'); C(350, 61.5, 1, flash ? '#22c55e' : '#14532d');
+      L(360, 57, 367, 65, '#6b7280', 2.2); L(346, 54, 344, 48, '#ef4444', 0.6); L(354, 54, 356, 48, '#3b82f6', 0.6);
+      if (Math.floor(T * 10) % 3) for (let i = 0; i < 4; i++) C(367 + Math.sin(T * 40 + i) * 3, 65 + Math.cos(T * 33 + i) * 3, 0.7, '#fde047'); };   // welding sparks
+    const chair = (x, y, a) => { g.save(); g.translate(x, y); g.rotate(a);
+      L(-4, -5, -4, 5, '#94a3b8', 1.4); L(-4, 0, 4, 0, '#64748b', 1.8); L(4, 0, 4, 5, '#94a3b8', 1.2); g.restore(); };
+    const cap = s => { R(288, 86, 124, 7, 'rgba(0,0,0,.75)'); FT(s, 350, 89.5, 5, '#fff'); };
+    const iview = (who, name, role, line) => {               // the confessional: alone, close up, dark backdrop, lower third
+      R(288, 35, 124, 58, '#0c0a09'); E(362, 62, 44, 32, 'rgba(249,115,22,.09)');
+      for (let i = 0; i < 5; i++) C(296 + i * 27, 44 + (i % 2) * 11, 3, 'rgba(250,204,21,.07)');   // out-of-focus shop lights
+      fig(362, 104, who === 'gus' ? 2.2 : 2.6, who, false, who === 'gus' && p > 29.5);
+      R(292, 73, 58, 7, '#ea580c'); FT(name, 294, 76.5, 5, '#fff', 'left'); R(292, 80, 58, 5, '#111'); FT(role, 294, 82.6, 3.6, '#fde68a', 'left'); cap(line); };
+    if (p < 7) {                                            // the shop floor: the bot is late
+      shop(0, 0); halfBot(); const yell = p < 3.5;
+      fig(310, 80, 1.15, 'gus', yell && flash, yell); fig(390, 80, 1, 'rusty', false);
+      cap(yell ? 'GUS: THIS BOT WAS DUE TUESDAY!' : "RUSTY: Do it wrong, Dad, it's Judgment Day.");
+    } else if (p < 12) iview('rusty', 'RUSTY', 'BUILDER / PROGRAMMER', p < 9.5 ? 'Coding the brain? Easy.' : 'Coding around my DAD? Impossible.');
+    else if (p < 17) {                                      // the schedule meeting: two chairs, two windows
+      const t = p - 12; shop(t > 2.4 ? 1 : 0, t > 2.8 ? 1 : 0); halfBot();
+      for (const [x, wx, t0, who, s, hy] of [[326, 300, 1.2, 'gus', 1.15, 48], [374, 400, 1.6, 'rusty', 1, 58]]) {
+        const k = (t - t0) / 1.2; fig(x, 80, s, who, k < 1, who === 'gus');
+        if (k < 0) chair(x, hy, Math.sin(T * 8) * 0.2);
+        else if (k < 1) chair(x + (wx - x) * k, hy + (50 - hy) * k - Math.sin(k * Math.PI) * 6, k * 8);
+        else for (let i = 0; i < 6; i++) { const sy = Math.min(76, 59 + (t - t0 - 1.2) * (18 + i * 6)), sx = wx - 10 + i * 4;   // falling glass
+          poly([sx, sy, sx + 2, sy + 2, sx - 1, sy + 2.5], '#e0f2fe'); }
+      }
+      if (big && flash) FT('CRASH!', 350, 47, 8, '#fde047');
+      cap(t < 1.2 ? 'GUS: You wanna talk deadlines? HUH?!' : t < 2.4 ? "RUSTY: Oh, we're doing THIS again?" : 'THE TEAM DISCUSSES THE SCHEDULE.');
+    } else if (p < 22) iview('nunzio', 'NUNZIO', 'FABRICATOR', p < 19.5 ? "We're making good time." : 'Me and Carmine been here all night.');
+    else if (p < 27) iview('skip', 'SKIP', 'THE OTHER SON', p < 24.5 ? "I don't get all this robot stuff." : 'Can it make nachos? Then what is it FOR?');
+    else if (p < 32) {
+      iview('gus', 'BIG GUS', 'OWNER', p < 29.5 ? 'Thirty years I built stuff with my HANDS.' : "Now it's laptops and FEELINGS. Unbelievable.");
+      if (p > 29.5) for (let i = 0; i < 3; i++) for (const sx of [-15, 15]) C(362 + sx, 58 - ((T * 12 + i * 3) % 10), 2.2, 'rgba(255,255,255,.45)');   // steam
+    } else {                                                // the reveal: chrome, flames, and one feature
+      const t = p - 32, now = new Date(), tm = 'IT IS ' + (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0');
+      shop(2, 2);
+      R(345, 72, 4, 4, '#64748b'); R(355, 72, 4, 4, '#64748b'); RR(341, 53, 22, 19, 3, '#cbd5e1', '#64748b', 0.8);
+      poly([341, 68, 346, 64, 345, 68, 351, 62, 350, 68, 356, 63, 363, 69, 363, 70, 341, 70], '#f97316');   // flames, obviously
+      const hr = (now.getHours() % 12 + now.getMinutes() / 60) / 12 * TAU, mn = now.getMinutes() / 60 * TAU;   // a clock in its chest
+      C(352, 59.5, 4, '#fff'); L(352, 59.5, 352 + Math.sin(hr) * 2, 59.5 - Math.cos(hr) * 2, '#111', 0.7); L(352, 59.5, 352 + Math.sin(mn) * 3.2, 59.5 - Math.cos(mn) * 3.2, '#111', 0.5);
+      L(341, 56, 335, 66, '#94a3b8', 2.4); L(363, 56, 369, 66, '#94a3b8', 2.4); L(343, 55, 345, 53.8, '#fff', 0.8);
+      const talk = t > 4.5 && t < 5.5 && flash; RR(345, 44, 14, 9, 2, '#e2e8f0', '#64748b', 0.8);
+      C(349, 48.5, 1.3, talk ? '#fde047' : '#22d3ee'); C(355, 48.5, 1.3, talk ? '#fde047' : '#22d3ee'); L(352, 44, 352, 42.6, '#64748b', 0.6); C(352, 42.6, 1, '#ef4444');
+      if (t < 2.5) { const k = Math.max(0, t - 1.5); g.globalAlpha = 1 - k;   // the sheet comes off
+        poly([332 + k * 40, 76, 336 + k * 40, 52, 352 + k * 44, 42, 368 + k * 40, 52, 372 + k * 40, 76], '#f5f5f4'); g.globalAlpha = 1; }
+      else if (t < 4.5) [[336, 50], [368, 52], [358, 41]].forEach(([x, y], i) => { const r = 1.5 + Math.sin(T * 8 + i * 2); L(x - r, y, x + r, y, '#fff', 0.6); L(x, y - r, x, y + r, '#fff', 0.6); });
+      fig(302, 80, 1.1, 'gus', t > 5.5 && flash, t > 5.5); fig(322, 80, 1, 'skip', false);
+      fig(386, 80, 1, 'rusty', t > 1.5 && t < 2.5); fig(404, 80, 1, 'nunzio', false);
+      if (t > 4.5) { RR(290, 43, 46, 9, 2, '#fff'); poly([335, 46, 344, 48, 335, 50], '#fff'); FT(tm, 313, 47.5, 5.5, '#111'); }
+      if (big && flash) R(288, 35, 124, 58, 'rgba(239,68,68,.12)');
+      cap(t < 1.5 ? 'THE REVEAL.' : t < 2.5 ? 'RUSTY: Ladies and gentlemen...' : t < 4.5 ? 'SKIP: Hey robot. WHAT TIME IS IT?'
+        : t < 5.5 ? 'BOT: "' + tm + '."' : "GUS: THAT'S IT?! SIX WEEKS FOR A CLOCK?!");
+    }
   } else {
     R(288, 35, 124, 58, '#5b2a3a'); R(288, 35, 14, 58, '#7f1d1d'); R(398, 35, 14, 58, '#7f1d1d');
     for (const cx of [312, 388]) { R(cx - 1, 60, 2, 8, '#fef3c7'); C(cx, 58, 1.6, Math.sin(T * 9 + cx) > 0 ? '#fbbf24' : '#f97316'); }
