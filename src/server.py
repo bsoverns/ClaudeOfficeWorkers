@@ -1008,12 +1008,44 @@ def cursor_state_db() -> str:
     return os.path.join(base, "Cursor", "User", "globalStorage", "state.vscdb")
 
 
-def read_cursor_login() -> tuple[str, str]:
-    """(token, user id) from the Cursor app's own store, opened read-only so it can't change anything
-    or get in Cursor's way. Raises LookupError if you aren't logged in. Not part of any documented API."""
+def _login_user(token: str) -> str:
+    """The user id inside a Cursor login token (a JWT's "sub"). Raises ValueError if it isn't one."""
     import base64
+    try:
+        part = token.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+        return str(claims["sub"]).split("|")[-1]
+    except (IndexError, KeyError, ValueError, TypeError, AttributeError):
+        raise ValueError from None
+
+
+def read_session_cookie() -> tuple[str, str] | None:
+    """(token, user id) from CURSOR_SESSION_TOKEN, the WorkosCursorSessionToken cookie you copy yourself
+    from cursor.com in your browser, for when the Cursor app keeps its login encrypted. Read fresh from
+    the environment each time, never saved. None if it isn't set; LookupError if it doesn't look right."""
+    from urllib.parse import unquote
+    raw = unquote(os.environ.get("CURSOR_SESSION_TOKEN", "").strip().strip('"'))
+    if not raw:
+        return None
+    if raw.startswith("WorkosCursorSessionToken="):
+        raw = raw.split("=", 1)[1]
+    user, _, token = raw.rpartition("::")
+    try:
+        found = _login_user(token)
+    except ValueError:
+        raise LookupError("CURSOR_SESSION_TOKEN isn't a cursor.com session cookie") from None
+    return token, user or found
+
+
+def read_cursor_login() -> tuple[str, str]:
+    """(token, user id): your own CURSOR_SESSION_TOKEN cookie if you set one, else the Cursor app's own
+    store, opened read-only so it can't change anything or get in Cursor's way. Raises LookupError if
+    you aren't logged in. Not part of any documented API."""
     import sqlite3
     from urllib.parse import quote
+    cookie = read_session_cookie()
+    if cookie:
+        return cookie
     path = cursor_state_db()
     if not os.path.isfile(path):
         raise LookupError("Cursor's login wasn't found on this PC")
@@ -1026,15 +1058,14 @@ def read_cursor_login() -> tuple[str, str]:
     if not token:
         raise LookupError("Cursor isn't logged in")
     if "." not in token and token.startswith("cursor-") and ":" in token:
-        # Newer Cursor builds keep an encrypted copy ("cursor-…:<blob>") that only the Cursor app can open,
-        # and Cursor refuses it as a login. Opening it would mean breaking into the app's own store, so don't.
+        # Newer Cursor builds keep an encrypted copy ("cursor-safe-storage:v1:<blob>") that only the Cursor
+        # app can open, and Cursor refuses it as a login. Opening it would mean breaking into the app's own
+        # store, so don't: the browser cookie (CURSOR_SESSION_TOKEN) is the way round it.
         raise LookupError("Cursor now keeps its login encrypted, so the office can't read it: "
-                          "set a Team API key (CURSOR_ADMIN_KEY) or turn cost off")
+                          "set CURSOR_SESSION_TOKEN (your cursor.com cookie) or a Team API key, or turn cost off")
     try:
-        part = token.split(".")[1]
-        claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
-        return token, str(claims["sub"]).split("|")[-1]
-    except (IndexError, KeyError, ValueError, TypeError):
+        return token, _login_user(token)
+    except ValueError:
         raise LookupError("Cursor's login isn't in the expected format") from None
 
 
@@ -1088,7 +1119,7 @@ def cursor_cost_report() -> str:
     lines = []
     try:
         token, user_id = read_cursor_login()
-        lines.append("Login: found in Cursor's store")
+        lines.append("Login: from your CURSOR_SESSION_TOKEN cookie" if os.environ.get("CURSOR_SESSION_TOKEN", "").strip() else "Login: found in Cursor's store")
     except (LookupError, OSError, ImportError) as e:
         return f"Login: {e}"
     except Exception as e:

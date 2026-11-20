@@ -28,7 +28,7 @@ The Cursor office is a second program, in `CursorOffice.zip` / `CursorOffice-mac
 Connecting writes `~/.cursor/hooks.json` (with `--project`, `<repo>/.cursor/hooks.json`), backs up any existing file
 and keeps your other hooks. Don't commit a project's copy: it holds paths from your PC, so add it to `.gitignore`.
 Cursor reloads the file when it's saved; restart Cursor if nothing shows up, and look in its Hooks output channel if it still doesn't.
-If you move the folder, connect again. See [Cursor office](../README.md#cursor-office) for what it shows, its speed and how to turn on the optional cost screen (click it on the help desk to use your Cursor login, or set `CURSOR_ADMIN_KEY`).
+If you move the folder, connect again. See [Cursor office](../README.md#cursor-office) for what it shows, its speed and how to turn on the optional cost screen (click it on the help desk to use your Cursor login, plus `CURSOR_SESSION_TOKEN` if Cursor keeps that login encrypted, or set `CURSOR_ADMIN_KEY`).
 
 ---
 

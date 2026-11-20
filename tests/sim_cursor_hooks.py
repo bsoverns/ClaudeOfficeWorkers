@@ -279,7 +279,7 @@ def test_login_cost() -> None:
     check("format" in cost.error and "not-a-jwt" not in cost.error and not seen, f"a strange login is reported, not shown ({cost.error})")
     fake_login(db, '"cursor-abcd-encrypt-v1:' + "Q+/x" * 148 + '"')
     cost.check_login()
-    check("encrypted" in cost.error and "CURSOR_ADMIN_KEY" in cost.error and "Q+/x" not in cost.error and not seen,
+    check("encrypted" in cost.error and "CURSOR_SESSION_TOKEN" in cost.error and "Q+/x" not in cost.error and not seen,
           f"Cursor's encrypted login is named, never sent ({cost.error})")
     check(not cost.error.endswith("."), "the message reads right before the page's own full stop")
 
@@ -295,6 +295,25 @@ def test_login_cost() -> None:
     check(f"WorkosCursorSessionToken=user_abc%3A%3A{token}" == head["/summary"].get("Cookie"), "the summary call sends the login as Cursor's cookie")
     check(head["/period"].get("Authorization") == f"Bearer {token}", "the period call sends it as a bearer token")
     check(token not in json.dumps(p) and "SIGNATURE" not in json.dumps(p), "the login never reaches the page")
+
+    # Cursor's login encrypted, your browser cookie set instead (as copied, URL-encoded)
+    fake_login(db, '"cursor-safe-storage:v1:' + "Q+/x" * 148 + '"')
+    os.environ["CURSOR_SESSION_TOKEN"] = f"user_abc%3A%3A{token}"
+    seen.clear()
+    cost.check_login()
+    head = dict(seen)
+    check(cost.public()["cents"] == 200 and not cost.error, f"the browser cookie gets past the encrypted login ({cost.error})")
+    check(head["/summary"].get("Cookie") == f"WorkosCursorSessionToken=user_abc%3A%3A{token}", "the cookie goes to Cursor as it was")
+    check("Login: from your CURSOR_SESSION_TOKEN cookie" in srv.cursor_cost_report(), "the cost check says the cookie was used")
+    os.environ["CURSOR_SESSION_TOKEN"] = f'"WorkosCursorSessionToken=user_abc::{token}"'
+    check(srv.read_cursor_login() == (token, "user_abc"), "the whole name=value, in quotes, works too")
+    os.environ["CURSOR_SESSION_TOKEN"] = "nonsense-value"
+    seen.clear()
+    cost.check_login()
+    check("CURSOR_SESSION_TOKEN" in cost.error and "nonsense" not in cost.error and not seen, f"a wrong cookie is named, never sent ({cost.error})")
+    del os.environ["CURSOR_SESSION_TOKEN"]
+    fake_login(db, f'"{token}"')
+    cost.check_login()
     answer["summary"] = {"individualUsage": {"plan": {"used": 100, "limit": 2000}, "onDemand": {"used": 50}}}
     cost.check_login()
     check(cost.public()["cents"] == 150 and cost.public()["limit"] == 2000, "other plans add plan and on-demand")
