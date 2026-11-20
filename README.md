@@ -7,6 +7,8 @@ An animated office that shows what Claude Code is doing, so you notice when it's
 have an [office of its own](#cursor-office), running as a separate process. If you only want the numbers, the
 [Usage Widget](#usage-widget) is a small separate window with your Claude tokens and cost and your Cursor spend.
 
+![The office in the Hero HQ theme: heroes and villains on break, eight jobs at their stations, one in the Hero Med Bay and one waiting in the mailroom](docs/images/hero-hq.png)
+
 ## Download
 
 There's a separate office for each tool, plus a small cost widget. Get the ones you use. Every change merged
@@ -724,6 +726,7 @@ tests/
   sim_usage_widget.py    the widget's numbers on made-up transcripts, with no window or internet
 docs/
   CONNECT_A_PROJECT.md   setup for a new PC, global or per-project, with a paste-in prompt
+  images/hero-hq.png     the README's snapshot (Hero HQ, demo jobs on a test office)
 .github/                 CI build + release, PR auto-assign, CODEOWNERS
 .githooks/               pre-push guard that refuses pushes to main; commit-msg strips session links
 ```
