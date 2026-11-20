@@ -277,6 +277,11 @@ def test_login_cost() -> None:
     fake_login(db, '"not-a-jwt"')
     cost.check_login()
     check("format" in cost.error and "not-a-jwt" not in cost.error and not seen, f"a strange login is reported, not shown ({cost.error})")
+    fake_login(db, '"cursor-abcd-encrypt-v1:' + "Q+/x" * 148 + '"')
+    cost.check_login()
+    check("encrypted" in cost.error and "CURSOR_ADMIN_KEY" in cost.error and "Q+/x" not in cost.error and not seen,
+          f"Cursor's encrypted login is named, never sent ({cost.error})")
+    check(not cost.error.endswith("."), "the message reads right before the page's own full stop")
 
     fake_login(db, f'"{token}"')
     check(srv.read_cursor_login() == (token, "user_abc"), "the login and user id come from Cursor's store")

@@ -1025,6 +1025,11 @@ def read_cursor_login() -> tuple[str, str]:
     token = str(row[0] if row and row[0] else "").strip().strip('"')
     if not token:
         raise LookupError("Cursor isn't logged in")
+    if "." not in token and token.startswith("cursor-") and ":" in token:
+        # Newer Cursor builds keep an encrypted copy ("cursor-…:<blob>") that only the Cursor app can open,
+        # and Cursor refuses it as a login. Opening it would mean breaking into the app's own store, so don't.
+        raise LookupError("Cursor now keeps its login encrypted, so the office can't read it: "
+                          "set a Team API key (CURSOR_ADMIN_KEY) or turn cost off")
     try:
         part = token.split(".")[1]
         claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))

@@ -553,6 +553,9 @@ Know what this is: **these are Cursor's private calls, not a documented API**, f
 [CodexBar](https://github.com/steipete/CodexBar), so an update to Cursor can break them. It also has another program reuse your login token, so on a work
 account check that your company allows it. If the screen shows ERROR or a wrong number, run `Check Cursor Cost.bat`
 (`CursorOffice.exe --cost-check`): it writes what it finds to `cursor-cost-check.txt`, your own amounts and field names only, with no login, email, ids or team spend.
+Newer Cursor builds save the login encrypted (a token starting `cursor-…:` instead of the older dotted kind), which only the
+Cursor app can open and which Cursor won't accept from anyone else. The office doesn't try to break into it: the screen then
+says *Cursor now keeps its login encrypted*, and the Team API key below is the only way to see cost.
 
 *A Team API key.* The documented route, which shows today's cost instead and wins if both are on. Your Cursor admin may have to create the key. Set it once, then reopen the Cursor office:
 
