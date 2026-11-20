@@ -30,6 +30,11 @@ and keeps your other hooks. Don't commit a project's copy: it holds paths from y
 Cursor reloads the file when it's saved; restart Cursor if nothing shows up, and look in its Hooks output channel if it still doesn't.
 If you move the folder, connect again. See [Cursor office](../README.md#cursor-office) for what it shows, its speed and how to turn on the optional cost screen (click it on the help desk to use your Cursor login, plus `CURSOR_SESSION_TOKEN` if Cursor keeps that login encrypted, or set `CURSOR_ADMIN_KEY`).
 
+**Cost screen says *Cursor now keeps its login encrypted*?** Newer Cursor builds lock their saved login away. Copy your
+`WorkosCursorSessionToken` cookie from cursor.com (F12 → Application → Cookies → `https://cursor.com`, double-click the value,
+Ctrl+C), run `setx CURSOR_SESSION_TOKEN "<the value>"`, and reopen the Cursor office. Step by step, with what to check after:
+[Cursor office → Cost](../README.md#cursor-office). Copy it again when it expires and the screen shows ERROR.
+
 ---
 
 ## 0. Easiest: the standalone app (no Python needed)

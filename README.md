@@ -558,20 +558,29 @@ kind), which only the Cursor app can open and which Cursor won't accept from any
 into it; the screen says *Cursor now keeps its login encrypted*. To get your cost back, give the office the same login
 your browser uses for Cursor's Settings page:
 
-1. Sign in at `cursor.com` in your browser and open the dashboard.
-2. Open the developer tools (F12) → **Application** (Chrome, Edge) or **Storage** (Firefox) → **Cookies** → `https://cursor.com`,
-   and copy the value of `WorkosCursorSessionToken` (it starts `user_`).
-3. Run this once (paste the value between the quotes), then reopen the Cursor office and turn cost on as above:
+1. In Chrome or Edge, sign in at `cursor.com` and open the dashboard (any cursor.com page you're signed in on works).
+2. Press **F12** to open the developer tools, pick the **Application** tab (Firefox: **Storage**), and in the left
+   column open **Storage → Cookies → `https://cursor.com`**.
+3. Find the row named **`WorkosCursorSessionToken`** (usually near the bottom; its value starts `user_`). The column
+   only shows the start of the value, which is about 600 characters long, so **double-click the Value cell** to select
+   all of it and press **Ctrl+C**. (Or click the row once and copy the full value from the panel underneath.) The
+   encoded form (`%3A%3A` in the middle) and the decoded one (`::`) both work.
+4. In PowerShell, run this once, pasting the value between the quotes. It should answer *SUCCESS: Specified value was saved.*
 
 ```
 setx CURSOR_SESSION_TOKEN "user_..."
 ```
 
+5. **Close the Cursor office completely and open it again**: `setx` only reaches programs started after it. Make sure
+   cost is on (the help desk screen's **Show my cost**, or **Show my Cursor cost** in Settings).
+6. Run `Check Cursor Cost.bat`. `cursor-cost-check.txt` should start *Login: from your CURSOR_SESSION_TOKEN cookie*,
+   followed by your spend. If it says *isn't a cursor.com session cookie*, part of the value was left out: copy it again.
+
+The value is your whole cursor.com login, so treat it like a password: don't paste it into a chat, a ticket or a screenshot.
 The office reads it fresh for each check and sends it only to `cursor.com` and `api2.cursor.sh`, as with the app's login. It
-sits in your user environment variables in plain text, it's your whole cursor.com login (treat it like a password), and
-on a work account check your company allows it. It expires after a while (or when you sign out of cursor.com): the screen
-then shows ERROR, and you copy it again. `setx CURSOR_SESSION_TOKEN ""` removes it. `Check Cursor Cost.bat` says
-*Login: from your CURSOR_SESSION_TOKEN cookie* when it's in use.
+sits in your user environment variables in plain text, so on a work account check your company allows it. It expires after
+a while (or when you sign out of cursor.com): the screen then shows ERROR, and you repeat steps 1 to 5.
+`setx CURSOR_SESSION_TOKEN ""` removes it.
 
 *A Team API key.* The documented route, which shows today's cost instead and wins if both are on. Your Cursor admin may have to create the key. Set it once, then reopen the Cursor office:
 
