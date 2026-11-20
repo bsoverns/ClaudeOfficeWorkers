@@ -553,9 +553,25 @@ Know what this is: **these are Cursor's private calls, not a documented API**, f
 [CodexBar](https://github.com/steipete/CodexBar), so an update to Cursor can break them. It also has another program reuse your login token, so on a work
 account check that your company allows it. If the screen shows ERROR or a wrong number, run `Check Cursor Cost.bat`
 (`CursorOffice.exe --cost-check`): it writes what it finds to `cursor-cost-check.txt`, your own amounts and field names only, with no login, email, ids or team spend.
-Newer Cursor builds save the login encrypted (a token starting `cursor-…:` instead of the older dotted kind), which only the
-Cursor app can open and which Cursor won't accept from anyone else. The office doesn't try to break into it: the screen then
-says *Cursor now keeps its login encrypted*, and the Team API key below is the only way to see cost.
+Newer Cursor builds save the login encrypted (a token starting `cursor-safe-storage:v1:` instead of the older dotted
+kind), which only the Cursor app can open and which Cursor won't accept from anyone else. The office doesn't try to break
+into it; the screen says *Cursor now keeps its login encrypted*. To get your cost back, give the office the same login
+your browser uses for Cursor's Settings page:
+
+1. Sign in at `cursor.com` in your browser and open the dashboard.
+2. Open the developer tools (F12) → **Application** (Chrome, Edge) or **Storage** (Firefox) → **Cookies** → `https://cursor.com`,
+   and copy the value of `WorkosCursorSessionToken` (it starts `user_`).
+3. Run this once (paste the value between the quotes), then reopen the Cursor office and turn cost on as above:
+
+```
+setx CURSOR_SESSION_TOKEN "user_..."
+```
+
+The office reads it fresh for each check and sends it only to `cursor.com` and `api2.cursor.sh`, as with the app's login. It
+sits in your user environment variables in plain text, it's your whole cursor.com login (treat it like a password), and
+on a work account check your company allows it. It expires after a while (or when you sign out of cursor.com): the screen
+then shows ERROR, and you copy it again. `setx CURSOR_SESSION_TOKEN ""` removes it. `Check Cursor Cost.bat` says
+*Login: from your CURSOR_SESSION_TOKEN cookie* when it's in use.
 
 *A Team API key.* The documented route, which shows today's cost instead and wins if both are on. Your Cursor admin may have to create the key. Set it once, then reopen the Cursor office:
 
@@ -648,7 +664,7 @@ On a Mac it uses a Python with `tkinter`, preferring Tk 8.6 or newer. Apple's ow
   counting and prices, so the same rules apply: API list prices, the day in Eastern time, and "in" includes cache writes and reads. It reads local files only and keeps only counts, in memory.
   It ignores the office's **Reset**, which only applies inside the office.
 - **Cursor:** your spend this billing cycle, with your limit, its reset date and a bar. It's the Cursor office's [cost check](#cursor-office), with the same rules and the same saved setting (`cursor-cost.json`), so
-  it's off until you turn it on here or there. Your login is read fresh for each check and never saved or logged, and it goes only to Cursor. Checks run every 15 minutes. A Team API key (`CURSOR_ADMIN_KEY`) shows today's cost instead;
+  it's off until you turn it on here or there. Your login (or your `CURSOR_SESSION_TOKEN` browser cookie, when Cursor keeps its login encrypted) is read fresh for each check and never saved or logged, and it goes only to Cursor. Checks run every 15 minutes. A Team API key (`CURSOR_ADMIN_KEY`) shows today's cost instead;
   set `CURSOR_COST_EMAIL` too, because the widget gets no hooks to learn your email from. Cursor reports no tokens this way, so only the Claude row has them.
 
 The exe is one file that unpacks itself to a temp folder, so it takes a few seconds to open.
